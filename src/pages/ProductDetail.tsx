@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronRight, ShoppingCart, Truck, Check, Minus, Plus } from 'lucide-react'
+import { ChevronRight, ShoppingCart, Truck, Check, Minus, Plus, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/contexts/cart-context'
-import { mockProducts } from '@/lib/mock-data'
+import { getProduct, getActiveProducts, getFileUrl, Product } from '@/services/products'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
-  const product = mockProducts.find((p) => p.id === id)
-  const relatedProducts = mockProducts.filter((p) => p.id !== id).slice(0, 4)
+  const [product, setProduct] = useState<Product | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const [mainImage, setMainImage] = useState(product?.imageUrl || '')
+  const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image')
   const [quantity, setQuantity] = useState(1)
   const [cep, setCep] = useState('')
   const [freight, setFreight] = useState<{ value: number; days: number } | null>(null)
@@ -22,13 +23,36 @@ export default function ProductDetail() {
   const { increment } = useCart()
 
   useEffect(() => {
-    if (product) {
-      setMainImage(product.imageUrl)
-      setQuantity(1)
-      setFreight(null)
-      setCep('')
+    const loadProduct = async () => {
+      if (!id) return
+      try {
+        setLoading(true)
+        const p = await getProduct(id)
+        setProduct(p)
+        setActiveMedia('image')
+        setQuantity(1)
+        setFreight(null)
+        setCep('')
+
+        const allProducts = await getActiveProducts()
+        setRelatedProducts(allProducts.filter((item) => item.id !== id).slice(0, 4))
+      } catch (error) {
+        console.error('Product not found', error)
+        setProduct(null)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [id, product])
+    loadProduct()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-20 text-center animate-fade-in">
+        <h2 className="text-2xl font-medium mb-4 text-gray-500">Carregando produto...</h2>
+      </div>
+    )
+  }
 
   if (!product) {
     return (
@@ -58,6 +82,11 @@ export default function ProductDetail() {
     }
   }
 
+  const imageUrl = product.image
+    ? getFileUrl(product, product.image)
+    : `https://img.usecurling.com/p/800/800?q=tech&color=gray&seed=${product.id}`
+  const videoUrl = product.video ? getFileUrl(product, product.video) : ''
+
   return (
     <div className="bg-white min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -76,37 +105,37 @@ export default function ProductDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
           <div className="space-y-4">
             <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
-              <img
-                src={mainImage}
-                alt={product.name}
-                className="w-full h-full object-cover animate-fade-in"
-                key={mainImage}
-              />
+              {activeMedia === 'image' ? (
+                <img
+                  src={imageUrl}
+                  alt={product.name}
+                  className="w-full h-full object-cover animate-fade-in"
+                  key={imageUrl}
+                />
+              ) : (
+                <video
+                  src={videoUrl}
+                  controls
+                  autoPlay
+                  className="w-full h-full object-cover bg-black animate-fade-in"
+                />
+              )}
             </div>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               <button
-                onClick={() => setMainImage(product.imageUrl)}
-                className={`flex-none w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${mainImage === product.imageUrl ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
+                onClick={() => setActiveMedia('image')}
+                className={`flex-none w-20 h-20 rounded-lg overflow-hidden border-2 transition-all relative flex items-center justify-center bg-gray-100 ${activeMedia === 'image' ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
               >
-                <img
-                  src={product.imageUrl}
-                  alt="Thumbnail main"
-                  className="w-full h-full object-cover"
-                />
+                <img src={imageUrl} alt="Thumbnail main" className="w-full h-full object-cover" />
               </button>
-              {product.thumbnails.map((thumb, idx) => (
+              {videoUrl && (
                 <button
-                  key={idx}
-                  onClick={() => setMainImage(thumb)}
-                  className={`flex-none w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${mainImage === thumb ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
+                  onClick={() => setActiveMedia('video')}
+                  className={`flex-none w-20 h-20 rounded-lg overflow-hidden border-2 transition-all relative flex items-center justify-center bg-gray-200 ${activeMedia === 'video' ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
                 >
-                  <img
-                    src={thumb}
-                    alt={`Thumbnail ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+                  <Play className="w-8 h-8 text-gray-600" />
                 </button>
-              ))}
+              )}
             </div>
           </div>
 
@@ -126,7 +155,9 @@ export default function ProductDetail() {
               </span>
             </div>
 
-            <p className="text-gray-600 mb-8 leading-relaxed">{product.fullDescription}</p>
+            <p className="text-gray-600 mb-8 leading-relaxed whitespace-pre-wrap">
+              {product.description}
+            </p>
 
             <Separator className="mb-8" />
 
@@ -207,30 +238,36 @@ export default function ProductDetail() {
           <div className="pt-12 border-t border-gray-200 animate-fade-in">
             <h2 className="text-2xl font-bold text-secondary mb-8">Você também pode gostar</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((product) => (
-                <div key={product.id} className="group cursor-pointer">
-                  <Link
-                    to={`/produto/${product.id}`}
-                    className="block overflow-hidden rounded-xl bg-gray-100 mb-4 aspect-square"
-                  >
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  </Link>
-                  <Link to={`/produto/${product.id}`}>
-                    <h3 className="font-medium text-secondary line-clamp-2 group-hover:text-primary transition-colors">
-                      {product.name}
-                    </h3>
-                  </Link>
-                  <div className="font-bold text-secondary mt-2">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      product.price,
-                    )}
+              {relatedProducts.map((p) => {
+                const thumbUrl = p.image
+                  ? getFileUrl(p, p.image)
+                  : `https://img.usecurling.com/p/800/800?q=tech&color=gray&seed=${p.id}`
+                return (
+                  <div key={p.id} className="group cursor-pointer">
+                    <Link
+                      to={`/produto/${p.id}`}
+                      className="block overflow-hidden rounded-xl bg-gray-100 mb-4 aspect-square"
+                    >
+                      <img
+                        src={thumbUrl}
+                        alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    </Link>
+                    <Link to={`/produto/${p.id}`}>
+                      <h3 className="font-medium text-secondary line-clamp-2 group-hover:text-primary transition-colors">
+                        {p.name}
+                      </h3>
+                    </Link>
+                    <div className="font-bold text-secondary mt-2">
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(p.price)}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

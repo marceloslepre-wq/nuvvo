@@ -1,15 +1,34 @@
-import { useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/contexts/cart-context'
-import { mockProducts } from '@/lib/mock-data'
+import { getActiveProducts, getFileUrl, Product } from '@/services/products'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export default function Index() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { increment } = useCart()
+  const [products, setProducts] = useState<Product[]>([])
+
+  const loadProducts = async () => {
+    try {
+      const data = await getActiveProducts()
+      setProducts(data)
+    } catch (error) {
+      console.error('Failed to load products:', error)
+    }
+  }
+
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
+  useRealtime('products', () => {
+    loadProducts()
+  })
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -96,57 +115,69 @@ export default function Index() {
             ref={scrollContainerRef}
             className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0"
           >
-            {mockProducts.map((product) => (
-              <div
-                key={product.id}
-                className="min-w-[280px] md:min-w-[320px] max-w-[320px] flex-none bg-white rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 snap-center group"
-              >
-                <Link
-                  to={`/produto/${product.id}`}
-                  className="block overflow-hidden rounded-xl mb-4 bg-gray-100"
+            {products.map((product) => {
+              const imageUrl = product.image
+                ? getFileUrl(product, product.image)
+                : `https://img.usecurling.com/p/600/600?q=tech&color=gray&seed=${product.id}`
+              return (
+                <div
+                  key={product.id}
+                  className="min-w-[280px] md:min-w-[320px] max-w-[320px] flex-none bg-white rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 snap-center group"
                 >
-                  <div className="aspect-square relative overflow-hidden">
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  </div>
-                </Link>
-                <div className="space-y-2">
-                  <Link to={`/produto/${product.id}`}>
-                    <h3 className="font-semibold text-lg text-secondary line-clamp-1 group-hover:text-primary transition-colors">
-                      {product.name}
-                    </h3>
+                  <Link
+                    to={`/produto/${product.id}`}
+                    className="block overflow-hidden rounded-xl mb-4 bg-gray-100"
+                  >
+                    <div className="aspect-square relative overflow-hidden">
+                      <img
+                        src={imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
                   </Link>
-                  <p className="text-sm text-gray-500 line-clamp-2 min-h-[40px]">
-                    {product.description}
-                  </p>
-                  <div className="text-xl font-bold text-secondary pt-2">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      product.price,
-                    )}
-                  </div>
+                  <div className="space-y-2">
+                    <Link to={`/produto/${product.id}`}>
+                      <h3 className="font-semibold text-lg text-secondary line-clamp-1 group-hover:text-primary transition-colors">
+                        {product.name}
+                      </h3>
+                    </Link>
+                    <p className="text-sm text-gray-500 line-clamp-2 min-h-[40px]">
+                      {product.description}
+                    </p>
+                    <div className="text-xl font-bold text-secondary pt-2">
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(product.price)}
+                    </div>
 
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      className="flex-1 border-gray-300 text-secondary hover:bg-gray-50"
-                      asChild
-                    >
-                      <Link to={`/produto/${product.id}`}>Saiba Mais</Link>
-                    </Button>
-                    <Button
-                      className="flex-1 bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform"
-                      onClick={() => handleAddToCart(product.name)}
-                    >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Adquira
-                    </Button>
+                    <div className="flex gap-2 pt-4">
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-gray-300 text-secondary hover:bg-gray-50"
+                        asChild
+                      >
+                        <Link to={`/produto/${product.id}`}>Saiba Mais</Link>
+                      </Button>
+                      <Button
+                        className="flex-1 bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform"
+                        onClick={() => handleAddToCart(product.name)}
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        Adquira
+                      </Button>
+                    </div>
                   </div>
                 </div>
+              )
+            })}
+
+            {products.length === 0 && (
+              <div className="w-full text-center py-10 text-gray-500">
+                Nenhum produto disponível no momento.
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
