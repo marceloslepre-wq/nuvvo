@@ -4,6 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
 import ProductDetail from './pages/ProductDetail'
+import Checkout from './pages/Checkout'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { CartProvider } from './contexts/cart-context'
@@ -18,6 +19,7 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/produto/:id" element={<ProductDetail />} />
+            <Route path="/produto/:id/compra" element={<Checkout />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

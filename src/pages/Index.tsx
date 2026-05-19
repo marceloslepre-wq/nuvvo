@@ -54,21 +54,21 @@ export default function Index() {
       <section className="relative h-[80vh] min-h-[500px] max-h-[800px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://img.usecurling.com/p/1920/1080?q=tech&color=black&dpr=2"
+            src="https://img.usecurling.com/p/1920/1080?q=business&color=blue&dpr=2"
             alt="Hero Background"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/60"></div>
+          <div className="absolute inset-0 bg-secondary/80"></div>
         </div>
 
         <div className="container mx-auto px-4 z-10 text-center text-white">
-          <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
+          <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
-              Tecnologia e Estilo em um <span className="text-primary">Só Lugar</span>
+              Transforme Seu Negócio com Aplicativos Skip
             </h1>
-            <p className="text-lg md:text-xl text-gray-200">
-              Descubra nossa seleção premium de produtos projetados para elevar seu dia a dia.
-              Qualidade excepcional com ofertas imperdíveis.
+            <p className="text-lg md:text-xl text-gray-300">
+              Descubra nossa seleção de aplicativos profissionais projetados para escalar e inovar
+              sua empresa. Soluções de alta performance prontas para você.
             </p>
             <div className="pt-4">
               <Button
@@ -119,6 +119,8 @@ export default function Index() {
               const imageUrl = product.image
                 ? getFileUrl(product, product.image)
                 : `https://img.usecurling.com/p/600/600?q=tech&color=gray&seed=${product.id}`
+              const videoUrl = product.video ? getFileUrl(product, product.video) : null
+
               return (
                 <div
                   key={product.id}
@@ -129,11 +131,27 @@ export default function Index() {
                     className="block overflow-hidden rounded-xl mb-4 bg-gray-100"
                   >
                     <div className="aspect-square relative overflow-hidden">
-                      <img
-                        src={imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      />
+                      {videoUrl ? (
+                        <video
+                          src={videoUrl}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          muted
+                          loop
+                          playsInline
+                          onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+                          onMouseLeave={(e) => {
+                            const target = e.target as HTMLVideoElement
+                            target.pause()
+                            target.currentTime = 0
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                      )}
                     </div>
                   </Link>
                   <div className="space-y-2">
@@ -162,10 +180,12 @@ export default function Index() {
                       </Button>
                       <Button
                         className="flex-1 bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform"
-                        onClick={() => handleAddToCart(product.name)}
+                        asChild
                       >
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Adquira
+                        <Link to={`/produto/${product.id}/compra`}>
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Adquira Agora
+                        </Link>
                       </Button>
                     </div>
                   </div>

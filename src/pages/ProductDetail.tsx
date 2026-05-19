@@ -4,6 +4,7 @@ import { ChevronRight, ShoppingCart, Truck, Check, Minus, Plus, Play } from 'luc
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/contexts/cart-context'
 import { getProduct, getActiveProducts, getFileUrl, Product } from '@/services/products'
@@ -104,39 +105,42 @@ export default function ProductDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
           <div className="space-y-4">
-            <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
-              {activeMedia === 'image' ? (
-                <img
-                  src={imageUrl}
-                  alt={product.name}
-                  className="w-full h-full object-cover animate-fade-in"
-                  key={imageUrl}
-                />
-              ) : (
-                <video
-                  src={videoUrl}
-                  controls
-                  autoPlay
-                  className="w-full h-full object-cover bg-black animate-fade-in"
-                />
-              )}
-            </div>
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <button
-                onClick={() => setActiveMedia('image')}
-                className={`flex-none w-20 h-20 rounded-lg overflow-hidden border-2 transition-all relative flex items-center justify-center bg-gray-100 ${activeMedia === 'image' ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
-              >
-                <img src={imageUrl} alt="Thumbnail main" className="w-full h-full object-cover" />
-              </button>
-              {videoUrl && (
-                <button
-                  onClick={() => setActiveMedia('video')}
-                  className={`flex-none w-20 h-20 rounded-lg overflow-hidden border-2 transition-all relative flex items-center justify-center bg-gray-200 ${activeMedia === 'video' ? 'border-primary' : 'border-transparent hover:border-gray-300'}`}
-                >
-                  <Play className="w-8 h-8 text-gray-600" />
-                </button>
-              )}
-            </div>
+            <Tabs
+              defaultValue="image"
+              className="w-full"
+              onValueChange={(v) => setActiveMedia(v as 'image' | 'video')}
+            >
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="image">Imagem</TabsTrigger>
+                <TabsTrigger value="video" disabled={!videoUrl}>
+                  Vídeo MP4
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="image" className="mt-0">
+                <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
+                  <img
+                    src={imageUrl}
+                    alt={product.name}
+                    className="w-full h-full object-cover animate-fade-in"
+                    key={imageUrl}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="video" className="mt-0">
+                <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
+                  {videoUrl && (
+                    <video
+                      src={videoUrl}
+                      controls
+                      autoPlay
+                      className="w-full h-full object-cover bg-black animate-fade-in"
+                    />
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           <div className="flex flex-col animate-fade-in-up">
@@ -155,44 +159,36 @@ export default function ProductDetail() {
               </span>
             </div>
 
-            <p className="text-gray-600 mb-8 leading-relaxed whitespace-pre-wrap">
-              {product.description}
-            </p>
+            <div id="product-description" className="scroll-mt-24">
+              <p className="text-gray-600 mb-8 leading-relaxed whitespace-pre-wrap">
+                {product.description}
+              </p>
+            </div>
 
             <Separator className="mb-8" />
 
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <div className="flex items-center border border-gray-300 rounded-md h-12 w-32">
-                <button
-                  className="px-3 h-full text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors rounded-l-md"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <div className="flex-1 text-center font-medium">{quantity}</div>
-                <button
-                  className="px-3 h-full text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors rounded-r-md"
-                  onClick={() => setQuantity(quantity + 1)}
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-
               <Button
                 size="lg"
                 variant="outline"
                 className="flex-1 h-12 text-base border-primary text-primary hover:bg-primary/5 active:scale-95 transition-transform"
-                onClick={handleAddToCart}
+                onClick={() => {
+                  document
+                    .getElementById('product-description')
+                    ?.scrollIntoView({ behavior: 'smooth' })
+                }}
               >
-                Adicionar ao Carrinho
+                Saiba Mais
               </Button>
               <Button
                 size="lg"
                 className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform shadow-md"
-                onClick={handleAddToCart}
+                asChild
               >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Comprar Agora
+                <Link to={`/produto/${product.id}/compra`}>
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Adquira Agora
+                </Link>
               </Button>
             </div>
 

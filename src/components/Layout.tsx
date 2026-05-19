@@ -30,9 +30,9 @@ export default function Layout() {
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                V
+                S
               </div>
-              <span className="font-bold text-xl tracking-tight text-secondary">VendaPlus</span>
+              <span className="font-bold text-xl tracking-tight text-secondary">Skip Apps</span>
             </Link>
             <nav className="hidden md:flex gap-6">
               <Link
@@ -125,13 +125,13 @@ export default function Layout() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                V
+                S
               </div>
-              <span className="font-bold text-xl tracking-tight">VendaPlus</span>
+              <span className="font-bold text-xl tracking-tight">Skip Apps</span>
             </div>
             <p className="text-gray-400 text-sm mb-4 leading-relaxed">
-              Sua plataforma de compras premium. Encontre os melhores produtos com a melhor
-              experiência de compra e suporte dedicado.
+              Soluções profissionais e minimalistas para impulsionar o seu negócio. Inovação e alta
+              performance em cada aplicativo.
             </p>
             <div className="flex gap-4">
               <Button
@@ -200,7 +200,7 @@ export default function Layout() {
           </div>
         </div>
         <div className="container mx-auto px-4 mt-12 pt-8 border-t border-white/10 text-center text-sm text-gray-500">
-          <p>© 2024 VendaPlus - Todos os direitos reservados</p>
+          <p>© 2024 Skip Apps - Todos os direitos reservados</p>
         </div>
       </footer>
     </div>
