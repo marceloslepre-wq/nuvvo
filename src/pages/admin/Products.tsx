@@ -99,20 +99,25 @@ export default function AdminProducts() {
   })
 
   const handleEdit = async (p: any) => {
-  setFormData({
-    id: p.id || '',
-    name: p.name || '',
-    reference: p.reference || '',
-    description: p.description || '',
-    detailed_description: p.detailed_description || '',
-    price: p.price || 0,
-    status: p.status || 'active',
-    category: p.category || '',
-    rental_period: Array.isArray(p.rental_period) ? p.rental_period : (p.rental_period ? [p.rental_period] : []),
-    external_link: p.external_link || '',
-    order: p.order || 1,
-    variations: p.variations || [],
-  })    setMainImage(null)
+    setFormData({
+      id: p.id || '',
+      name: p.name || '',
+      reference: p.reference || '',
+      description: p.description || '',
+      detailed_description: p.detailed_description || '',
+      price: p.price || 0,
+      status: p.status || 'active',
+      category: p.category || '',
+      rental_period: Array.isArray(p.rental_period)
+        ? p.rental_period
+        : p.rental_period
+          ? [p.rental_period]
+          : [],
+      external_link: p.external_link || '',
+      order: p.order || 1,
+      variations: p.variations || [],
+    })
+    setMainImage(null)
     setMainVideo(null)
     setNewMediaVariation('')
     setNewMediaFile(null)
@@ -336,7 +341,9 @@ export default function AdminProducts() {
                 <TableCell>{p.reference || '-'}</TableCell>
                 <TableCell className="font-medium">{p.name}</TableCell>
                 <TableCell>
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price)}
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                    p.price,
+                  )}
                 </TableCell>
                 <TableCell>{p.status === 'active' ? 'Ativo' : 'Suspenso'}</TableCell>
                 <TableCell className="text-right space-x-2">
