@@ -55,7 +55,7 @@ export default function AdminProducts() {
     price: 0,
     status: 'active',
     category: '',
-    rental_period: '',
+    rental_period: [],
     external_link: '',
     order: 1,
     variations: [],
@@ -99,21 +99,20 @@ export default function AdminProducts() {
   })
 
   const handleEdit = async (p: any) => {
-    setFormData({
-      id: p.id || '',
-      name: p.name || '',
-      reference: p.reference || '',
-      description: p.description || '',
-      detailed_description: p.detailed_description || '',
-      price: p.price || 0,
-      status: p.status || 'active',
-      category: p.category || '',
-      rental_period: p.rental_period || '',
-      external_link: p.external_link || '',
-      order: p.order || 1,
-      variations: p.variations || [],
-    })
-    setMainImage(null)
+  setFormData({
+    id: p.id || '',
+    name: p.name || '',
+    reference: p.reference || '',
+    description: p.description || '',
+    detailed_description: p.detailed_description || '',
+    price: p.price || 0,
+    status: p.status || 'active',
+    category: p.category || '',
+    rental_period: Array.isArray(p.rental_period) ? p.rental_period : (p.rental_period ? [p.rental_period] : []),
+    external_link: p.external_link || '',
+    order: p.order || 1,
+    variations: p.variations || [],
+  })    setMainImage(null)
     setMainVideo(null)
     setNewMediaVariation('')
     setNewMediaFile(null)
@@ -223,7 +222,7 @@ export default function AdminProducts() {
     try {
       const form = new FormData()
       Object.keys(formData).forEach((k) => {
-        if (k === 'variations') {
+        if (k === 'variations' || k === 'rental_period') {
           if (formData[k].length === 0) {
             form.append(k, '')
           } else {
@@ -326,7 +325,7 @@ export default function AdminProducts() {
             <TableRow>
               <TableHead>Ref</TableHead>
               <TableHead>Nome</TableHead>
-              <TableHead>Valor</TableHead>
+              <TableHead>Valor da Diária</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -336,7 +335,9 @@ export default function AdminProducts() {
               <TableRow key={p.id}>
                 <TableCell>{p.reference || '-'}</TableCell>
                 <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell>R$ {p.price}</TableCell>
+                <TableCell>
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price)}
+                </TableCell>
                 <TableCell>{p.status === 'active' ? 'Ativo' : 'Suspenso'}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(p)}>
@@ -388,7 +389,7 @@ export default function AdminProducts() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Valor</Label>
+                <Label>Valor da Diária</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -454,23 +455,20 @@ export default function AdminProducts() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Prazo de Locação</Label>
-                <Select
+              <div className="space-y-2 col-span-2">
+                <Label>Prazos de Locação</Label>
+                <ToggleGroup
+                  type="multiple"
                   value={formData.rental_period}
                   onValueChange={(v) => setFormData({ ...formData, rental_period: v })}
+                  className="justify-start flex-wrap"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rentalPeriods.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        {r.name} ({r.days}d)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {rentalPeriods.map((r) => (
+                    <ToggleGroupItem key={r.id} value={r.id} className="border border-gray-200">
+                      {r.name} ({r.days}d)
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
               </div>
               <div className="space-y-2 col-span-2">
                 <Label>Descrição Curta</Label>

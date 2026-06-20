@@ -4,8 +4,6 @@ import { ChevronRight, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { useToast } from '@/components/ui/use-toast'
-import { useCart } from '@/contexts/cart-context'
 import { getProduct, getFileUrl, Product } from '@/services/products'
 import pb from '@/lib/pocketbase/client'
 
@@ -15,15 +13,11 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
 
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image')
-  const [quantity, setQuantity] = useState(1)
 
   const [productMedia, setProductMedia] = useState<any[]>([])
   const [productVariantDetails, setProductVariantDetails] = useState<any[]>([])
   const [selectedVariation, setSelectedVariation] = useState<string | null>(null)
   const [selectedRentalPeriod, setSelectedRentalPeriod] = useState<string | null>(null)
-
-  const { toast } = useToast()
-  const { increment } = useCart()
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -33,7 +27,6 @@ export default function ProductDetail() {
         const p = await getProduct(id)
         setProduct(p)
         setActiveMedia('image')
-        setQuantity(1)
         setSelectedRentalPeriod(null)
 
         try {
@@ -95,16 +88,6 @@ export default function ProductDetail() {
     )
   }
 
-  const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      increment()
-    }
-    toast({
-      title: 'Adicionado ao carrinho',
-      description: `${quantity}x ${product.name} adicionado com sucesso!`,
-    })
-  }
-
   const availableVariations = product.expand?.variations || []
   const availableRentalPeriods = product.expand?.rental_period
     ? Array.isArray(product.expand.rental_period)
@@ -115,6 +98,15 @@ export default function ProductDetail() {
   const currentVariantDetail = selectedVariation
     ? productVariantDetails.find((vd) => vd.variation === selectedVariation)
     : null
+
+  const selectedPeriodObj = availableRentalPeriods.find((rp: any) => rp.id === selectedRentalPeriod)
+  const displayPrice = selectedPeriodObj
+    ? Math.ceil(product.price * selectedPeriodObj.days)
+    : product.price
+
+  const canRent =
+    (!availableVariations.length || selectedVariation) &&
+    (!availableRentalPeriods.length || selectedRentalPeriod)
 
   let imageUrl = product.image
     ? getFileUrl(product, product.image)
@@ -191,15 +183,11 @@ export default function ProductDetail() {
 
             <div className="text-4xl font-bold text-primary mb-6">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                product.price,
+                displayPrice,
               )}
-              <span className="text-sm text-gray-500 font-normal block mt-1">
-                em até 12x de{' '}
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                  product.price / 12,
-                )}{' '}
-                sem juros
-              </span>
+              {!selectedPeriodObj && (
+                <span className="text-sm text-gray-500 font-normal block mt-1">por diária</span>
+              )}
             </div>
 
             {availableVariations.length > 0 && (
@@ -263,12 +251,20 @@ export default function ProductDetail() {
               <Button
                 size="lg"
                 className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform shadow-md"
-                asChild
+                disabled={!canRent}
+                asChild={!!canRent}
               >
-                <Link to={`/produto/${product.id}/compra`}>
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  Alugue Agora
-                </Link>
+                {canRent ? (
+                  <Link to={`/produto/${product.id}/compra`}>
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Alugue Agora
+                  </Link>
+                ) : (
+                  <span>
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Alugue Agora
+                  </span>
+                )}
               </Button>
             </div>
           </div>
