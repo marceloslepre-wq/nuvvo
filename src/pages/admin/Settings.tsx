@@ -242,7 +242,7 @@ export default function AdminSettings() {
 
         <TabsContent value="variations" className="space-y-4 pt-4">
           <form
-            onSubmit={(e) => handleAddSimple(e, 'variations')}
+            onSubmit={(e) => handleAddSimple(e, 'variations', 'category')}
             className="flex gap-2 mb-4 max-w-2xl"
           >
             <Input
