@@ -60,6 +60,19 @@ export default function ProductDetail() {
     loadProduct()
   }, [id])
 
+  const selectedMediaRecord = selectedVariation
+    ? productMedia.find((m) => m.variation === selectedVariation && m.file)
+    : null
+
+  useEffect(() => {
+    if (selectedMediaRecord) {
+      const isVideo = selectedMediaRecord.file.match(/\.(mp4|webm|ogg)$/i)
+      setActiveMedia(isVideo ? 'video' : 'image')
+    } else if (selectedVariation) {
+      setActiveMedia('image')
+    }
+  }, [selectedVariation, selectedMediaRecord])
+
   if (loading) {
     return (
       <div className="container mx-auto py-20 text-center animate-fade-in">
@@ -104,10 +117,6 @@ export default function ProductDetail() {
     ).values(),
   )
 
-  const selectedMediaRecord = selectedVariation
-    ? productMedia.find((m) => m.variation === selectedVariation && m.file)
-    : null
-
   let imageUrl = product.image
     ? getFileUrl(product, product.image)
     : `https://img.usecurling.com/p/800/800?q=tech&color=gray&seed=${product.id}`
@@ -121,15 +130,6 @@ export default function ProductDetail() {
       imageUrl = pb.files.getURL(selectedMediaRecord, selectedMediaRecord.file)
     }
   }
-
-  useEffect(() => {
-    if (selectedMediaRecord) {
-      const isVideo = selectedMediaRecord.file.match(/\.(mp4|webm|ogg)$/i)
-      setActiveMedia(isVideo ? 'video' : 'image')
-    } else if (selectedVariation) {
-      setActiveMedia('image')
-    }
-  }, [selectedVariation, selectedMediaRecord])
 
   return (
     <div className="bg-white min-h-screen py-8">
