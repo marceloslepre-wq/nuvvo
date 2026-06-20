@@ -6,28 +6,40 @@ import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/contexts/cart-context'
 import { getActiveProducts, getFileUrl, Product } from '@/services/products'
 import { useRealtime } from '@/hooks/use-realtime'
+import pb from '@/lib/pocketbase/client'
 
 export default function Index() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { increment } = useCart()
   const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [heroMedia, setHeroMedia] = useState<string>('')
 
-  const loadProducts = async () => {
+  const loadData = async () => {
     try {
       const data = await getActiveProducts()
       setProducts(data)
+      const cats = await pb.collection('categories').getFullList()
+      setCategories(cats)
+      const settings = await pb
+        .collection('site_settings')
+        .getFirstListItem('')
+        .catch(() => null)
+      if (settings && settings.hero_media) {
+        setHeroMedia(pb.files.getURL(settings, settings.hero_media))
+      }
     } catch (error) {
-      console.error('Failed to load products:', error)
+      console.error('Failed to load data:', error)
     }
   }
 
   useEffect(() => {
-    loadProducts()
+    loadData()
   }, [])
 
   useRealtime('products', () => {
-    loadProducts()
+    loadData()
   })
 
   const scroll = (direction: 'left' | 'right') => {
@@ -53,11 +65,26 @@ export default function Index() {
     <div className="w-full">
       <section className="relative h-[80vh] min-h-[500px] max-h-[800px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img
-            src="https://img.usecurling.com/p/1920/1080?q=business&color=blue&dpr=2"
-            alt="Hero Background"
-            className="w-full h-full object-cover"
-          />
+          {heroMedia ? (
+            heroMedia.match(/\.(mp4|webm|ogg)$/i) ? (
+              <video
+                src={heroMedia}
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img src={heroMedia} alt="Hero Background" className="w-full h-full object-cover" />
+            )
+          ) : (
+            <img
+              src="https://img.usecurling.com/p/1920/1080?q=business&color=blue&dpr=2"
+              alt="Hero Background"
+              className="w-full h-full object-cover"
+            />
+          )}
           <div className="absolute inset-0 bg-secondary/80"></div>
         </div>
 
@@ -82,6 +109,23 @@ export default function Index() {
           </div>
         </div>
       </section>
+
+      {categories.length > 0 && (
+        <section className="py-8 bg-white border-b">
+          <div className="container mx-auto px-4">
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x pb-4">
+              {categories.map((c) => (
+                <div
+                  key={c.id}
+                  className="snap-center whitespace-nowrap px-6 py-2 bg-gray-100 rounded-full font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors cursor-pointer"
+                >
+                  {c.name}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section id="destaques" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">

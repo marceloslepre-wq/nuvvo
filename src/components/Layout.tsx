@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import pb from '@/lib/pocketbase/client'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { ShoppingCart, Search, Menu, Facebook, Twitter, Instagram, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,14 @@ import { useCart } from '@/contexts/cart-context'
 export default function Layout() {
   const { count } = useCart()
   const { pathname, hash } = useLocation()
+  const [locations, setLocations] = useState<any[]>([])
+
+  useEffect(() => {
+    pb.collection('pickup_locations')
+      .getFullList()
+      .then(setLocations)
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (hash) {
@@ -52,6 +61,12 @@ export default function Layout() {
                 className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
               >
                 Contato
+              </Link>
+              <Link
+                to="/admin"
+                className="text-sm font-medium text-primary hover:text-primary/80 transition-colors bg-primary/10 px-3 py-1 rounded-md"
+              >
+                Painel
               </Link>
             </nav>
           </div>
@@ -109,6 +124,14 @@ export default function Layout() {
                       Contato
                     </Link>
                   </SheetClose>
+                  <SheetClose asChild>
+                    <Link
+                      to="/admin"
+                      className="text-lg font-medium text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Painel Administrativo
+                    </Link>
+                  </SheetClose>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -158,6 +181,23 @@ export default function Layout() {
             </div>
           </div>
           <div>
+            {locations.length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-semibold text-lg mb-4 text-white">Locais de Retirada</h3>
+                <ul className="space-y-3 text-sm text-gray-400">
+                  {locations.map((l) => (
+                    <li key={l.id}>
+                      <span className="block text-white font-medium">
+                        {l.city} - {l.state}
+                      </span>
+                      {l.street}, {l.number} - {l.neighborhood}
+                      <br />
+                      {l.hours}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <h3 className="font-semibold text-lg mb-4 text-white">Links Rápidos</h3>
             <ul className="space-y-3 text-sm text-gray-400">
               <li>
@@ -187,16 +227,31 @@ export default function Layout() {
             <p className="text-gray-400 text-sm mb-4">
               Inscreva-se para receber ofertas exclusivas e novidades.
             </p>
-            <div className="flex gap-2">
+            <form
+              className="flex gap-2"
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const fd = new FormData(e.currentTarget)
+                try {
+                  await pb.collection('newsletter_subscribers').create({ email: fd.get('email') })
+                  e.currentTarget.reset()
+                  alert('Inscrito com sucesso!')
+                } catch (err) {
+                  alert('Erro ao inscrever.')
+                }
+              }}
+            >
               <input
+                name="email"
                 type="email"
+                required
                 placeholder="Seu e-mail"
                 className="bg-white/10 border border-white/20 rounded-md px-3 py-2 text-sm w-full text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition-all"
               />
-              <Button className="bg-primary hover:bg-primary/90 text-white">
+              <Button type="submit" className="bg-primary hover:bg-primary/90 text-white">
                 <Mail className="h-4 w-4" />
               </Button>
-            </div>
+            </form>
           </div>
         </div>
         <div className="container mx-auto px-4 mt-12 pt-8 border-t border-white/10 text-center text-sm text-gray-500">
