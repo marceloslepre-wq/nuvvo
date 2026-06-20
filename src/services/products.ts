@@ -9,6 +9,10 @@ export interface Product extends RecordModel {
   video: string
   status: 'active' | 'inactive'
   order: number
+  variations?: string[]
+  expand?: {
+    variations?: any[]
+  }
 }
 
 export const getActiveProducts = async (): Promise<Product[]> => {
@@ -19,7 +23,7 @@ export const getActiveProducts = async (): Promise<Product[]> => {
 }
 
 export const getProduct = async (id: string): Promise<Product> => {
-  return pb.collection<Product>('products').getOne(id)
+  return pb.collection<Product>('products').getOne(id, { expand: 'variations' })
 }
 
 export const getFileUrl = (record: RecordModel, filename: string): string => {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T18:39:39.489Z",
+  "generatedAt": "2026-06-20T18:54:25.759Z",
   "collections": [
     {
       "name": "users",
@@ -156,11 +156,19 @@
           "required": false,
           "system": false,
           "collectionRef": "categories"
+        },
+        {
+          "name": "variations",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "variations"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_products_order ON products (`order`)",
-        "CREATE INDEX idx_products_status ON products (status)"
+        "CREATE INDEX idx_products_status ON products (status)",
+        "CREATE INDEX `idx_products_variations` ON `products` (variations)"
       ]
     },
     {

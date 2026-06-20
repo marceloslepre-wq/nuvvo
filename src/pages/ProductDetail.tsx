@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/components/ui/use-toast'
 import { useCart } from '@/contexts/cart-context'
 import { getProduct, getActiveProducts, getFileUrl, Product } from '@/services/products'
+import pb from '@/lib/pocketbase/client'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
@@ -109,13 +110,7 @@ export default function ProductDetail() {
     }
   }
 
-  const availableVariations = Array.from(
-    new Map(
-      productMedia
-        .filter((m) => m.expand?.variation)
-        .map((m) => [m.expand.variation.id, m.expand.variation]),
-    ).values(),
-  )
+  const availableVariations = product.expand?.variations || []
 
   let imageUrl = product.image
     ? getFileUrl(product, product.image)
@@ -150,6 +145,7 @@ export default function ProductDetail() {
           <div className="space-y-4">
             <Tabs
               defaultValue="image"
+              value={activeMedia}
               className="w-full"
               onValueChange={(v) => setActiveMedia(v as 'image' | 'video')}
             >
@@ -204,9 +200,9 @@ export default function ProductDetail() {
 
             {availableVariations.length > 0 && (
               <div className="mb-8 animate-fade-in">
-                <h3 className="text-sm font-medium text-gray-900 mb-3">Variações disponíveis:</h3>
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Selecione uma opção:</h3>
                 <div className="flex flex-wrap gap-2">
-                  {availableVariations.map((v) => (
+                  {availableVariations.map((v: any) => (
                     <button
                       key={v.id}
                       onClick={() => setSelectedVariation(selectedVariation === v.id ? null : v.id)}

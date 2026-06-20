@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Pencil, Trash2, Plus, Search, PowerOff } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
@@ -35,8 +36,13 @@ export default function AdminProducts() {
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
   const [variations, setVariations] = useState<any[]>([])
   const [productMedia, setProductMedia] = useState<any[]>([])
+
   const [newMediaVariation, setNewMediaVariation] = useState('')
   const [newMediaFile, setNewMediaFile] = useState<File | null>(null)
+
+  const [pendingMedia, setPendingMedia] = useState<
+    Array<{ tempId: string; variationId: string; file: File; variationName: string }>
+  >([])
 
   const [formData, setFormData] = useState<any>({
     id: '',
@@ -50,6 +56,7 @@ export default function AdminProducts() {
     rental_period: '',
     external_link: '',
     order: 1,
+    variations: [],
   })
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [mainVideo, setMainVideo] = useState<File | null>(null)
@@ -58,7 +65,7 @@ export default function AdminProducts() {
     try {
       const filter = search ? `name ~ "${search}" || reference ~ "${search}"` : ''
       const [pRes, cRes, rRes, vRes] = await Promise.all([
-        pb.collection('products').getFullList({ filter, sort: '-created' }),
+        pb.collection('products').getFullList({ filter, sort: '-created', expand: 'variations' }),
         pb.collection('categories').getFullList(),
         pb.collection('rental_periods').getFullList(),
         pb.collection('variations').getFullList(),
@@ -102,11 +109,13 @@ export default function AdminProducts() {
       rental_period: p.rental_period || '',
       external_link: p.external_link || '',
       order: p.order || 1,
+      variations: p.variations || [],
     })
     setMainImage(null)
     setMainVideo(null)
     setNewMediaVariation('')
     setNewMediaFile(null)
+    setPendingMedia([])
 
     if (p.id) {
       try {
@@ -141,23 +150,36 @@ export default function AdminProducts() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const handleAddMedia = async () => {
-    if (!formData.id || !newMediaVariation) return
+    if (!newMediaVariation || !newMediaFile) return
     setLoading(true)
     try {
-      const form = new FormData()
-      form.append('product', formData.id)
-      form.append('variation', newMediaVariation)
-      if (newMediaFile) form.append('file', newMediaFile)
+      if (formData.id) {
+        const form = new FormData()
+        form.append('product', formData.id)
+        form.append('variation', newMediaVariation)
+        form.append('file', newMediaFile)
 
-      await pb.collection('product_media').create(form)
+        await pb.collection('product_media').create(form)
 
-      const pm = await pb
-        .collection('product_media')
-        .getFullList({ filter: `product='${formData.id}'`, expand: 'variation' })
-      setProductMedia(pm)
+        const pm = await pb
+          .collection('product_media')
+          .getFullList({ filter: `product='${formData.id}'`, expand: 'variation' })
+        setProductMedia(pm)
+        toast({ title: 'Sucesso', description: 'Mídia de variação adicionada!' })
+      } else {
+        const variationName = variations.find((v) => v.id === newMediaVariation)?.name || ''
+        setPendingMedia([
+          ...pendingMedia,
+          {
+            tempId: Math.random().toString(),
+            variationId: newMediaVariation,
+            file: newMediaFile,
+            variationName,
+          },
+        ])
+      }
       setNewMediaVariation('')
       setNewMediaFile(null)
-      toast({ title: 'Sucesso', description: 'Mídia de variação adicionada!' })
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     }
@@ -177,6 +199,10 @@ export default function AdminProducts() {
     }
   }
 
+  const handleDeletePendingMedia = (tempId: string) => {
+    setPendingMedia(pendingMedia.filter((m) => m.tempId !== tempId))
+  }
+
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -184,7 +210,15 @@ export default function AdminProducts() {
     try {
       const form = new FormData()
       Object.keys(formData).forEach((k) => {
-        if (k !== 'id') form.append(k, formData[k])
+        if (k === 'variations') {
+          if (formData[k].length === 0) {
+            form.append(k, '')
+          } else {
+            formData[k].forEach((vId: string) => form.append(k, vId))
+          }
+        } else if (k !== 'id') {
+          form.append(k, formData[k])
+        }
       })
       if (mainImage) form.append('image', mainImage)
       if (mainVideo) form.append('video', mainVideo)
@@ -192,7 +226,14 @@ export default function AdminProducts() {
       if (formData.id) {
         await pb.collection('products').update(formData.id, form)
       } else {
-        await pb.collection('products').create(form)
+        const newProd = await pb.collection('products').create(form)
+        for (const pm of pendingMedia) {
+          const pmForm = new FormData()
+          pmForm.append('product', newProd.id)
+          pmForm.append('variation', pm.variationId)
+          pmForm.append('file', pm.file)
+          await pb.collection('product_media').create(pmForm)
+        }
       }
       toast({ title: 'Sucesso', description: 'Produto salvo!' })
       setIsOpen(false)
@@ -212,6 +253,8 @@ export default function AdminProducts() {
     }
     setLoading(false)
   }
+
+  const availableVariationsForMedia = variations.filter((v) => formData.variations.includes(v.id))
 
   return (
     <div className="space-y-6">
@@ -310,6 +353,21 @@ export default function AdminProducts() {
                   required
                 />
               </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Variações</Label>
+                <ToggleGroup
+                  type="multiple"
+                  value={formData.variations}
+                  onValueChange={(v) => setFormData({ ...formData, variations: v })}
+                  className="justify-start flex-wrap"
+                >
+                  {variations.map((v) => (
+                    <ToggleGroupItem key={v.id} value={v.id} className="border border-gray-200">
+                      {v.name}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
               <div className="space-y-2">
                 <Label>Categoria</Label>
                 <Select
@@ -389,14 +447,7 @@ export default function AdminProducts() {
                 />
               </div>
             </div>
-            <div className="pt-4 border-t">
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
-          </form>
 
-          {formData.id && (
             <div className="mt-8 pt-6 border-t space-y-4">
               <h3 className="font-semibold text-lg">Mídias por Variação</h3>
 
@@ -408,7 +459,12 @@ export default function AdminProducts() {
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {variations.map((v) => (
+                      {availableVariationsForMedia.length === 0 && (
+                        <SelectItem value="_empty" disabled>
+                          Selecione variações acima primeiro
+                        </SelectItem>
+                      )}
+                      {availableVariationsForMedia.map((v) => (
                         <SelectItem key={v.id} value={v.id}>
                           {v.name}
                         </SelectItem>
@@ -427,14 +483,16 @@ export default function AdminProducts() {
                 <Button
                   type="button"
                   onClick={handleAddMedia}
-                  disabled={loading || !newMediaVariation}
+                  disabled={
+                    loading || !newMediaVariation || !newMediaFile || newMediaVariation === '_empty'
+                  }
                   className="col-span-2"
                 >
-                  <Plus className="h-4 w-4 mr-2" /> Adicionar Variação
+                  <Plus className="h-4 w-4 mr-2" /> Adicionar Mídia
                 </Button>
               </div>
 
-              {productMedia.length > 0 && (
+              {(productMedia.length > 0 || pendingMedia.length > 0) && (
                 <div className="mt-4 space-y-2">
                   {productMedia.map((pm) => (
                     <div
@@ -458,10 +516,34 @@ export default function AdminProducts() {
                       </div>
                     </div>
                   ))}
+                  {pendingMedia.map((pm) => (
+                    <div
+                      key={pm.tempId}
+                      className="flex items-center justify-between p-2 border rounded text-sm bg-gray-50"
+                    >
+                      <span className="font-medium">{pm.variationName} (Não salvo)</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 truncate max-w-[150px]">{pm.file.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeletePendingMedia(pm.tempId)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          )}
+
+            <div className="pt-4 border-t mt-4">
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Salvando...' : 'Salvar Produto'}
+              </Button>
+            </div>
+          </form>
         </SheetContent>
       </Sheet>
     </div>
