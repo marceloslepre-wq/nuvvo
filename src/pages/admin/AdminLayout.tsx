@@ -10,11 +10,21 @@ export default function AdminLayout() {
   const { pathname } = useLocation()
 
   const links = [
-    { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard Gerencial' },
-    { to: '/admin/products', icon: Package, label: 'Produtos' },
-    { to: '/admin/settings', icon: Settings, label: 'Configurações' },
-    { to: '/admin/layout', icon: LayoutTemplate, label: 'Layout Página Principal' },
-  ]
+    {
+      to: '/admin/dashboard',
+      icon: LayoutDashboard,
+      label: 'Dashboard Gerencial',
+      roles: ['gestor', 'funcionario'],
+    },
+    { to: '/admin/products', icon: Package, label: 'Produtos', roles: ['gestor', 'funcionario'] },
+    { to: '/admin/settings', icon: Settings, label: 'Configurações', roles: ['gestor'] },
+    {
+      to: '/admin/layout',
+      icon: LayoutTemplate,
+      label: 'Layout Página Principal',
+      roles: ['gestor'],
+    },
+  ].filter((link) => link.roles.includes(user?.role || 'gestor'))
 
   const NavLinks = () => (
     <>

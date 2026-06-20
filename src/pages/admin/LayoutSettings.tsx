@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,8 +17,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Plus, Trash2 } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export default function AdminLayoutSettings() {
+  const { user } = useAuth()
   const [settings, setSettings] = useState<any>(null)
   const [locations, setLocations] = useState<any[]>([])
 
@@ -36,6 +40,13 @@ export default function AdminLayoutSettings() {
     loadData()
   }, [])
 
+  useRealtime('site_settings', () => {
+    loadData()
+  })
+  useRealtime('pickup_locations', () => {
+    loadData()
+  })
+
   const saveSettings = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
@@ -44,7 +55,16 @@ export default function AdminLayoutSettings() {
       toast({ title: 'Sucesso', description: 'Configurações salvas.' })
       loadData()
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+      const errObj = err.response?.data
+      let errMsg = err.message
+      if (errObj && typeof errObj === 'object') {
+        errMsg =
+          Object.values(errObj)
+            .map((e: any) => e?.message)
+            .filter(Boolean)
+            .join(' ') || errMsg
+      }
+      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
     }
   }
 
@@ -57,7 +77,16 @@ export default function AdminLayoutSettings() {
       e.currentTarget.reset()
       toast({ title: 'Local Adicionado' })
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+      const errObj = err.response?.data
+      let errMsg = err.message
+      if (errObj && typeof errObj === 'object') {
+        errMsg =
+          Object.values(errObj)
+            .map((e: any) => e?.message)
+            .filter(Boolean)
+            .join(' ') || errMsg
+      }
+      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
     }
   }
 
@@ -65,6 +94,10 @@ export default function AdminLayoutSettings() {
     if (!confirm('Excluir?')) return
     await pb.collection('pickup_locations').delete(id)
     loadData()
+  }
+
+  if (user?.role !== 'gestor') {
+    return <Navigate to="/admin/dashboard" />
   }
 
   if (!settings) return null

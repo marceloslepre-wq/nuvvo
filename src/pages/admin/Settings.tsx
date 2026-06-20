@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table'
 import { toast } from '@/components/ui/use-toast'
 import { Plus, Trash2 } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
 import {
   Select,
   SelectContent,
@@ -21,7 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
+
 export default function AdminSettings() {
+  const { user } = useAuth()
   const [users, setUsers] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [variations, setVariations] = useState<any[]>([])
@@ -43,6 +48,19 @@ export default function AdminSettings() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useRealtime('users', () => {
+    loadData()
+  })
+  useRealtime('categories', () => {
+    loadData()
+  })
+  useRealtime('variations', () => {
+    loadData()
+  })
+  useRealtime('rental_periods', () => {
+    loadData()
+  })
 
   const deleteRecord = async (col: string, id: string) => {
     if (!confirm('Excluir?')) return
@@ -66,7 +84,16 @@ export default function AdminSettings() {
       e.currentTarget.reset()
       toast({ title: 'Usuário Adicionado' })
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+      const errObj = err.response?.data
+      let errMsg = err.message
+      if (errObj && typeof errObj === 'object') {
+        errMsg =
+          Object.values(errObj)
+            .map((e: any) => e?.message)
+            .filter(Boolean)
+            .join(' ') || errMsg
+      }
+      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
     }
   }
 
@@ -85,8 +112,21 @@ export default function AdminSettings() {
       e.currentTarget.reset()
       toast({ title: 'Adicionado' })
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+      const errObj = err.response?.data
+      let errMsg = err.message
+      if (errObj && typeof errObj === 'object') {
+        errMsg =
+          Object.values(errObj)
+            .map((e: any) => e?.message)
+            .filter(Boolean)
+            .join(' ') || errMsg
+      }
+      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
     }
+  }
+
+  if (user?.role !== 'gestor') {
+    return <Navigate to="/admin/dashboard" />
   }
 
   return (

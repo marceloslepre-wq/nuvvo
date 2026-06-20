@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Pencil, Trash2, Plus, Search, PowerOff } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
+import { extractFieldErrors } from '@/lib/pocketbase/errors'
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([])
@@ -31,6 +33,10 @@ export default function AdminProducts() {
 
   const [categories, setCategories] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
+  const [variations, setVariations] = useState<any[]>([])
+  const [productMedia, setProductMedia] = useState<any[]>([])
+  const [newMediaVariation, setNewMediaVariation] = useState('')
+  const [newMediaFile, setNewMediaFile] = useState<File | null>(null)
 
   const [formData, setFormData] = useState<any>({
     id: '',
@@ -51,14 +57,16 @@ export default function AdminProducts() {
   const loadData = async () => {
     try {
       const filter = search ? `name ~ "${search}" || reference ~ "${search}"` : ''
-      const [pRes, cRes, rRes] = await Promise.all([
+      const [pRes, cRes, rRes, vRes] = await Promise.all([
         pb.collection('products').getFullList({ filter, sort: '-created' }),
         pb.collection('categories').getFullList(),
         pb.collection('rental_periods').getFullList(),
+        pb.collection('variations').getFullList(),
       ])
       setProducts(pRes)
       setCategories(cRes)
       setRentalPeriods(rRes)
+      setVariations(vRes)
     } catch {
       /* intentionally ignored */
     }
@@ -68,7 +76,20 @@ export default function AdminProducts() {
     loadData()
   }, [search])
 
-  const handleEdit = (p: any) => {
+  useRealtime('products', () => {
+    loadData()
+  })
+  useRealtime('categories', () => {
+    loadData()
+  })
+  useRealtime('rental_periods', () => {
+    loadData()
+  })
+  useRealtime('variations', () => {
+    loadData()
+  })
+
+  const handleEdit = async (p: any) => {
     setFormData({
       id: p.id || '',
       name: p.name || '',
@@ -84,6 +105,22 @@ export default function AdminProducts() {
     })
     setMainImage(null)
     setMainVideo(null)
+    setNewMediaVariation('')
+    setNewMediaFile(null)
+
+    if (p.id) {
+      try {
+        const pm = await pb
+          .collection('product_media')
+          .getFullList({ filter: `product='${p.id}'`, expand: 'variation' })
+        setProductMedia(pm)
+      } catch {
+        setProductMedia([])
+      }
+    } else {
+      setProductMedia([])
+    }
+
     setIsOpen(true)
   }
 
@@ -101,9 +138,49 @@ export default function AdminProducts() {
     loadData()
   }
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  const handleAddMedia = async () => {
+    if (!formData.id || !newMediaVariation) return
+    setLoading(true)
+    try {
+      const form = new FormData()
+      form.append('product', formData.id)
+      form.append('variation', newMediaVariation)
+      if (newMediaFile) form.append('file', newMediaFile)
+
+      await pb.collection('product_media').create(form)
+
+      const pm = await pb
+        .collection('product_media')
+        .getFullList({ filter: `product='${formData.id}'`, expand: 'variation' })
+      setProductMedia(pm)
+      setNewMediaVariation('')
+      setNewMediaFile(null)
+      toast({ title: 'Sucesso', description: 'Mídia de variação adicionada!' })
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    }
+    setLoading(false)
+  }
+
+  const handleDeleteMedia = async (id: string) => {
+    if (!confirm('Excluir mídia?')) return
+    try {
+      await pb.collection('product_media').delete(id)
+      const pm = await pb
+        .collection('product_media')
+        .getFullList({ filter: `product='${formData.id}'`, expand: 'variation' })
+      setProductMedia(pm)
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    }
+  }
+
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setFieldErrors({})
     try {
       const form = new FormData()
       Object.keys(formData).forEach((k) => {
@@ -121,7 +198,17 @@ export default function AdminProducts() {
       setIsOpen(false)
       loadData()
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+      const errs = extractFieldErrors(err)
+      if (Object.keys(errs).length > 0) {
+        setFieldErrors(errs)
+        toast({
+          title: 'Campos inválidos',
+          description: 'Verifique os campos destacados.',
+          variant: 'destructive',
+        })
+      } else {
+        toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+      }
     }
     setLoading(false)
   }
@@ -202,6 +289,9 @@ export default function AdminProducts() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
+                {fieldErrors.name && (
+                  <span className="text-red-500 text-xs">{fieldErrors.name}</span>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Referência</Label>
@@ -305,6 +395,73 @@ export default function AdminProducts() {
               </Button>
             </div>
           </form>
+
+          {formData.id && (
+            <div className="mt-8 pt-6 border-t space-y-4">
+              <h3 className="font-semibold text-lg">Mídias por Variação</h3>
+
+              <div className="grid grid-cols-2 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label>Variação</Label>
+                  <Select value={newMediaVariation} onValueChange={setNewMediaVariation}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {variations.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Arquivo (Imagem/Vídeo)</Label>
+                  <Input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={(e) => setNewMediaFile(e.target.files?.[0] || null)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleAddMedia}
+                  disabled={loading || !newMediaVariation}
+                  className="col-span-2"
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Adicionar Variação
+                </Button>
+              </div>
+
+              {productMedia.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {productMedia.map((pm) => (
+                    <div
+                      key={pm.id}
+                      className="flex items-center justify-between p-2 border rounded text-sm"
+                    >
+                      <span className="font-medium">
+                        {pm.expand?.variation?.name || 'Variação desconhecida'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 truncate max-w-[150px]">
+                          {pm.file ? pm.file : 'Sem arquivo'}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteMedia(pm.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>

@@ -20,6 +20,9 @@ export default function ProductDetail() {
   const [cep, setCep] = useState('')
   const [freight, setFreight] = useState<{ value: number; days: number } | null>(null)
 
+  const [productMedia, setProductMedia] = useState<any[]>([])
+  const [selectedVariation, setSelectedVariation] = useState<string | null>(null)
+
   const { toast } = useToast()
   const { increment } = useCart()
 
@@ -37,6 +40,16 @@ export default function ProductDetail() {
 
         const allProducts = await getActiveProducts()
         setRelatedProducts(allProducts.filter((item) => item.id !== id).slice(0, 4))
+
+        try {
+          const pm = await pb
+            .collection('product_media')
+            .getFullList({ filter: `product='${id}'`, expand: 'variation' })
+          setProductMedia(pm)
+        } catch (e) {
+          setProductMedia([])
+        }
+        setSelectedVariation(null)
       } catch (error) {
         console.error('Product not found', error)
         setProduct(null)
@@ -83,10 +96,40 @@ export default function ProductDetail() {
     }
   }
 
-  const imageUrl = product.image
+  const availableVariations = Array.from(
+    new Map(
+      productMedia
+        .filter((m) => m.expand?.variation)
+        .map((m) => [m.expand.variation.id, m.expand.variation]),
+    ).values(),
+  )
+
+  const selectedMediaRecord = selectedVariation
+    ? productMedia.find((m) => m.variation === selectedVariation && m.file)
+    : null
+
+  let imageUrl = product.image
     ? getFileUrl(product, product.image)
     : `https://img.usecurling.com/p/800/800?q=tech&color=gray&seed=${product.id}`
-  const videoUrl = product.video ? getFileUrl(product, product.video) : ''
+  let videoUrl = product.video ? getFileUrl(product, product.video) : ''
+
+  if (selectedMediaRecord) {
+    const isVideo = selectedMediaRecord.file.match(/\.(mp4|webm|ogg)$/i)
+    if (isVideo) {
+      videoUrl = pb.files.getURL(selectedMediaRecord, selectedMediaRecord.file)
+    } else {
+      imageUrl = pb.files.getURL(selectedMediaRecord, selectedMediaRecord.file)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedMediaRecord) {
+      const isVideo = selectedMediaRecord.file.match(/\.(mp4|webm|ogg)$/i)
+      setActiveMedia(isVideo ? 'video' : 'image')
+    } else if (selectedVariation) {
+      setActiveMedia('image')
+    }
+  }, [selectedVariation, selectedMediaRecord])
 
   return (
     <div className="bg-white min-h-screen py-8">
@@ -158,6 +201,27 @@ export default function ProductDetail() {
                 sem juros
               </span>
             </div>
+
+            {availableVariations.length > 0 && (
+              <div className="mb-8 animate-fade-in">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Variações disponíveis:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {availableVariations.map((v) => (
+                    <button
+                      key={v.id}
+                      onClick={() => setSelectedVariation(selectedVariation === v.id ? null : v.id)}
+                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+                        selectedVariation === v.id
+                          ? 'bg-primary border-primary text-white shadow-md'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-primary hover:text-primary'
+                      }`}
+                    >
+                      {v.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div id="product-description" className="scroll-mt-24">
               <p className="text-gray-600 mb-8 leading-relaxed whitespace-pre-wrap">
