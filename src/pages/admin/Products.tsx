@@ -394,7 +394,37 @@ export default function AdminProducts() {
           <form onSubmit={saveProduct} className="space-y-4 mt-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
-                <Label>Nome</Label>
+                <Label>Categoria</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(v) => {
+                    const validVariations = (formData.variations || []).filter(
+                      (vId: string) => variations.find((va: any) => va.id === vId)?.category === v,
+                    )
+                    const newVariantDetails = { ...variantDetails }
+                    Object.keys(newVariantDetails).forEach((key) => {
+                      if (!validVariations.includes(key)) {
+                        delete newVariantDetails[key]
+                      }
+                    })
+                    setVariantDetails(newVariantDetails)
+                    setFormData({ ...formData, category: v, variations: validVariations })
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Nome do Produto</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -416,21 +446,35 @@ export default function AdminProducts() {
               </div>
               <div className="space-y-2 col-span-2">
                 <Label>Variações</Label>
-                <ToggleGroup
-                  type="multiple"
-                  value={formData.variations}
-                  onValueChange={(v) => setFormData({ ...formData, variations: v })}
-                  className="justify-start flex-wrap"
-                >
-                  {variations.map((v) => (
-                    <ToggleGroupItem key={v.id} value={v.id} className="border border-gray-200">
-                      {v.name}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                {!formData.category ? (
+                  <p className="text-sm text-gray-500 italic">
+                    Selecione uma categoria primeiro para ver as variações.
+                  </p>
+                ) : (
+                  <ToggleGroup
+                    type="multiple"
+                    value={formData.variations}
+                    onValueChange={(v) => setFormData({ ...formData, variations: v })}
+                    className="justify-start flex-wrap"
+                  >
+                    {variations
+                      .filter((v: any) => v.category === formData.category)
+                      .map((v: any) => (
+                        <ToggleGroupItem key={v.id} value={v.id} className="border border-gray-200">
+                          {v.name}
+                        </ToggleGroupItem>
+                      ))}
+                    {variations.filter((v: any) => v.category === formData.category).length ===
+                      0 && (
+                      <p className="text-sm text-gray-500 italic">
+                        Nenhuma variação encontrada para esta categoria.
+                      </p>
+                    )}
+                  </ToggleGroup>
+                )}
               </div>
 
-              {formData.variations.length === 0 && (
+              {(formData.variations || []).length === 0 && (
                 <div className="space-y-2 col-span-2">
                   <Label>Referência do Produto</Label>
                   <Input
@@ -441,12 +485,12 @@ export default function AdminProducts() {
                 </div>
               )}
 
-              {formData.variations.length > 0 && (
+              {(formData.variations || []).length > 0 && (
                 <div className="space-y-3 col-span-2 mt-2 p-4 border border-dashed rounded-md bg-gray-50/50">
                   <Label>Referências por Variação</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {formData.variations.map((vId: string) => {
-                      const vName = variations.find((v) => v.id === vId)?.name
+                    {(formData.variations || []).map((vId: string) => {
+                      const vName = variations.find((v: any) => v.id === vId)?.name
                       return (
                         <div key={vId} className="space-y-1">
                           <Label className="text-xs text-gray-500">{vName}</Label>
@@ -464,26 +508,8 @@ export default function AdminProducts() {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(v) => setFormData({ ...formData, category: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-2 col-span-2">
-                <Label>Prazos de Locação</Label>
+                <Label>Prazos de Locação</Label>{' '}
                 <ToggleGroup
                   type="multiple"
                   value={formData.rental_period}

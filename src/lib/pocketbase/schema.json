@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T20:56:06.397Z",
+  "generatedAt": "2026-06-20T21:14:34.997Z",
   "collections": [
     {
       "name": "users",
@@ -235,9 +235,16 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "category",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "categories"
         }
       ],
-      "indexes": []
+      "indexes": ["CREATE INDEX `idx_variations_category` ON `variations` (category)"]
     },
     {
       "name": "rental_periods",

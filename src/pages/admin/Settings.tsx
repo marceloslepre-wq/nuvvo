@@ -243,25 +243,49 @@ export default function AdminSettings() {
         <TabsContent value="variations" className="space-y-4 pt-4">
           <form
             onSubmit={(e) => handleAddSimple(e, 'variations')}
-            className="flex gap-2 mb-4 max-w-md"
+            className="flex gap-2 mb-4 max-w-2xl"
           >
-            <Input name="name" placeholder="Nova Variação (ex: Tam 44)..." required />
+            <Input
+              name="name"
+              placeholder="Nova Variação (ex: Tam 44)..."
+              required
+              className="flex-1"
+            />
+            <select
+              name="category"
+              required
+              className="flex h-9 w-[200px] items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Selecione a Categoria
+              </option>
+              {categories.map((cat: any) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
             <Button type="submit">
               <Plus className="h-4 w-4" />
             </Button>
           </form>
-          <div className="bg-white border rounded-md max-w-xl">
+          <div className="bg-white border rounded-md max-w-2xl">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Categoria</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {variations.map((c) => (
+                {variations.map((c: any) => (
                   <TableRow key={c.id}>
                     <TableCell>{c.name}</TableCell>
+                    <TableCell>
+                      {categories.find((cat: any) => cat.id === c.category)?.name || '-'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
