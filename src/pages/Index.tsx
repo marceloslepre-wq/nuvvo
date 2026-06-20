@@ -88,26 +88,7 @@ export default function Index() {
           <div className="absolute inset-0 bg-secondary/80"></div>
         </div>
 
-        <div className="container mx-auto px-4 z-10 text-center text-white">
-          <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
-              Transforme Seu Negócio com Aplicativos Skip
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300">
-              Descubra nossa seleção de aplicativos profissionais projetados para escalar e inovar
-              sua empresa. Soluções de alta performance prontas para você.
-            </p>
-            <div className="pt-4">
-              <Button
-                size="lg"
-                className="text-base px-8 h-14 rounded-full bg-primary hover:bg-primary/90 text-white shadow-lg transition-transform scale-100 hover:scale-105 active:scale-95"
-                asChild
-              >
-                <Link to="/#destaques">Ver Ofertas</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
+        <div className="container mx-auto px-4 z-10 text-center text-white"></div>
       </section>
 
       {categories.length > 0 && (
