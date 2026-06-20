@@ -36,6 +36,7 @@ export default function AdminProducts() {
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
   const [variations, setVariations] = useState<any[]>([])
   const [productMedia, setProductMedia] = useState<any[]>([])
+  const [pvdList, setPvdList] = useState<any[]>([])
 
   const [variantDetails, setVariantDetails] = useState<Record<string, string>>({})
 
@@ -49,7 +50,6 @@ export default function AdminProducts() {
   const [formData, setFormData] = useState<any>({
     id: '',
     name: '',
-    reference: '',
     description: '',
     detailed_description: '',
     price: 0,
@@ -65,17 +65,19 @@ export default function AdminProducts() {
 
   const loadData = async () => {
     try {
-      const filter = search ? `name ~ "${search}" || reference ~ "${search}"` : ''
-      const [pRes, cRes, rRes, vRes] = await Promise.all([
+      const filter = search ? `name ~ "${search}"` : ''
+      const [pRes, cRes, rRes, vRes, pvdRes] = await Promise.all([
         pb.collection('products').getFullList({ filter, sort: '-created', expand: 'variations' }),
         pb.collection('categories').getFullList(),
         pb.collection('rental_periods').getFullList(),
         pb.collection('variations').getFullList(),
+        pb.collection('product_variant_details').getFullList(),
       ])
       setProducts(pRes)
       setCategories(cRes)
       setRentalPeriods(rRes)
       setVariations(vRes)
+      setPvdList(pvdRes)
     } catch {
       /* intentionally ignored */
     }
@@ -97,12 +99,14 @@ export default function AdminProducts() {
   useRealtime('variations', () => {
     loadData()
   })
+  useRealtime('product_variant_details', () => {
+    loadData()
+  })
 
   const handleEdit = async (p: any) => {
     setFormData({
       id: p.id || '',
       name: p.name || '',
-      reference: p.reference || '',
       description: p.description || '',
       detailed_description: p.detailed_description || '',
       price: p.price || 0,
@@ -336,36 +340,42 @@ export default function AdminProducts() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>{p.reference || '-'}</TableCell>
-                <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell>
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                    p.price,
-                  )}
-                </TableCell>
-                <TableCell>{p.status === 'active' ? 'Ativo' : 'Suspenso'}</TableCell>
-                <TableCell className="text-right space-x-2">
-                  <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(p)}>
-                    <PowerOff
-                      className={`h-4 w-4 ${p.status === 'active' ? 'text-green-500' : 'text-gray-400'}`}
-                    />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(p.id)}
-                    className="text-red-500"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {products.map((p) => {
+              const refs = pvdList
+                .filter((vd) => vd.product === p.id && vd.reference_code)
+                .map((vd) => vd.reference_code)
+                .join(', ')
+              return (
+                <TableRow key={p.id}>
+                  <TableCell>{refs || '-'}</TableCell>
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                      p.price,
+                    )}
+                  </TableCell>
+                  <TableCell>{p.status === 'active' ? 'Ativo' : 'Suspenso'}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(p)}>
+                      <PowerOff
+                        className={`h-4 w-4 ${p.status === 'active' ? 'text-green-500' : 'text-gray-400'}`}
+                      />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(p.id)}
+                      className="text-red-500"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
@@ -388,14 +398,7 @@ export default function AdminProducts() {
                   <span className="text-red-500 text-xs">{fieldErrors.name}</span>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label>Referência</Label>
-                <Input
-                  value={formData.reference}
-                  onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
+              <div className="space-y-2 col-span-2">
                 <Label>Valor da Diária</Label>
                 <Input
                   type="number"

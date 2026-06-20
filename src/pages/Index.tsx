@@ -191,7 +191,8 @@ export default function Index() {
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
-                      }).format(product.price)}
+                      }).format(Math.ceil(product.price * 30))}
+                      <span className="text-sm font-normal text-gray-500 ml-1">/mês</span>
                     </div>
 
                     <div className="flex gap-2 pt-4">

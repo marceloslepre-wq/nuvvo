@@ -102,7 +102,7 @@ export default function ProductDetail() {
   const selectedPeriodObj = availableRentalPeriods.find((rp: any) => rp.id === selectedRentalPeriod)
   const displayPrice = selectedPeriodObj
     ? Math.ceil(product.price * selectedPeriodObj.days)
-    : product.price
+    : Math.ceil(product.price * 30)
 
   const canRent =
     (!availableVariations.length || selectedVariation) &&
@@ -186,7 +186,12 @@ export default function ProductDetail() {
                 displayPrice,
               )}
               {!selectedPeriodObj && (
-                <span className="text-sm text-gray-500 font-normal block mt-1">por diária</span>
+                <span className="text-sm text-gray-500 font-normal block mt-1">por mês</span>
+              )}
+              {selectedPeriodObj && (
+                <span className="text-sm text-gray-500 font-normal block mt-1">
+                  por {selectedPeriodObj.days} dias
+                </span>
               )}
             </div>
 
@@ -238,9 +243,9 @@ export default function ProductDetail() {
               <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
                 {product.description}
               </p>
-              {(currentVariantDetail?.reference_code || product.reference) && (
+              {currentVariantDetail?.reference_code && (
                 <p className="text-sm text-gray-500 mt-4 font-medium tracking-wide">
-                  Referência: {currentVariantDetail?.reference_code || product.reference}
+                  Referência: {currentVariantDetail?.reference_code}
                 </p>
               )}
             </div>

@@ -10,7 +10,6 @@ export interface Product extends RecordModel {
   video: string
   status: 'active' | 'inactive'
   order: number
-  reference?: string
   variations?: string[]
   rental_period?: string | string[]
   expand?: {
