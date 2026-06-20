@@ -37,6 +37,8 @@ export default function AdminProducts() {
   const [variations, setVariations] = useState<any[]>([])
   const [productMedia, setProductMedia] = useState<any[]>([])
 
+  const [variantDetails, setVariantDetails] = useState<Record<string, string>>({})
+
   const [newMediaVariation, setNewMediaVariation] = useState('')
   const [newMediaFile, setNewMediaFile] = useState<File | null>(null)
 
@@ -123,11 +125,22 @@ export default function AdminProducts() {
           .collection('product_media')
           .getFullList({ filter: `product='${p.id}'`, expand: 'variation' })
         setProductMedia(pm)
+
+        const pvd = await pb
+          .collection('product_variant_details')
+          .getFullList({ filter: `product='${p.id}'` })
+        const vDetails: Record<string, string> = {}
+        pvd.forEach((vd) => {
+          vDetails[vd.variation] = vd.reference_code
+        })
+        setVariantDetails(vDetails)
       } catch {
         setProductMedia([])
+        setVariantDetails({})
       }
     } else {
       setProductMedia([])
+      setVariantDetails({})
     }
 
     setIsOpen(true)
@@ -223,10 +236,12 @@ export default function AdminProducts() {
       if (mainImage) form.append('image', mainImage)
       if (mainVideo) form.append('video', mainVideo)
 
+      let savedProductId = formData.id
       if (formData.id) {
         await pb.collection('products').update(formData.id, form)
       } else {
         const newProd = await pb.collection('products').create(form)
+        savedProductId = newProd.id
         for (const pm of pendingMedia) {
           const pmForm = new FormData()
           pmForm.append('product', newProd.id)
@@ -235,6 +250,35 @@ export default function AdminProducts() {
           await pb.collection('product_media').create(pmForm)
         }
       }
+
+      const existingPvd = await pb
+        .collection('product_variant_details')
+        .getFullList({ filter: `product='${savedProductId}'` })
+        .catch(() => [])
+      const existingMap = new Map(existingPvd.map((vd) => [vd.variation, vd]))
+
+      for (const vId of formData.variations) {
+        const refCode = variantDetails[vId] || ''
+        const existing = existingMap.get(vId)
+        if (existing) {
+          if (existing.reference_code !== refCode) {
+            await pb
+              .collection('product_variant_details')
+              .update(existing.id, { reference_code: refCode })
+          }
+          existingMap.delete(vId)
+        } else {
+          await pb.collection('product_variant_details').create({
+            product: savedProductId,
+            variation: vId,
+            reference_code: refCode,
+          })
+        }
+      }
+      for (const existing of Array.from(existingMap.values())) {
+        await pb.collection('product_variant_details').delete(existing.id)
+      }
+
       toast({ title: 'Sucesso', description: 'Produto salvo!' })
       setIsOpen(false)
       loadData()
@@ -368,6 +412,30 @@ export default function AdminProducts() {
                   ))}
                 </ToggleGroup>
               </div>
+
+              {formData.variations.length > 0 && (
+                <div className="space-y-3 col-span-2 mt-2 p-4 border border-dashed rounded-md bg-gray-50/50">
+                  <Label>Referências por Variação</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {formData.variations.map((vId: string) => {
+                      const vName = variations.find((v) => v.id === vId)?.name
+                      return (
+                        <div key={vId} className="space-y-1">
+                          <Label className="text-xs text-gray-500">{vName}</Label>
+                          <Input
+                            placeholder="Referência (opcional)"
+                            value={variantDetails[vId] || ''}
+                            onChange={(e) =>
+                              setVariantDetails({ ...variantDetails, [vId]: e.target.value })
+                            }
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Categoria</Label>
                 <Select

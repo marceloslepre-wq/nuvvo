@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T18:54:25.759Z",
+  "generatedAt": "2026-06-20T19:09:13.808Z",
   "collections": [
     {
       "name": "users",
@@ -506,6 +506,57 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "product_variant_details",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "product",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "products"
+        },
+        {
+          "name": "variation",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "variations"
+        },
+        {
+          "name": "reference_code",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_pvd_product ON product_variant_details (product)",
+        "CREATE INDEX idx_pvd_variation ON product_variant_details (variation)"
+      ]
     }
   ]
 }

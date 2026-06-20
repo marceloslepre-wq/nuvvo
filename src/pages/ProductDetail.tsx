@@ -22,6 +22,7 @@ export default function ProductDetail() {
   const [freight, setFreight] = useState<{ value: number; days: number } | null>(null)
 
   const [productMedia, setProductMedia] = useState<any[]>([])
+  const [productVariantDetails, setProductVariantDetails] = useState<any[]>([])
   const [selectedVariation, setSelectedVariation] = useState<string | null>(null)
 
   const { toast } = useToast()
@@ -49,6 +50,14 @@ export default function ProductDetail() {
           setProductMedia(pm)
         } catch (e) {
           setProductMedia([])
+        }
+        try {
+          const pvd = await pb
+            .collection('product_variant_details')
+            .getFullList({ filter: `product='${id}'` })
+          setProductVariantDetails(pvd)
+        } catch (e) {
+          setProductVariantDetails([])
         }
         setSelectedVariation(null)
       } catch (error) {
@@ -111,6 +120,10 @@ export default function ProductDetail() {
   }
 
   const availableVariations = product.expand?.variations || []
+
+  const currentVariantDetail = selectedVariation
+    ? productVariantDetails.find((vd) => vd.variation === selectedVariation)
+    : null
 
   let imageUrl = product.image
     ? getFileUrl(product, product.image)
@@ -183,7 +196,13 @@ export default function ProductDetail() {
           </div>
 
           <div className="flex flex-col animate-fade-in-up">
-            <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-4">{product.name}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-2">{product.name}</h1>
+
+            {(currentVariantDetail?.reference_code || product.reference) && (
+              <p className="text-sm text-gray-500 mb-4 font-medium tracking-wide">
+                Ref: {currentVariantDetail?.reference_code || product.reference}
+              </p>
+            )}
 
             <div className="text-4xl font-bold text-primary mb-6">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
