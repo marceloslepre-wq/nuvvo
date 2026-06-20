@@ -50,6 +50,7 @@ export default function AdminProducts() {
   const [formData, setFormData] = useState<any>({
     id: '',
     name: '',
+    reference: '',
     description: '',
     detailed_description: '',
     price: 0,
@@ -107,6 +108,7 @@ export default function AdminProducts() {
     setFormData({
       id: p.id || '',
       name: p.name || '',
+      reference: p.reference || '',
       description: p.description || '',
       detailed_description: p.detailed_description || '',
       price: p.price || 0,
@@ -334,24 +336,28 @@ export default function AdminProducts() {
             <TableRow>
               <TableHead>Ref</TableHead>
               <TableHead>Nome</TableHead>
-              <TableHead>Valor da Diária</TableHead>
+              <TableHead>Valor Mensal</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((p) => {
-              const refs = pvdList
-                .filter((vd) => vd.product === p.id && vd.reference_code)
-                .map((vd) => vd.reference_code)
-                .join(', ')
+              const hasVariations = p.variations && p.variations.length > 0
+              const refs = hasVariations
+                ? pvdList
+                    .filter((vd) => vd.product === p.id && vd.reference_code)
+                    .map((vd) => vd.reference_code)
+                    .join(', ')
+                : p.reference
+
               return (
                 <TableRow key={p.id}>
                   <TableCell>{refs || '-'}</TableCell>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      p.price,
+                      Math.ceil(p.price * 30),
                     )}
                   </TableCell>
                   <TableCell>{p.status === 'active' ? 'Ativo' : 'Suspenso'}</TableCell>
@@ -423,6 +429,17 @@ export default function AdminProducts() {
                   ))}
                 </ToggleGroup>
               </div>
+
+              {formData.variations.length === 0 && (
+                <div className="space-y-2 col-span-2">
+                  <Label>Referência do Produto</Label>
+                  <Input
+                    placeholder="Referência (opcional)"
+                    value={formData.reference}
+                    onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                  />
+                </div>
+              )}
 
               {formData.variations.length > 0 && (
                 <div className="space-y-3 col-span-2 mt-2 p-4 border border-dashed rounded-md bg-gray-50/50">
