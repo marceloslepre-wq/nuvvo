@@ -85,7 +85,6 @@ export default function Index() {
               className="w-full h-full object-cover"
             />
           )}
-          <div className="absolute inset-0 bg-secondary/80"></div>
         </div>
 
         <div className="container mx-auto px-4 z-10 text-center text-white"></div>
