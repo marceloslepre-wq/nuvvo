@@ -1,29 +1,26 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronRight, ShoppingCart, Truck, Check, Minus, Plus, Play } from 'lucide-react'
+import { ChevronRight, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import { useCart } from '@/contexts/cart-context'
-import { getProduct, getActiveProducts, getFileUrl, Product } from '@/services/products'
+import { getProduct, getFileUrl, Product } from '@/services/products'
 import pb from '@/lib/pocketbase/client'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
   const [product, setProduct] = useState<Product | null>(null)
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image')
   const [quantity, setQuantity] = useState(1)
-  const [cep, setCep] = useState('')
-  const [freight, setFreight] = useState<{ value: number; days: number } | null>(null)
 
   const [productMedia, setProductMedia] = useState<any[]>([])
   const [productVariantDetails, setProductVariantDetails] = useState<any[]>([])
   const [selectedVariation, setSelectedVariation] = useState<string | null>(null)
+  const [selectedRentalPeriod, setSelectedRentalPeriod] = useState<string | null>(null)
 
   const { toast } = useToast()
   const { increment } = useCart()
@@ -37,11 +34,7 @@ export default function ProductDetail() {
         setProduct(p)
         setActiveMedia('image')
         setQuantity(1)
-        setFreight(null)
-        setCep('')
-
-        const allProducts = await getActiveProducts()
-        setRelatedProducts(allProducts.filter((item) => item.id !== id).slice(0, 4))
+        setSelectedRentalPeriod(null)
 
         try {
           const pm = await pb
@@ -112,14 +105,12 @@ export default function ProductDetail() {
     })
   }
 
-  const handleCalculateFreight = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (cep.length >= 8) {
-      setFreight({ value: 15.9, days: 3 })
-    }
-  }
-
   const availableVariations = product.expand?.variations || []
+  const availableRentalPeriods = product.expand?.rental_period
+    ? Array.isArray(product.expand.rental_period)
+      ? product.expand.rental_period
+      : [product.expand.rental_period]
+    : []
 
   const currentVariantDetail = selectedVariation
     ? productVariantDetails.find((vd) => vd.variation === selectedVariation)
@@ -198,12 +189,6 @@ export default function ProductDetail() {
           <div className="flex flex-col animate-fade-in-up">
             <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-2">{product.name}</h1>
 
-            {(currentVariantDetail?.reference_code || product.reference) && (
-              <p className="text-sm text-gray-500 mb-4 font-medium tracking-wide">
-                Ref: {currentVariantDetail?.reference_code || product.reference}
-              </p>
-            )}
-
             <div className="text-4xl font-bold text-primary mb-6">
               {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                 product.price,
@@ -238,10 +223,38 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <div id="product-description" className="scroll-mt-24">
-              <p className="text-gray-600 mb-8 leading-relaxed whitespace-pre-wrap">
+            {availableRentalPeriods.length > 0 && (
+              <div className="mb-8 animate-fade-in">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Prazo de Locação:</h3>
+                <div className="flex flex-wrap gap-2">
+                  {availableRentalPeriods.map((rp: any) => (
+                    <button
+                      key={rp.id}
+                      onClick={() =>
+                        setSelectedRentalPeriod(selectedRentalPeriod === rp.id ? null : rp.id)
+                      }
+                      className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+                        selectedRentalPeriod === rp.id
+                          ? 'bg-primary border-primary text-white shadow-md'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-primary hover:text-primary'
+                      }`}
+                    >
+                      {rp.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div id="product-description" className="scroll-mt-24 mb-8">
+              <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
                 {product.description}
               </p>
+              {(currentVariantDetail?.reference_code || product.reference) && (
+                <p className="text-sm text-gray-500 mt-4 font-medium tracking-wide">
+                  Referência: {currentVariantDetail?.reference_code || product.reference}
+                </p>
+              )}
             </div>
 
             <Separator className="mb-8" />
@@ -249,101 +262,25 @@ export default function ProductDetail() {
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Button
                 size="lg"
-                variant="outline"
-                className="flex-1 h-12 text-base border-primary text-primary hover:bg-primary/5 active:scale-95 transition-transform"
-                onClick={() => {
-                  document
-                    .getElementById('product-description')
-                    ?.scrollIntoView({ behavior: 'smooth' })
-                }}
-              >
-                Saiba Mais
-              </Button>
-              <Button
-                size="lg"
                 className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform shadow-md"
                 asChild
               >
                 <Link to={`/produto/${product.id}/compra`}>
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  Adquira Agora
+                  Alugue Agora
                 </Link>
               </Button>
-            </div>
-
-            <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-              <h3 className="flex items-center gap-2 font-medium text-secondary mb-4">
-                <Truck className="w-5 h-5 text-gray-500" />
-                Calcular Frete e Prazo
-              </h3>
-              <form onSubmit={handleCalculateFreight} className="flex gap-2">
-                <Input
-                  placeholder="00000-000"
-                  value={cep}
-                  onChange={(e) => setCep(e.target.value.replace(/\D/g, '').substring(0, 8))}
-                  className="max-w-[150px] bg-white focus-visible:ring-primary"
-                />
-                <Button
-                  variant="secondary"
-                  type="submit"
-                  className="bg-secondary text-white hover:bg-secondary/90"
-                >
-                  Calcular
-                </Button>
-              </form>
-
-              {freight && (
-                <div className="mt-4 flex items-center justify-between text-sm bg-green-50 text-green-800 p-3 rounded-md border border-green-200 animate-fade-in-up">
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4" />
-                    <span>Frete Padrão - até {freight.days} dias úteis</span>
-                  </div>
-                  <span className="font-bold">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      freight.value,
-                    )}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
 
-        {relatedProducts.length > 0 && (
-          <div className="pt-12 border-t border-gray-200 animate-fade-in">
-            <h2 className="text-2xl font-bold text-secondary mb-8">Você também pode gostar</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((p) => {
-                const thumbUrl = p.image
-                  ? getFileUrl(p, p.image)
-                  : `https://img.usecurling.com/p/800/800?q=tech&color=gray&seed=${p.id}`
-                return (
-                  <div key={p.id} className="group cursor-pointer">
-                    <Link
-                      to={`/produto/${p.id}`}
-                      className="block overflow-hidden rounded-xl bg-gray-100 mb-4 aspect-square"
-                    >
-                      <img
-                        src={thumbUrl}
-                        alt={p.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    </Link>
-                    <Link to={`/produto/${p.id}`}>
-                      <h3 className="font-medium text-secondary line-clamp-2 group-hover:text-primary transition-colors">
-                        {p.name}
-                      </h3>
-                    </Link>
-                    <div className="font-bold text-secondary mt-2">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(p.price)}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+        {product.detailed_description && (
+          <div className="pt-12 border-t border-gray-200 animate-fade-in mb-12">
+            <h2 className="text-2xl font-bold text-secondary mb-8">Descrição Detalhada</h2>
+            <div
+              className="prose max-w-none text-gray-600"
+              dangerouslySetInnerHTML={{ __html: product.detailed_description }}
+            />
           </div>
         )}
       </div>
