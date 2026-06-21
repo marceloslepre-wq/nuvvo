@@ -8,6 +8,7 @@ import { getActiveProducts, getFileUrl, Product } from '@/services/products'
 import { useRealtime } from '@/hooks/use-realtime'
 import pb from '@/lib/pocketbase/client'
 import { Image } from '@/components/Image'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Index() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -17,6 +18,8 @@ export default function Index() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [heroMedia, setHeroMedia] = useState<string>('')
+  const [isDataLoading, setIsDataLoading] = useState(true)
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   const loadData = async () => {
     try {
@@ -29,10 +32,20 @@ export default function Index() {
         .getFirstListItem('')
         .catch(() => null)
       if (settings && settings.hero_media) {
-        setHeroMedia(pb.files.getURL(settings, settings.hero_media))
+        const url = pb.files.getURL(settings, settings.hero_media)
+        setHeroMedia((prev) => {
+          if (prev !== url) setImageLoaded(false)
+          return url
+        })
+      } else {
+        setHeroMedia('')
+        setImageLoaded(true)
       }
     } catch (error) {
       console.error('Failed to load data:', error)
+      setImageLoaded(true)
+    } finally {
+      setIsDataLoading(false)
     }
   }
 
@@ -41,6 +54,10 @@ export default function Index() {
   }, [])
 
   useRealtime('products', () => {
+    loadData()
+  })
+
+  useRealtime('site_settings', () => {
     loadData()
   })
 
@@ -72,7 +89,24 @@ export default function Index() {
 
   return (
     <div className="w-full">
+      {heroMedia && <link rel="preload" as="image" href={heroMedia} fetchPriority="high" />}
       <section className="relative w-full min-h-[500px] max-h-[800px] aspect-[16/9] lg:aspect-[3/2] flex items-center justify-center overflow-hidden bg-gray-100">
+        {(isDataLoading || (heroMedia && !imageLoaded)) && (
+          <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
+        )}
+        {heroMedia && (
+          <img
+            src={heroMedia}
+            alt="Hero Background"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            loading="eager"
+            fetchPriority="high"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
+          />
+        )}
         <div className="container mx-auto px-4 z-10 text-center text-white"></div>
       </section>
 
