@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/table'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
+import { RichTextEditor } from '@/components/RichTextEditor'
 import {
   Select,
   SelectContent,
@@ -40,7 +40,7 @@ export default function AdminProducts() {
 
   const [variantDetails, setVariantDetails] = useState<Record<string, string>>({})
 
-  const [newMediaVariation, setNewMediaVariation] = useState('')
+  const [newMediaVariation, setNewMediaVariation] = useState('geral')
   const [newMediaFile, setNewMediaFile] = useState<File | null>(null)
 
   const [pendingMedia, setPendingMedia] = useState<
@@ -125,9 +125,8 @@ export default function AdminProducts() {
     })
     setMainImage(null)
     setMainVideo(null)
-    setNewMediaVariation('')
-    setNewMediaFile(null)
-    setPendingMedia([])
+    setNewMediaVariation('geral')
+    setNewMediaFile(null)    setPendingMedia([])
 
     if (p.id) {
       try {
@@ -176,10 +175,11 @@ export default function AdminProducts() {
     if (!newMediaVariation || !newMediaFile) return
     setLoading(true)
     try {
+      const variationId = newMediaVariation === 'geral' ? '' : newMediaVariation
       if (formData.id) {
         const form = new FormData()
         form.append('product', formData.id)
-        form.append('variation', newMediaVariation)
+        if (variationId) form.append('variation', variationId)
         form.append('file', newMediaFile)
 
         await pb.collection('product_media').create(form)
@@ -188,20 +188,20 @@ export default function AdminProducts() {
           .collection('product_media')
           .getFullList({ filter: `product='${formData.id}'`, expand: 'variation' })
         setProductMedia(pm)
-        toast({ title: 'Sucesso', description: 'Mídia de variação adicionada!' })
+        toast({ title: 'Sucesso', description: 'Mídia adicionada!' })
       } else {
-        const variationName = variations.find((v) => v.id === newMediaVariation)?.name || ''
+        const variationName = newMediaVariation === 'geral' ? 'Geral' : variations.find((v) => v.id === newMediaVariation)?.name || ''
         setPendingMedia([
           ...pendingMedia,
           {
             tempId: Math.random().toString(),
-            variationId: newMediaVariation,
+            variationId,
             file: newMediaFile,
             variationName,
           },
         ])
       }
-      setNewMediaVariation('')
+      setNewMediaVariation('geral')
       setNewMediaFile(null)
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
@@ -255,7 +255,7 @@ export default function AdminProducts() {
         for (const pm of pendingMedia) {
           const pmForm = new FormData()
           pmForm.append('product', newProd.id)
-          pmForm.append('variation', pm.variationId)
+          if (pm.variationId) pmForm.append('variation', pm.variationId)
           pmForm.append('file', pm.file)
           await pb.collection('product_media').create(pmForm)
         }
@@ -525,20 +525,17 @@ export default function AdminProducts() {
               </div>
               <div className="space-y-2 col-span-2">
                 <Label>Descrição Curta</Label>
-                <Textarea
+                <RichTextEditor
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  required
+                  onChange={(val) => setFormData({ ...formData, description: val })}
                 />
               </div>
               <div className="space-y-2 col-span-2">
                 <Label>Descrição Detalhada</Label>
-                <Textarea
+                <RichTextEditor
                   value={formData.detailed_description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, detailed_description: e.target.value })
-                  }
-                  className="min-h-[100px]"
+                  onChange={(val) => setFormData({ ...formData, detailed_description: val })}
+                  className="min-h-[150px]"
                 />
               </div>
               <div className="space-y-2 col-span-2">
@@ -568,21 +565,17 @@ export default function AdminProducts() {
             </div>
 
             <div className="mt-8 pt-6 border-t space-y-4">
-              <h3 className="font-semibold text-lg">Mídias por Variação</h3>
+              <h3 className="font-semibold text-lg">Galeria de Mídia</h3>
 
               <div className="grid grid-cols-2 gap-4 items-end">
                 <div className="space-y-2">
-                  <Label>Variação</Label>
+                  <Label>Variação / Tipo</Label>
                   <Select value={newMediaVariation} onValueChange={setNewMediaVariation}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableVariationsForMedia.length === 0 && (
-                        <SelectItem value="_empty" disabled>
-                          Selecione variações acima primeiro
-                        </SelectItem>
-                      )}
+                      <SelectItem value="geral">Geral (Sem variação)</SelectItem>
                       {availableVariationsForMedia.map((v) => (
                         <SelectItem key={v.id} value={v.id}>
                           {v.name}
@@ -619,7 +612,7 @@ export default function AdminProducts() {
                       className="flex items-center justify-between p-2 border rounded text-sm"
                     >
                       <span className="font-medium">
-                        {pm.expand?.variation?.name || 'Variação desconhecida'}
+                        {pm.expand?.variation?.name || 'Geral'}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-gray-500 truncate max-w-[150px]">

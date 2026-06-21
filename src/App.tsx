@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/Dashboard'
 import AdminProducts from './pages/admin/Products'
 import AdminSettings from './pages/admin/Settings'
 import AdminLayoutSettings from './pages/admin/LayoutSettings'
+import CategoryPage from './pages/Category'
 
 const App = () => (
   <AuthProvider>
@@ -28,6 +29,7 @@ const App = () => (
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
+              <Route path="/categoria/:id" element={<CategoryPage />} />
               <Route path="/produto/:id" element={<ProductDetail />} />
               <Route path="/produto/:id/compra" element={<Checkout />} />
             </Route>

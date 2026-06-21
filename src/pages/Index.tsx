@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
@@ -10,6 +10,7 @@ import pb from '@/lib/pocketbase/client'
 
 export default function Index() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
   const { toast } = useToast()
   const { increment } = useCart()
   const [products, setProducts] = useState<Product[]>([])
@@ -61,6 +62,13 @@ export default function Index() {
     })
   }
 
+  const stripHtml = (html: string) => {
+    if (!html) return ''
+    const tmp = document.createElement('DIV')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }
+
   return (
     <div className="w-full">
       <section className="relative h-[80vh] min-h-[500px] max-h-[800px] flex items-center justify-center overflow-hidden">
@@ -97,6 +105,7 @@ export default function Index() {
               {categories.map((c) => (
                 <div
                   key={c.id}
+                  onClick={() => navigate(`/categoria/${c.id}`)}
                   className="snap-center whitespace-nowrap px-6 py-2 bg-gray-100 rounded-full font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors cursor-pointer"
                 >
                   {c.name}
@@ -185,7 +194,7 @@ export default function Index() {
                       </h3>
                     </Link>
                     <p className="text-sm text-gray-500 line-clamp-2 min-h-[40px]">
-                      {product.description}
+                      {stripHtml(product.description)}
                     </p>
                     <div className="text-xl font-bold text-secondary pt-2">
                       {new Intl.NumberFormat('pt-BR', {

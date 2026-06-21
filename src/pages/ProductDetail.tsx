@@ -4,6 +4,13 @@ import { ChevronRight, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel'
 import { getProduct, getFileUrl, Product } from '@/services/products'
 import pb from '@/lib/pocketbase/client'
 
@@ -13,6 +20,10 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
 
   const [activeMedia, setActiveMedia] = useState<'image' | 'video'>('image')
+  const [mainViewerItem, setMainViewerItem] = useState<{
+    type: 'image' | 'video'
+    url: string
+  } | null>(null)
 
   const [productMedia, setProductMedia] = useState<any[]>([])
   const [productVariantDetails, setProductVariantDetails] = useState<any[]>([])
@@ -46,6 +57,7 @@ export default function ProductDetail() {
           setProductVariantDetails([])
         }
         setSelectedVariation(null)
+        setMainViewerItem(null)
       } catch (error) {
         console.error('Product not found', error)
         setProduct(null)
@@ -61,6 +73,7 @@ export default function ProductDetail() {
     : null
 
   useEffect(() => {
+    setMainViewerItem(null)
     if (selectedMediaRecord) {
       const isVideo = selectedMediaRecord.file.match(/\.(mp4|webm|ogg)$/i)
       setActiveMedia(isVideo ? 'video' : 'image')
@@ -122,6 +135,36 @@ export default function ProductDetail() {
     }
   }
 
+  if (mainViewerItem) {
+    if (mainViewerItem.type === 'video') {
+      videoUrl = mainViewerItem.url
+      imageUrl = ''
+    } else {
+      imageUrl = mainViewerItem.url
+      videoUrl = ''
+    }
+  }
+
+  const galleryItems: { type: 'image' | 'video'; url: string; id: string }[] = []
+  if (product.image)
+    galleryItems.push({ type: 'image', url: getFileUrl(product, product.image), id: 'main-img' })
+  if (product.video)
+    galleryItems.push({ type: 'video', url: getFileUrl(product, product.video), id: 'main-vid' })
+
+  const relevantMedia = productMedia.filter(
+    (m) => !selectedVariation || !m.variation || m.variation === selectedVariation,
+  )
+  relevantMedia.forEach((m) => {
+    if (m.file) {
+      const isVideo = m.file.match(/\.(mp4|webm|ogg)$/i)
+      galleryItems.push({
+        type: isVideo ? 'video' : 'image',
+        url: pb.files.getURL(m, m.file),
+        id: m.id,
+      })
+    }
+  })
+
   return (
     <div className="bg-white min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -176,6 +219,43 @@ export default function ProductDetail() {
                 </div>
               </TabsContent>
             </Tabs>
+
+            {galleryItems.length > 1 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-900 mb-3">Galeria</h3>
+                <Carousel className="w-full">
+                  <CarouselContent className="-ml-2 md:-ml-4">
+                    {galleryItems.map((item, idx) => (
+                      <CarouselItem
+                        key={item.id + idx}
+                        className="pl-2 md:pl-4 basis-1/3 md:basis-1/4"
+                      >
+                        <div
+                          className="aspect-square rounded-xl overflow-hidden bg-gray-100 border-2 border-transparent hover:border-primary transition-colors cursor-pointer"
+                          onClick={() => {
+                            setMainViewerItem(item)
+                            setActiveMedia(item.type)
+                          }}
+                        >
+                          {item.type === 'video' ? (
+                            <video
+                              src={item.url}
+                              className="w-full h-full object-cover"
+                              muted
+                              playsInline
+                            />
+                          ) : (
+                            <img src={item.url} className="w-full h-full object-cover" alt="" />
+                          )}
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </Carousel>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col animate-fade-in-up">
@@ -240,9 +320,10 @@ export default function ProductDetail() {
             )}
 
             <div id="product-description" className="scroll-mt-24 mb-8">
-              <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                {product.description}
-              </p>
+              <div
+                className="prose prose-sm max-w-none text-gray-600 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
               {currentVariantDetail?.reference_code && (
                 <p className="text-sm text-gray-500 mt-4 font-medium tracking-wide">
                   Referência: {currentVariantDetail?.reference_code}
