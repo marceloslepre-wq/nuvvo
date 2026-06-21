@@ -73,28 +73,6 @@ export default function Index() {
   return (
     <div className="w-full">
       <section className="relative w-full min-h-[500px] max-h-[800px] aspect-[16/9] lg:aspect-[3/2] flex items-center justify-center overflow-hidden bg-gray-100">
-        <div className="absolute inset-0 z-0">
-          {heroMedia ? (
-            heroMedia.match(/\.(mp4|webm|ogg)$/i) ? (
-              <video
-                src={heroMedia}
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-full object-cover"
-              />
-            ) : null
-          ) : (
-            <img
-              src="https://img.usecurling.com/p/1920/1080?q=business&color=blue&dpr=2"
-              alt="Hero Background"
-              fetchPriority="high"
-              className="w-full h-full object-cover"
-            />
-          )}
-        </div>
-
         <div className="container mx-auto px-4 z-10 text-center text-white"></div>
       </section>
 
