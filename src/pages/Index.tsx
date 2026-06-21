@@ -7,6 +7,7 @@ import { useCart } from '@/contexts/cart-context'
 import { getActiveProducts, getFileUrl, Product } from '@/services/products'
 import { useRealtime } from '@/hooks/use-realtime'
 import pb from '@/lib/pocketbase/client'
+import { Image } from '@/components/Image'
 
 export default function Index() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -71,7 +72,7 @@ export default function Index() {
 
   return (
     <div className="w-full">
-      <section className="relative h-[80vh] min-h-[500px] max-h-[800px] flex items-center justify-center overflow-hidden">
+      <section className="relative w-full min-h-[500px] max-h-[800px] aspect-[16/9] lg:aspect-[3/2] flex items-center justify-center overflow-hidden bg-gray-100">
         <div className="absolute inset-0 z-0">
           {heroMedia ? (
             heroMedia.match(/\.(mp4|webm|ogg)$/i) ? (
@@ -84,12 +85,18 @@ export default function Index() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <img src={heroMedia} alt="Hero Background" className="w-full h-full object-cover" />
+              <img
+                src={heroMedia}
+                alt="Hero Background"
+                fetchPriority="high"
+                className="w-full h-full object-cover"
+              />
             )
           ) : (
             <img
               src="https://img.usecurling.com/p/1920/1080?q=business&color=blue&dpr=2"
               alt="Hero Background"
+              fetchPriority="high"
               className="w-full h-full object-cover"
             />
           )}
@@ -179,10 +186,12 @@ export default function Index() {
                           }}
                         />
                       ) : (
-                        <img
+                        <Image
                           src={imageUrl}
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          containerClassName="w-full h-full"
+                          lazy={true}
                         />
                       )}
                     </div>

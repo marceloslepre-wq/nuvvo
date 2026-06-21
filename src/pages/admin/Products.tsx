@@ -74,7 +74,28 @@ export default function AdminProducts() {
         pb.collection('variations').getFullList(),
         pb.collection('product_variant_details').getFullList(),
       ])
-      setProducts(pRes)
+
+      const augmentedProducts = pRes.map((p: any) => ({
+        ...p,
+        originalName: p.name,
+        name: (
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-md overflow-hidden bg-gray-100 border flex items-center justify-center">
+              {p.image ? (
+                <img
+                  src={pb.files.getURL(p, p.image)}
+                  alt={p.originalName || p.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-[10px] text-gray-400">Sem img</span>
+              )}
+            </div>
+            <span className="font-medium">{p.name}</span>
+          </div>
+        ),
+      }))
+      setProducts(augmentedProducts)
       setCategories(cRes)
       setRentalPeriods(rRes)
       setVariations(vRes)
@@ -107,7 +128,7 @@ export default function AdminProducts() {
   const handleEdit = async (p: any) => {
     setFormData({
       id: p.id || '',
-      name: p.name || '',
+      name: p.originalName || p.name || '',
       reference: p.reference || '',
       description: p.description || '',
       detailed_description: p.detailed_description || '',
