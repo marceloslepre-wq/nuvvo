@@ -165,6 +165,26 @@ export default function ProductDetail() {
     }
   })
 
+  const getEmbedUrl = (url: string) => {
+    if (!url) return null
+    try {
+      const urlObj = new URL(url)
+      if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('v')) {
+        return `https://www.youtube.com/embed/${urlObj.searchParams.get('v')}`
+      }
+      if (urlObj.hostname === 'youtu.be') {
+        return `https://www.youtube.com/embed${urlObj.pathname}`
+      }
+      if (urlObj.hostname.includes('loom.com') && urlObj.pathname.includes('/share/')) {
+        return url.replace('/share/', '/embed/')
+      }
+    } catch (e) {
+      // ignore invalid URLs
+    }
+    return null
+  }
+  const embedUrl = product.external_link ? getEmbedUrl(product.external_link) : null
+
   return (
     <div className="bg-white min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -324,9 +344,9 @@ export default function ProductDetail() {
                 className="prose prose-sm max-w-none text-gray-600 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: product.description }}
               />
-              {currentVariantDetail?.reference_code && (
+              {(currentVariantDetail?.reference_code || product.reference) && (
                 <p className="text-sm text-gray-500 mt-4 font-medium tracking-wide">
-                  Referência: {currentVariantDetail?.reference_code}
+                  Referência: {currentVariantDetail?.reference_code || product.reference}
                 </p>
               )}
             </div>
@@ -356,13 +376,31 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {product.detailed_description && (
+        {(product.external_link || product.detailed_description) && (
           <div className="pt-12 border-t border-gray-200 animate-fade-in mb-12">
-            <h2 className="text-2xl font-bold text-secondary mb-8">Descrição Detalhada</h2>
-            <div
-              className="prose max-w-none text-gray-600"
-              dangerouslySetInnerHTML={{ __html: product.detailed_description }}
-            />
+            {embedUrl && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold text-secondary mb-8">Vídeo Demonstrativo</h2>
+                <div className="aspect-video w-full max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-lg border border-gray-100">
+                  <iframe
+                    src={embedUrl}
+                    className="w-full h-full"
+                    allowFullScreen
+                    frameBorder="0"
+                  ></iframe>
+                </div>
+              </div>
+            )}
+
+            {product.detailed_description && (
+              <div>
+                <h2 className="text-2xl font-bold text-secondary mb-8">Descrição Detalhada</h2>
+                <div
+                  className="prose max-w-none text-gray-600"
+                  dangerouslySetInnerHTML={{ __html: product.detailed_description }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

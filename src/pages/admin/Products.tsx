@@ -339,6 +339,7 @@ export default function AdminProducts() {
           <TableHeader>
             <TableRow>
               <TableHead>Ref</TableHead>
+              <TableHead className="w-16">Imagem</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Valor Mensal</TableHead>
               <TableHead>Status</TableHead>
@@ -358,6 +359,17 @@ export default function AdminProducts() {
               return (
                 <TableRow key={p.id}>
                   <TableCell>{refs || '-'}</TableCell>
+                  <TableCell>
+                    {p.image ? (
+                      <img
+                        src={pb.files.getURL(p, p.image)}
+                        alt={p.name}
+                        className="w-10 h-10 object-cover rounded-md"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-100 rounded-md" />
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(

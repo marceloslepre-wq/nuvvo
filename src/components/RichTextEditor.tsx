@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { Button } from './ui/button'
-import { Bold, Italic, Underline, List, ListOrdered } from 'lucide-react'
+import { Bold, Italic, Underline, List, ListOrdered, Indent, Outdent } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface RichTextEditorProps {
@@ -28,6 +28,13 @@ export function RichTextEditor({ value, onChange, className }: RichTextEditorPro
     document.execCommand(command, false, cmdValue)
     editorRef.current?.focus()
     handleInput()
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      exec(e.shiftKey ? 'outdent' : 'indent')
+    }
   }
 
   return (
@@ -78,6 +85,24 @@ export function RichTextEditor({ value, onChange, className }: RichTextEditorPro
         >
           <ListOrdered className="w-4 h-4" />
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => exec('indent')}
+          className="h-8 px-2"
+        >
+          <Indent className="w-4 h-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => exec('outdent')}
+          className="h-8 px-2"
+        >
+          <Outdent className="w-4 h-4" />
+        </Button>
       </div>
       <div
         ref={editorRef}
@@ -85,6 +110,7 @@ export function RichTextEditor({ value, onChange, className }: RichTextEditorPro
         contentEditable
         onInput={handleInput}
         onBlur={handleInput}
+        onKeyDown={handleKeyDown}
       />
     </div>
   )
