@@ -84,14 +84,7 @@ export default function Index() {
                 playsInline
                 className="w-full h-full object-cover"
               />
-            ) : (
-              <img
-                src={heroMedia}
-                alt="Hero Background"
-                fetchPriority="high"
-                className="w-full h-full object-cover"
-              />
-            )
+            ) : null
           ) : (
             <img
               src="https://img.usecurling.com/p/1920/1080?q=business&color=blue&dpr=2"
