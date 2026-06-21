@@ -12,7 +12,7 @@ export function Image({
   src,
   alt,
   className,
-  fallbackSrc = 'https://img.usecurling.com/p/800/800?q=placeholder&color=gray',
+  fallbackSrc = 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"%3E%3Crect width="100%" height="100%" fill="%23f3f4f6"/%3E%3C/svg%3E',
   lazy = true,
   containerClassName,
   ...props
@@ -42,7 +42,7 @@ export function Image({
     return () => observer.disconnect()
   }, [lazy])
 
-  const currentSrc = hasError ? fallbackSrc : inView ? src : undefined
+  const currentSrc = !src || hasError ? fallbackSrc : inView ? src : undefined
 
   return (
     <div

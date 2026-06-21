@@ -14,6 +14,7 @@ import {
 import { getProduct, getFileUrl, Product } from '@/services/products'
 import pb from '@/lib/pocketbase/client'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { Image } from '@/components/Image'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
@@ -122,9 +123,7 @@ export default function ProductDetail() {
     (!availableVariations.length || selectedVariation) &&
     (!availableRentalPeriods.length || selectedRentalPeriod)
 
-  let imageUrl = product.image
-    ? getFileUrl(product, product.image)
-    : `https://img.usecurling.com/p/800/800?q=placeholder&color=gray&seed=${product.id}`
+  let imageUrl = product.image ? getFileUrl(product, product.image) : ''
   let videoUrl = product.video ? getFileUrl(product, product.video) : ''
 
   if (selectedMediaRecord) {
@@ -237,25 +236,30 @@ export default function ProductDetail() {
               </TabsList>
 
               <TabsContent value="image" className="mt-0">
-                <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
-                  <img
-                    src={imageUrl}
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 relative">
+                  {imageUrl && <link rel="preload" href={imageUrl} as="image" />}
+                  <Image
+                    src={imageUrl || ''}
                     alt={product.name}
-                    className="w-full h-full object-cover animate-fade-in"
+                    lazy={false}
+                    loading="eager"
+                    className="w-full h-full object-cover"
                     key={imageUrl}
                   />
                 </div>
               </TabsContent>
 
               <TabsContent value="video" className="mt-0">
-                <div className="aspect-square rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
-                  {videoUrl && (
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
+                  {videoUrl ? (
                     <video
                       src={videoUrl}
                       controls
                       autoPlay
                       className="w-full h-full object-cover bg-black animate-fade-in"
                     />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100" />
                   )}
                 </div>
               </TabsContent>
@@ -286,7 +290,12 @@ export default function ProductDetail() {
                               playsInline
                             />
                           ) : (
-                            <img src={item.url} className="w-full h-full object-cover" alt="" />
+                            <Image
+                              src={item.url}
+                              className="w-full h-full object-cover"
+                              alt=""
+                              lazy={true}
+                            />
                           )}
                         </div>
                       </CarouselItem>

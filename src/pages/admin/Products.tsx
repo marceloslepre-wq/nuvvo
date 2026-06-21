@@ -63,6 +63,8 @@ export default function AdminProducts() {
   })
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [mainVideo, setMainVideo] = useState<File | null>(null)
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([])
+  const [extraVideoFiles, setExtraVideoFiles] = useState<File[]>([])
 
   const loadData = async () => {
     try {
@@ -78,22 +80,6 @@ export default function AdminProducts() {
       const augmentedProducts = pRes.map((p: any) => ({
         ...p,
         originalName: p.name,
-        name: (
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-md overflow-hidden bg-gray-100 border flex items-center justify-center">
-              {p.image ? (
-                <img
-                  src={pb.files.getURL(p, p.image)}
-                  alt={p.originalName || p.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-[10px] text-gray-400">Sem img</span>
-              )}
-            </div>
-            <span className="font-medium">{p.name}</span>
-          </div>
-        ),
       }))
       setProducts(augmentedProducts)
       setCategories(cRes)
@@ -146,7 +132,9 @@ export default function AdminProducts() {
     })
     setMainImage(null)
     setMainVideo(null)
-    setNewMediaVariation('geral')
+    setExtraImageFiles([])
+    setExtraVideoFiles([])
+    setNewMediaVariation('')
     setNewMediaFile(null)
     setPendingMedia([])
 
@@ -194,10 +182,10 @@ export default function AdminProducts() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const handleAddMedia = async () => {
-    if (!newMediaVariation || !newMediaFile) return
+    if (!newMediaVariation || !newMediaFile || newMediaVariation === '_empty') return
     setLoading(true)
     try {
-      const variationId = newMediaVariation === 'geral' ? '' : newMediaVariation
+      const variationId = newMediaVariation
       if (formData.id) {
         const form = new FormData()
         form.append('product', formData.id)
@@ -212,10 +200,7 @@ export default function AdminProducts() {
         setProductMedia(pm)
         toast({ title: 'Sucesso', description: 'Mídia adicionada!' })
       } else {
-        const variationName =
-          newMediaVariation === 'geral'
-            ? 'Geral'
-            : variations.find((v) => v.id === newMediaVariation)?.name || ''
+        const variationName = variations.find((v) => v.id === newMediaVariation)?.name || ''
         setPendingMedia([
           ...pendingMedia,
           {
@@ -226,7 +211,7 @@ export default function AdminProducts() {
           },
         ])
       }
-      setNewMediaVariation('geral')
+      setNewMediaFile(null)
       setNewMediaFile(null)
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
@@ -284,6 +269,19 @@ export default function AdminProducts() {
           pmForm.append('file', pm.file)
           await pb.collection('product_media').create(pmForm)
         }
+      }
+
+      for (const file of extraImageFiles) {
+        const pmForm = new FormData()
+        pmForm.append('product', savedProductId)
+        pmForm.append('file', file)
+        await pb.collection('product_media').create(pmForm)
+      }
+      for (const file of extraVideoFiles) {
+        const pmForm = new FormData()
+        pmForm.append('product', savedProductId)
+        pmForm.append('file', file)
+        await pb.collection('product_media').create(pmForm)
       }
 
       const existingPvd = await pb
@@ -360,8 +358,9 @@ export default function AdminProducts() {
           <TableHeader>
             <TableRow>
               <TableHead>Ref</TableHead>
-              <TableHead className="w-16">Imagem</TableHead>
+              <TableHead className="w-20">Miniatura</TableHead>
               <TableHead>Nome</TableHead>
+              <TableHead>Link</TableHead>
               <TableHead>Valor Mensal</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -369,29 +368,35 @@ export default function AdminProducts() {
           </TableHeader>
           <TableBody>
             {products.map((p) => {
-              const hasVariations = p.variations && p.variations.length > 0
-              const refs = hasVariations
-                ? pvdList
-                    .filter((vd) => vd.product === p.id && vd.reference_code)
-                    .map((vd) => vd.reference_code)
-                    .join(', ')
-                : p.reference
-
               return (
                 <TableRow key={p.id}>
-                  <TableCell>{refs || '-'}</TableCell>
+                  <TableCell>{p.reference || '-'}</TableCell>
                   <TableCell>
                     {p.image ? (
                       <img
                         src={pb.files.getURL(p, p.image)}
-                        alt={p.name}
-                        className="w-10 h-10 object-cover rounded-md"
+                        alt={p.originalName || p.name}
+                        className="w-10 h-10 object-cover rounded-md block"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-gray-100 rounded-md" />
+                      <div className="w-10 h-10 bg-gray-100 rounded-md block" />
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell className="font-medium">{p.originalName || p.name}</TableCell>
+                  <TableCell>
+                    {p.external_link ? (
+                      <a
+                        href={p.external_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline truncate max-w-[100px] block"
+                      >
+                        Link
+                      </a>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
                   <TableCell>
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                       Math.ceil(p.price * 30),
@@ -587,22 +592,145 @@ export default function AdminProducts() {
                 <Label>Imagem Principal</Label>
                 <Input
                   type="file"
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.webp"
                   onChange={(e) => setMainImage(e.target.files?.[0] || null)}
                 />
+
+                {productMedia
+                  .filter(
+                    (pm) => !pm.expand?.variation && pm.file?.match(/\.(jpg|jpeg|png|webp)$/i),
+                  )
+                  .map((pm) => (
+                    <div
+                      key={pm.id}
+                      className="flex items-center justify-between p-2 border rounded text-sm mt-2"
+                    >
+                      <span className="text-gray-500 truncate max-w-[200px]">{pm.file}</span>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteMedia(pm.id)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                {extraImageFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 border rounded text-sm mt-2"
+                  >
+                    <span className="text-gray-500 truncate max-w-[200px]">{file.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setExtraImageFiles(extraImageFiles.filter((_, i) => i !== idx))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+
+                {(formData.image ? 1 : 0) +
+                  productMedia.filter(
+                    (pm) => !pm.expand?.variation && pm.file?.match(/\.(jpg|jpeg|png|webp)$/i),
+                  ).length +
+                  extraImageFiles.length <
+                  5 && (
+                  <div className="mt-2">
+                    <Input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      className="hidden"
+                      id="extra-image-upload"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          setExtraImageFiles([...extraImageFiles, e.target.files[0]])
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      type="button"
+                      size="sm"
+                      onClick={() => document.getElementById('extra-image-upload')?.click()}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Adicionar Imagem
+                    </Button>
+                  </div>
+                )}
               </div>
+
               <div className="space-y-2 col-span-2">
                 <Label>Vídeo Principal</Label>
                 <Input
                   type="file"
-                  accept="video/*"
+                  accept=".mp4,.webm"
                   onChange={(e) => setMainVideo(e.target.files?.[0] || null)}
                 />
+
+                {productMedia
+                  .filter((pm) => !pm.expand?.variation && pm.file?.match(/\.(mp4|webm)$/i))
+                  .map((pm) => (
+                    <div
+                      key={pm.id}
+                      className="flex items-center justify-between p-2 border rounded text-sm mt-2"
+                    >
+                      <span className="text-gray-500 truncate max-w-[200px]">{pm.file}</span>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteMedia(pm.id)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                {extraVideoFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2 border rounded text-sm mt-2"
+                  >
+                    <span className="text-gray-500 truncate max-w-[200px]">{file.name}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setExtraVideoFiles(extraVideoFiles.filter((_, i) => i !== idx))
+                      }
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+
+                {(formData.video ? 1 : 0) +
+                  productMedia.filter(
+                    (pm) => !pm.expand?.variation && pm.file?.match(/\.(mp4|webm)$/i),
+                  ).length +
+                  extraVideoFiles.length <
+                  3 && (
+                  <div className="mt-2">
+                    <Input
+                      type="file"
+                      accept=".mp4,.webm"
+                      className="hidden"
+                      id="extra-video-upload"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          setExtraVideoFiles([...extraVideoFiles, e.target.files[0]])
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      type="button"
+                      size="sm"
+                      onClick={() => document.getElementById('extra-video-upload')?.click()}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Adicionar Vídeo
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="mt-8 pt-6 border-t space-y-4">
-              <h3 className="font-semibold text-lg">Galeria de Mídia</h3>
+              <h3 className="font-semibold text-lg">Mídia por Variação</h3>
 
               <div className="grid grid-cols-2 gap-4 items-end">
                 <div className="space-y-2">
@@ -612,7 +740,11 @@ export default function AdminProducts() {
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="geral">Geral (Sem variação)</SelectItem>
+                      {availableVariationsForMedia.length === 0 && (
+                        <SelectItem value="_empty" disabled>
+                          Nenhuma variação
+                        </SelectItem>
+                      )}
                       {availableVariationsForMedia.map((v) => (
                         <SelectItem key={v.id} value={v.id}>
                           {v.name}
@@ -641,46 +773,53 @@ export default function AdminProducts() {
                 </Button>
               </div>
 
-              {(productMedia.length > 0 || pendingMedia.length > 0) && (
+              {(productMedia.filter((pm) => pm.expand?.variation).length > 0 ||
+                pendingMedia.filter((pm) => pm.variationId).length > 0) && (
                 <div className="mt-4 space-y-2">
-                  {productMedia.map((pm) => (
-                    <div
-                      key={pm.id}
-                      className="flex items-center justify-between p-2 border rounded text-sm"
-                    >
-                      <span className="font-medium">{pm.expand?.variation?.name || 'Geral'}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500 truncate max-w-[150px]">
-                          {pm.file ? pm.file : 'Sem arquivo'}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteMedia(pm.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                  {productMedia
+                    .filter((pm) => pm.expand?.variation)
+                    .map((pm) => (
+                      <div
+                        key={pm.id}
+                        className="flex items-center justify-between p-2 border rounded text-sm"
+                      >
+                        <span className="font-medium">{pm.expand?.variation?.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 truncate max-w-[150px]">
+                            {pm.file ? pm.file : 'Sem arquivo'}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteMedia(pm.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                  {pendingMedia.map((pm) => (
-                    <div
-                      key={pm.tempId}
-                      className="flex items-center justify-between p-2 border rounded text-sm bg-gray-50"
-                    >
-                      <span className="font-medium">{pm.variationName} (Não salvo)</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-500 truncate max-w-[150px]">{pm.file.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeletePendingMedia(pm.tempId)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                    ))}
+                  {pendingMedia
+                    .filter((pm) => pm.variationId)
+                    .map((pm) => (
+                      <div
+                        key={pm.tempId}
+                        className="flex items-center justify-between p-2 border rounded text-sm bg-gray-50"
+                      >
+                        <span className="font-medium">{pm.variationName} (Não salvo)</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 truncate max-w-[150px]">
+                            {pm.file.name}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeletePendingMedia(pm.tempId)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>
