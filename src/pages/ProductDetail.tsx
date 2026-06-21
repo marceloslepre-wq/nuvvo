@@ -200,26 +200,6 @@ export default function ProductDetail() {
           <span className="text-secondary font-medium truncate">{product.name}</span>
         </nav>
 
-        <div className="mb-8 flex flex-col gap-4 animate-fade-in">
-          {!selectedVariation && product.reference && (
-            <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-gray-100 text-sm text-gray-700 font-medium w-fit">
-              Referência: {product.reference}
-            </div>
-          )}
-          {embedUrl && (
-            <ErrorBoundary>
-              <div className="w-full max-w-4xl aspect-video rounded-xl overflow-hidden shadow-lg border border-gray-100">
-                <iframe
-                  src={embedUrl}
-                  className="w-full h-full border-0"
-                  allowFullScreen
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                />
-              </div>
-            </ErrorBoundary>
-          )}
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
           <div className="space-y-4">
             <Tabs
