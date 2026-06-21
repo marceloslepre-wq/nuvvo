@@ -126,7 +126,8 @@ export default function AdminProducts() {
     setMainImage(null)
     setMainVideo(null)
     setNewMediaVariation('geral')
-    setNewMediaFile(null)    setPendingMedia([])
+    setNewMediaFile(null)
+    setPendingMedia([])
 
     if (p.id) {
       try {
@@ -190,7 +191,10 @@ export default function AdminProducts() {
         setProductMedia(pm)
         toast({ title: 'Sucesso', description: 'Mídia adicionada!' })
       } else {
-        const variationName = newMediaVariation === 'geral' ? 'Geral' : variations.find((v) => v.id === newMediaVariation)?.name || ''
+        const variationName =
+          newMediaVariation === 'geral'
+            ? 'Geral'
+            : variations.find((v) => v.id === newMediaVariation)?.name || ''
         setPendingMedia([
           ...pendingMedia,
           {
@@ -611,9 +615,7 @@ export default function AdminProducts() {
                       key={pm.id}
                       className="flex items-center justify-between p-2 border rounded text-sm"
                     >
-                      <span className="font-medium">
-                        {pm.expand?.variation?.name || 'Geral'}
-                      </span>
+                      <span className="font-medium">{pm.expand?.variation?.name || 'Geral'}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-gray-500 truncate max-w-[150px]">
                           {pm.file ? pm.file : 'Sem arquivo'}
