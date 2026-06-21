@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { useCart } from '@/contexts/cart-context'
@@ -11,7 +11,6 @@ import { Image } from '@/components/Image'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Index() {
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const { toast } = useToast()
   const { increment } = useCart()
@@ -60,16 +59,6 @@ export default function Index() {
   useRealtime('site_settings', () => {
     loadData()
   })
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 350
-      scrollContainerRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      })
-    }
-  }
 
   const handleAddToCart = (productName: string) => {
     increment()
@@ -130,36 +119,11 @@ export default function Index() {
 
       <section id="destaques" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-secondary mb-2">Destaques</h2>
-              <p className="text-gray-600">Os produtos mais desejados do momento.</p>
-            </div>
-
-            <div className="hidden md:flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => scroll('left')}
-                className="rounded-full hover:bg-gray-100 hover:text-primary transition-colors"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => scroll('right')}
-                className="rounded-full hover:bg-gray-100 hover:text-primary transition-colors"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-secondary mb-2">Todos os Produtos</h2>
           </div>
 
-          <div
-            ref={scrollContainerRef}
-            className="flex gap-6 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => {
               const imageUrl = product.image
                 ? getFileUrl(product, product.image)
@@ -169,7 +133,7 @@ export default function Index() {
               return (
                 <div
                   key={product.id}
-                  className="min-w-[280px] md:min-w-[320px] max-w-[320px] flex-none bg-white rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 snap-center group"
+                  className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col"
                 >
                   <Link
                     to={`/produto/${product.id}`}
@@ -201,7 +165,7 @@ export default function Index() {
                       )}
                     </div>
                   </Link>
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1 flex flex-col">
                     <Link to={`/produto/${product.id}`}>
                       <h3 className="font-semibold text-lg text-secondary line-clamp-1 group-hover:text-primary transition-colors">
                         {product.name}
@@ -218,7 +182,7 @@ export default function Index() {
                       <span className="text-sm font-normal text-gray-500 ml-1">/mês</span>
                     </div>
 
-                    <div className="flex gap-2 pt-4">
+                    <div className="flex gap-2 pt-4 mt-auto">
                       <Button
                         variant="outline"
                         className="flex-1 border-gray-300 text-secondary hover:bg-gray-50"
@@ -242,7 +206,7 @@ export default function Index() {
             })}
 
             {products.length === 0 && (
-              <div className="w-full text-center py-10 text-gray-500">
+              <div className="w-full text-center py-10 text-gray-500 col-span-full">
                 Nenhum produto disponível no momento.
               </div>
             )}

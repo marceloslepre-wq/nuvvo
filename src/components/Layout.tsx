@@ -25,6 +25,23 @@ export default function Layout() {
       .catch(() => {})
   }, [])
 
+  const formatPhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+    }
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+    }
+    return phone
+  }
+
+  const getWaLink = (phone: string) => {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.startsWith('55')) return `https://wa.me/${digits}`
+    return `https://wa.me/55${digits}`
+  }
+
   useEffect(() => {
     if (hash) {
       const element = document.getElementById(hash.substring(1))
@@ -154,8 +171,30 @@ export default function Layout() {
           <div>
             <h3 className="font-semibold text-lg mb-4 text-white">Contato</h3>
             <ul className="space-y-3 text-sm text-gray-400">
-              {settings?.phone && <li>Telefone: {settings.phone}</li>}
-              {settings?.email && <li>E-mail: {settings.email}</li>}
+              {settings?.phone && (
+                <li>
+                  Telefone:{' '}
+                  <a
+                    href={getWaLink(settings.phone)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-primary transition-colors"
+                  >
+                    {formatPhone(settings.phone)}
+                  </a>
+                </li>
+              )}
+              {settings?.email && (
+                <li>
+                  E-mail:{' '}
+                  <a
+                    href={`mailto:${settings.email}`}
+                    className="hover:text-primary transition-colors"
+                  >
+                    {settings.email}
+                  </a>
+                </li>
+              )}
               {!settings?.phone && !settings?.email && (
                 <li>Informações de contato indisponíveis.</li>
               )}
