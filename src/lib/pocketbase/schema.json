@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-21T14:50:29.757Z",
+  "generatedAt": "2026-06-22T13:47:21.832Z",
   "collections": [
     {
       "name": "users",
@@ -77,12 +77,6 @@
         {
           "name": "description",
           "type": "text",
-          "required": true,
-          "system": false
-        },
-        {
-          "name": "price",
-          "type": "number",
           "required": true,
           "system": false
         },
@@ -563,6 +557,58 @@
       "indexes": [
         "CREATE INDEX idx_pvd_product ON product_variant_details (product)",
         "CREATE INDEX idx_pvd_variation ON product_variant_details (variation)"
+      ]
+    },
+    {
+      "name": "product_rental_prices",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "product",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "products"
+        },
+        {
+          "name": "rental_period",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "rental_periods"
+        },
+        {
+          "name": "price",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_prp_product ON product_rental_prices (product)",
+        "CREATE INDEX idx_prp_rental_period ON product_rental_prices (rental_period)",
+        "CREATE UNIQUE INDEX idx_prp_unique ON product_rental_prices (product, rental_period)"
       ]
     }
   ]

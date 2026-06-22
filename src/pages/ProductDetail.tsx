@@ -29,6 +29,7 @@ export default function ProductDetail() {
 
   const [productMedia, setProductMedia] = useState<any[]>([])
   const [productVariantDetails, setProductVariantDetails] = useState<any[]>([])
+  const [rentalPrices, setRentalPrices] = useState<any[]>([])
   const [selectedVariation, setSelectedVariation] = useState<string | null>(null)
   const [selectedRentalPeriod, setSelectedRentalPeriod] = useState<string | null>(null)
 
@@ -57,6 +58,14 @@ export default function ProductDetail() {
           setProductVariantDetails(pvd)
         } catch (e) {
           setProductVariantDetails([])
+        }
+        try {
+          const prp = await pb
+            .collection('product_rental_prices')
+            .getFullList({ filter: `product='${id}'` })
+          setRentalPrices(prp)
+        } catch (e) {
+          setRentalPrices([])
         }
         setSelectedVariation(null)
         setMainViewerItem(null)
@@ -114,10 +123,21 @@ export default function ProductDetail() {
     ? productVariantDetails.find((vd) => vd.variation === selectedVariation)
     : null
 
-  const selectedPeriodObj = availableRentalPeriods.find((rp: any) => rp.id === selectedRentalPeriod)
-  const displayPrice = selectedPeriodObj
-    ? Math.ceil(product.price * selectedPeriodObj.days)
-    : Math.ceil(product.price * 30)
+  const currentPriceRecord = selectedRentalPeriod
+    ? rentalPrices.find((rp) => rp.rental_period === selectedRentalPeriod)
+    : null
+
+  const displayPrice = currentPriceRecord
+    ? currentPriceRecord.price
+    : rentalPrices.length > 0
+      ? Math.min(...rentalPrices.map((r) => r.price))
+      : 0
+
+  const selectedPeriodObj = availableRentalPeriods.find(
+    (rp: any) =>
+      rp.id ===
+      (selectedRentalPeriod || rentalPrices.find((r) => r.price === displayPrice)?.rental_period),
+  )
 
   const canRent =
     (!availableVariations.length || selectedVariation) &&
@@ -292,15 +312,14 @@ export default function ProductDetail() {
             <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-2">{product.name}</h1>
 
             <div className="text-4xl font-bold text-primary mb-6">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                displayPrice,
-              )}
-              {!selectedPeriodObj && (
-                <span className="text-sm text-gray-500 font-normal block mt-1">por mês</span>
-              )}
-              {selectedPeriodObj && (
+              {displayPrice > 0
+                ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                    displayPrice,
+                  )
+                : 'Sob consulta'}
+              {displayPrice > 0 && selectedPeriodObj && (
                 <span className="text-sm text-gray-500 font-normal block mt-1">
-                  por {selectedPeriodObj.days} dias
+                  / {selectedPeriodObj.name}
                 </span>
               )}
             </div>

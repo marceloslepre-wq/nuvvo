@@ -37,8 +37,10 @@ export default function AdminProducts() {
   const [variations, setVariations] = useState<any[]>([])
   const [productMedia, setProductMedia] = useState<any[]>([])
   const [pvdList, setPvdList] = useState<any[]>([])
+  const [prpList, setPrpList] = useState<any[]>([])
 
   const [variantDetails, setVariantDetails] = useState<Record<string, string>>({})
+  const [rentalPrices, setRentalPrices] = useState<Record<string, number>>({})
 
   const [newMediaVariation, setNewMediaVariation] = useState('geral')
   const [newMediaFile, setNewMediaFile] = useState<File | null>(null)
@@ -69,12 +71,13 @@ export default function AdminProducts() {
   const loadData = async () => {
     try {
       const filter = search ? `name ~ "${search}"` : ''
-      const [pRes, cRes, rRes, vRes, pvdRes] = await Promise.all([
+      const [pRes, cRes, rRes, vRes, pvdRes, prpRes] = await Promise.all([
         pb.collection('products').getFullList({ filter, sort: '-created', expand: 'variations' }),
         pb.collection('categories').getFullList(),
         pb.collection('rental_periods').getFullList(),
         pb.collection('variations').getFullList(),
         pb.collection('product_variant_details').getFullList(),
+        pb.collection('product_rental_prices').getFullList(),
       ])
 
       const augmentedProducts = pRes.map((p: any) => ({
@@ -86,6 +89,7 @@ export default function AdminProducts() {
       setRentalPeriods(rRes)
       setVariations(vRes)
       setPvdList(pvdRes)
+      setPrpList(prpRes)
     } catch {
       /* intentionally ignored */
     }
@@ -110,6 +114,9 @@ export default function AdminProducts() {
   useRealtime('product_variant_details', () => {
     loadData()
   })
+  useRealtime('product_rental_prices', () => {
+    loadData()
+  })
 
   const handleEdit = async (p: any) => {
     setFormData({
@@ -118,7 +125,6 @@ export default function AdminProducts() {
       reference: p.reference || '',
       description: p.description || '',
       detailed_description: p.detailed_description || '',
-      price: p.price || 0,
       status: p.status || 'active',
       category: p.category || '',
       rental_period: Array.isArray(p.rental_period)
@@ -153,13 +159,24 @@ export default function AdminProducts() {
           vDetails[vd.variation] = vd.reference_code
         })
         setVariantDetails(vDetails)
+
+        const prp = await pb
+          .collection('product_rental_prices')
+          .getFullList({ filter: `product='${p.id}'` })
+        const rPrices: Record<string, number> = {}
+        prp.forEach((r) => {
+          rPrices[r.rental_period] = r.price
+        })
+        setRentalPrices(rPrices)
       } catch {
         setProductMedia([])
         setVariantDetails({})
+        setRentalPrices({})
       }
     } else {
       setProductMedia([])
       setVariantDetails({})
+      setRentalPrices({})
     }
 
     setIsOpen(true)
@@ -312,6 +329,32 @@ export default function AdminProducts() {
         await pb.collection('product_variant_details').delete(existing.id)
       }
 
+      const existingPrp = await pb
+        .collection('product_rental_prices')
+        .getFullList({ filter: `product='${savedProductId}'` })
+        .catch(() => [])
+      const existingPrpMap = new Map(existingPrp.map((r) => [r.rental_period, r]))
+
+      for (const rpId of formData.rental_period) {
+        const pValue = rentalPrices[rpId] || 0
+        const existing = existingPrpMap.get(rpId)
+        if (existing) {
+          if (existing.price !== pValue) {
+            await pb.collection('product_rental_prices').update(existing.id, { price: pValue })
+          }
+          existingPrpMap.delete(rpId)
+        } else {
+          await pb.collection('product_rental_prices').create({
+            product: savedProductId,
+            rental_period: rpId,
+            price: pValue,
+          })
+        }
+      }
+      for (const existing of Array.from(existingPrpMap.values())) {
+        await pb.collection('product_rental_prices').delete(existing.id)
+      }
+
       toast({ title: 'Sucesso', description: 'Produto salvo!' })
       setIsOpen(false)
       loadData()
@@ -361,7 +404,7 @@ export default function AdminProducts() {
               <TableHead className="w-20">Miniatura</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Link</TableHead>
-              <TableHead>Valor Mensal</TableHead>
+              <TableHead>A partir de</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -398,9 +441,15 @@ export default function AdminProducts() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                      Math.ceil(p.price * 30),
-                    )}
+                    {(() => {
+                      const prices = prpList.filter((prp) => prp.product === p.id)
+                      if (prices.length === 0) return '-'
+                      const minPrice = Math.min(...prices.map((prp) => prp.price))
+                      return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL',
+                      }).format(minPrice)
+                    })()}
                   </TableCell>
                   <TableCell>{p.status === 'active' ? 'Ativo' : 'Suspenso'}</TableCell>
                   <TableCell className="text-right space-x-2">
@@ -477,16 +526,6 @@ export default function AdminProducts() {
                 )}
               </div>
               <div className="space-y-2 col-span-2">
-                <Label>Valor da Diária</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2 col-span-2">
                 <Label>Variações</Label>
                 {!formData.category ? (
                   <p className="text-sm text-gray-500 italic">
@@ -551,7 +590,7 @@ export default function AdminProducts() {
               )}
 
               <div className="space-y-2 col-span-2">
-                <Label>Prazos de Locação</Label>{' '}
+                <Label>Prazos de Locação</Label>
                 <ToggleGroup
                   type="multiple"
                   value={formData.rental_period}
@@ -565,6 +604,37 @@ export default function AdminProducts() {
                   ))}
                 </ToggleGroup>
               </div>
+
+              {formData.rental_period.length > 0 && (
+                <div className="space-y-3 col-span-2 mt-2 p-4 border border-dashed rounded-md bg-gray-50/50">
+                  <Label>Preços por Prazo de Locação</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {formData.rental_period.map((rpId: string) => {
+                      const rpName = rentalPeriods.find((r: any) => r.id === rpId)?.name
+                      return (
+                        <div key={rpId} className="space-y-1">
+                          <Label className="text-xs text-gray-500">{rpName}</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            required
+                            placeholder="Valor"
+                            value={rentalPrices[rpId] !== undefined ? rentalPrices[rpId] : ''}
+                            onChange={(e) =>
+                              setRentalPrices({
+                                ...rentalPrices,
+                                [rpId]: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2 col-span-2">
                 <Label>Descrição Curta</Label>
                 <RichTextEditor

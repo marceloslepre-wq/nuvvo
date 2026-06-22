@@ -11,6 +11,8 @@ export default function CategoryPage() {
   const { id } = useParams<{ id: string }>()
   const [products, setProducts] = useState<Product[]>([])
   const [category, setCategory] = useState<any>(null)
+  const [rentalPrices, setRentalPrices] = useState<any[]>([])
+  const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
   const { increment } = useCart()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
@@ -22,11 +24,18 @@ export default function CategoryPage() {
         const cat = await pb.collection('categories').getOne(id!)
         setCategory(cat)
 
-        const prods = await pb.collection('products').getFullList({
-          filter: `status='active' && category='${id}'`,
-          sort: 'order',
-        })
+        const [prods, rPrices, rPeriods] = await Promise.all([
+          pb.collection('products').getFullList({
+            filter: `status='active' && category='${id}'`,
+            sort: 'order',
+          }),
+          pb.collection('product_rental_prices').getFullList(),
+          pb.collection('rental_periods').getFullList(),
+        ])
+
         setProducts(prods as Product[])
+        setRentalPrices(rPrices)
+        setRentalPeriods(rPeriods)
       } catch (error) {
         console.error(error)
       } finally {
@@ -123,11 +132,25 @@ export default function CategoryPage() {
                     {stripHtml(product.description)}
                   </p>
                   <div className="text-xl font-bold text-secondary pt-2">
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    }).format(Math.ceil(product.price * 30))}
-                    <span className="text-sm font-normal text-gray-500 ml-1">/mês</span>
+                    {(() => {
+                      const prices = rentalPrices.filter((prp) => prp.product === product.id)
+                      if (prices.length === 0) return 'Sob consulta'
+                      const minPrice = Math.min(...prices.map((prp) => prp.price))
+                      const periodId = prices.find((prp) => prp.price === minPrice)?.rental_period
+                      const periodName =
+                        rentalPeriods.find((r) => r.id === periodId)?.name || 'período'
+                      return (
+                        <>
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(minPrice)}
+                          <span className="text-sm font-normal text-gray-500 ml-1">
+                            / {periodName}
+                          </span>
+                        </>
+                      )
+                    })()}
                   </div>
 
                   <div className="flex gap-2 pt-4">

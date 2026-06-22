@@ -5,7 +5,7 @@ export interface Product extends RecordModel {
   name: string
   description: string
   detailed_description?: string
-  price: number
+  price?: number
   image: string
   video: string
   status: 'active' | 'inactive'
