@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ShoppingCart, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getFileUrl, Product } from '@/services/products'
 import pb from '@/lib/pocketbase/client'
-import { useCart } from '@/contexts/cart-context'
-import { useToast } from '@/components/ui/use-toast'
 
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>()
@@ -13,8 +11,6 @@ export default function CategoryPage() {
   const [category, setCategory] = useState<any>(null)
   const [rentalPrices, setRentalPrices] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
-  const { increment } = useCart()
-  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -155,13 +151,10 @@ export default function CategoryPage() {
 
                   <div className="flex gap-2 pt-4">
                     <Button
-                      className="w-full bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform"
+                      className="w-full bg-primary hover:bg-primary/90 text-white transition-colors"
                       asChild
                     >
-                      <Link to={`/produto/${product.id}/compra`}>
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        Adquira Agora
-                      </Link>
+                      <Link to={`/produto/${product.id}`}>Saiba Mais</Link>
                     </Button>
                   </div>
                 </div>

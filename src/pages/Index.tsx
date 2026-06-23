@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
-import { useCart } from '@/contexts/cart-context'
 import { getActiveProducts, getFileUrl, Product } from '@/services/products'
 import { useRealtime } from '@/hooks/use-realtime'
 import pb from '@/lib/pocketbase/client'
@@ -12,8 +9,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Index() {
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const { increment } = useCart()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [rentalPrices, setRentalPrices] = useState<any[]>([])
@@ -70,15 +65,6 @@ export default function Index() {
     loadData()
   })
 
-  const handleAddToCart = (productName: string) => {
-    increment()
-    toast({
-      title: 'Produto adicionado ao carrinho',
-      description: `${productName} foi adicionado com sucesso!`,
-      duration: 3000,
-    })
-  }
-
   const stripHtml = (html: string) => {
     if (!html) return ''
     const tmp = document.createElement('DIV')
@@ -89,7 +75,7 @@ export default function Index() {
   return (
     <div className="w-full">
       {heroMedia && <link rel="preload" as="image" href={heroMedia} fetchPriority="high" />}
-      <section className="relative w-full min-h-[500px] max-h-[800px] aspect-[16/9] lg:aspect-[3/2] flex items-center justify-center overflow-hidden bg-gray-100">
+      <section className="relative w-full min-h-[300px] flex items-center justify-center bg-gray-100 overflow-hidden">
         {(isDataLoading || (heroMedia && !imageLoaded)) && (
           <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
         )}
@@ -97,7 +83,7 @@ export default function Index() {
           <img
             src={heroMedia}
             alt="Hero Background"
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+            className={`w-full h-auto max-h-[50vh] sm:max-h-[70vh] lg:max-h-[80vh] object-contain transition-opacity duration-500 ${
               imageLoaded ? 'opacity-100' : 'opacity-0'
             }`}
             loading="eager"
@@ -106,18 +92,17 @@ export default function Index() {
             onError={() => setImageLoaded(true)}
           />
         )}
-        <div className="container mx-auto px-4 z-10 text-center text-white"></div>
       </section>
 
       {categories.length > 0 && (
         <section className="py-8 bg-white border-b">
           <div className="container mx-auto px-4">
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x pb-4">
+            <div className="flex flex-wrap gap-4 justify-center pb-4">
               {categories.map((c) => (
                 <div
                   key={c.id}
                   onClick={() => navigate(`/categoria/${c.id}`)}
-                  className="snap-center whitespace-nowrap px-6 py-2 bg-gray-100 rounded-full font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors cursor-pointer"
+                  className="whitespace-nowrap px-6 py-2 bg-gray-100 rounded-full font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors cursor-pointer"
                 >
                   {c.name}
                 </div>
@@ -208,20 +193,10 @@ export default function Index() {
 
                     <div className="flex gap-2 pt-4 mt-auto">
                       <Button
-                        variant="outline"
-                        className="flex-1 border-gray-300 text-secondary hover:bg-gray-50"
+                        className="w-full bg-primary hover:bg-primary/90 text-white transition-colors"
                         asChild
                       >
                         <Link to={`/produto/${product.id}`}>Saiba Mais</Link>
-                      </Button>
-                      <Button
-                        className="flex-1 bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform"
-                        asChild
-                      >
-                        <Link to={`/produto/${product.id}/compra`}>
-                          <ShoppingCart className="w-4 h-4 mr-2" />
-                          Adquira Agora
-                        </Link>
                       </Button>
                     </div>
                   </div>

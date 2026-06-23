@@ -413,7 +413,28 @@ export default function AdminProducts() {
             {products.map((p) => {
               return (
                 <TableRow key={p.id}>
-                  <TableCell>{p.reference || '-'}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const pvds = pvdList.filter((vd) => vd.product === p.id && vd.reference_code)
+                      if (pvds.length > 0) {
+                        return (
+                          <div className="flex flex-col gap-1 text-xs">
+                            {p.reference && <span className="font-semibold">{p.reference}</span>}
+                            {pvds.map((vd) => {
+                              const varName =
+                                variations.find((v) => v.id === vd.variation)?.name || 'Var'
+                              return (
+                                <span key={vd.id} className="text-gray-500 whitespace-nowrap">
+                                  {varName}: {vd.reference_code}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )
+                      }
+                      return p.reference || '-'
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {p.image ? (
                       <img
