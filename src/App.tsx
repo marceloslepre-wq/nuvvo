@@ -18,6 +18,7 @@ import AdminProducts from './pages/admin/Products'
 import AdminSettings from './pages/admin/Settings'
 import AdminLayoutSettings from './pages/admin/LayoutSettings'
 import CategoryPage from './pages/Category'
+import ContentPage from './pages/ContentPage'
 
 const App = () => (
   <AuthProvider>
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/categoria/:id" element={<CategoryPage />} />
               <Route path="/produto/:id" element={<ProductDetail />} />
               <Route path="/produto/:id/compra" element={<Checkout />} />
+              <Route path="/pagina/:slug" element={<ContentPage />} />
             </Route>
 
             <Route path="/admin/login" element={<AdminLogin />} />

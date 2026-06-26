@@ -123,7 +123,23 @@ export default function AdminLayoutSettings() {
               <Input name="email" defaultValue={settings.email} />
             </div>
             <div className="space-y-2">
+              <Label>Logomarca da Empresa</Label>
+              {settings.logo && (
+                <div className="mb-2">
+                  <img
+                    src={pb.files.getURL(settings, settings.logo)}
+                    alt="Logo"
+                    className="h-12 object-contain"
+                  />
+                </div>
+              )}
+              <Input type="file" name="logo" accept="image/*" />
+            </div>
+            <div className="space-y-2">
               <Label>Hero Media (Fundo da Home)</Label>
+              {settings.hero_media && (
+                <div className="mb-2 text-sm text-gray-500">Mídia atual salva.</div>
+              )}
               <Input type="file" name="hero_media" accept="image/*,video/*" />
             </div>
             <Button type="submit">Salvar Alterações</Button>

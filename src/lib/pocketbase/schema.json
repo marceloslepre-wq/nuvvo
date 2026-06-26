@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-23T20:32:05.192Z",
+  "generatedAt": "2026-06-26T23:04:11.468Z",
   "collections": [
     {
       "name": "users",
@@ -363,7 +363,7 @@
         "list": "",
         "view": "",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
+        "update": "@request.auth.role = 'gestor'",
         "delete": "@request.auth.id != ''"
       },
       "fields": [
@@ -422,6 +422,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []

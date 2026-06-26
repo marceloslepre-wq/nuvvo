@@ -61,9 +61,17 @@ export default function Layout() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                S
-              </div>
+              {settings?.logo ? (
+                <img
+                  src={pb.files.getURL(settings, settings.logo)}
+                  alt="Logo"
+                  className="h-8 object-contain"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                  S
+                </div>
+              )}
               <span className="font-bold text-xl tracking-tight text-secondary">Skip Apps</span>
             </Link>
             <nav className="hidden md:flex gap-6">
@@ -250,22 +258,22 @@ export default function Layout() {
             <h3 className="font-semibold text-lg mb-4 text-white">Links Rápidos</h3>
             <ul className="space-y-3 text-sm text-gray-400">
               <li>
-                <Link to="/" className="hover:text-primary transition-colors">
+                <Link to="/pagina/sobre-nos" className="hover:text-primary transition-colors">
                   Sobre Nós
                 </Link>
               </li>
               <li>
-                <Link to="/" className="hover:text-primary transition-colors">
+                <Link to="/pagina/termos" className="hover:text-primary transition-colors">
                   Termos de Serviço
                 </Link>
               </li>
               <li>
-                <Link to="/" className="hover:text-primary transition-colors">
+                <Link to="/pagina/privacidade" className="hover:text-primary transition-colors">
                   Política de Privacidade
                 </Link>
               </li>
               <li>
-                <Link to="/" className="hover:text-primary transition-colors">
+                <Link to="/pagina/trocas" className="hover:text-primary transition-colors">
                   Trocas e Devoluções
                 </Link>
               </li>
