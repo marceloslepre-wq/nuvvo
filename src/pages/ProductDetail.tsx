@@ -32,6 +32,7 @@ export default function ProductDetail() {
   const [rentalPrices, setRentalPrices] = useState<any[]>([])
   const [selectedVariation, setSelectedVariation] = useState<string | null>(null)
   const [selectedRentalPeriod, setSelectedRentalPeriod] = useState<string | null>(null)
+  const [siteSettings, setSiteSettings] = useState<any>(null)
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -66,6 +67,12 @@ export default function ProductDetail() {
           setRentalPrices(prp)
         } catch (e) {
           setRentalPrices([])
+        }
+        try {
+          const settings = await pb.collection('site_settings').getFirstListItem('')
+          setSiteSettings(settings)
+        } catch (e) {
+          setSiteSettings(null)
         }
         setSelectedVariation(null)
         setMainViewerItem(null)
@@ -184,6 +191,27 @@ export default function ProductDetail() {
       })
     }
   })
+
+  const handleRentClick = () => {
+    if (!canRent) return
+    const phoneRaw = siteSettings?.phone || ''
+    const phone = phoneRaw.replace(/\D/g, '')
+
+    const productRef = currentVariantDetail?.reference_code || product.reference || ''
+    const periodName = selectedPeriodObj?.name || ''
+    const pageUrl = window.location.href
+    const mainImageUrl = product.image ? getFileUrl(product, product.image) : ''
+
+    let text = `Olá! Gostaria de solicitar a locação do seguinte equipamento:\nProduto: ${product.name}\n`
+    if (productRef) text += `Referência: ${productRef}\n`
+    if (periodName) text += `Período: ${periodName}\n`
+    text += `Link da página: ${pageUrl}\n`
+    if (mainImageUrl) text += `Link da imagem: ${mainImageUrl}`
+
+    const encodedText = encodeURIComponent(text.trim())
+    const waUrl = `https://wa.me/${phone}?text=${encodedText}`
+    window.open(waUrl, '_blank')
+  }
 
   const getEmbedUrl = (url: string) => {
     if (!url) return null
@@ -387,19 +415,10 @@ export default function ProductDetail() {
                 size="lg"
                 className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform shadow-md"
                 disabled={!canRent}
-                asChild={!!canRent}
+                onClick={handleRentClick}
               >
-                {canRent ? (
-                  <Link to={`/produto/${product.id}/compra`}>
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Alugue Agora
-                  </Link>
-                ) : (
-                  <span>
-                    <ShoppingCart className="w-5 h-5 mr-2" />
-                    Alugue Agora
-                  </span>
-                )}
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Alugue Agora
               </Button>
             </div>
           </div>
