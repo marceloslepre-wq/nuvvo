@@ -60,20 +60,6 @@ export default function Layout() {
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center gap-2">
-              {settings?.logo ? (
-                <img
-                  src={pb.files.getURL(settings, settings.logo)}
-                  alt="Logo"
-                  className="h-8 object-contain"
-                />
-              ) : (
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                  S
-                </div>
-              )}
-              <span className="font-bold text-xl tracking-tight text-secondary">Skip Apps</span>
-            </Link>
             <nav className="hidden md:flex gap-6">
               <Link
                 to="/"
