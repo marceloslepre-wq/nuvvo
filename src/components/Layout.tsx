@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { useCart } from '@/contexts/cart-context'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export default function Layout() {
   const { count } = useCart()
@@ -13,17 +14,32 @@ export default function Layout() {
   const [locations, setLocations] = useState<any[]>([])
   const [settings, setSettings] = useState<any>(null)
 
-  useEffect(() => {
-    pb.collection('pickup_locations')
-      .getFullList()
-      .then(setLocations)
-      .catch(() => {})
-
+  const loadSettings = () => {
     pb.collection('site_settings')
       .getFirstListItem('')
       .then(setSettings)
       .catch(() => {})
+  }
+
+  const loadLocations = () => {
+    pb.collection('pickup_locations')
+      .getFullList()
+      .then(setLocations)
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    loadLocations()
+    loadSettings()
   }, [])
+
+  useRealtime('site_settings', () => {
+    loadSettings()
+  })
+
+  useRealtime('pickup_locations', () => {
+    loadLocations()
+  })
 
   const formatPhone = (phone: string) => {
     const digits = phone.replace(/\D/g, '')
@@ -60,6 +76,17 @@ export default function Layout() {
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center shrink-0 mr-2">
+              {settings?.logo ? (
+                <img
+                  src={pb.files.getURL(settings, settings.logo)}
+                  alt="Logo"
+                  className="h-8 md:h-10 object-contain"
+                />
+              ) : (
+                <span className="font-bold text-xl text-primary">Plataforma</span>
+              )}
+            </Link>
             <nav className="hidden md:flex gap-6">
               <Link
                 to="/"

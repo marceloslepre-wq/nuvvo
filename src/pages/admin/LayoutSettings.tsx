@@ -18,19 +18,32 @@ import {
 } from '@/components/ui/table'
 import { Plus, Trash2 } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
+import { RichTextEditor } from '@/components/RichTextEditor'
 
 export default function AdminLayoutSettings() {
   const { user } = useAuth()
   const [settings, setSettings] = useState<any>(null)
   const [locations, setLocations] = useState<any[]>([])
+  const [aboutUs, setAboutUs] = useState('')
+  const [terms, setTerms] = useState('')
+  const [privacy, setPrivacy] = useState('')
+  const [returns, setReturns] = useState('')
 
   const loadData = async () => {
     try {
       const res = await pb.collection('site_settings').getFirstListItem('')
       setSettings(res)
+      setAboutUs(res.about_us || '')
+      setTerms(res.terms || '')
+      setPrivacy(res.privacy || '')
+      setReturns(res.returns || '')
     } catch (e) {
       const s = await pb.collection('site_settings').create({ phone: '', email: '' })
       setSettings(s)
+      setAboutUs('')
+      setTerms('')
+      setPrivacy('')
+      setReturns('')
     }
     const locs = await pb.collection('pickup_locations').getFullList()
     setLocations(locs)
@@ -202,23 +215,23 @@ export default function AdminLayoutSettings() {
           <form onSubmit={saveSettings} className="space-y-6 bg-white p-4 border rounded-md">
             <div className="space-y-2">
               <Label>Sobre Nós</Label>
-              <Textarea
-                name="about_us"
-                defaultValue={settings.about_us}
-                className="min-h-[100px]"
-              />
+              <RichTextEditor value={aboutUs} onChange={setAboutUs} />
+              <input type="hidden" name="about_us" value={aboutUs} />
             </div>
             <div className="space-y-2">
               <Label>Termos de Serviço</Label>
-              <Textarea name="terms" defaultValue={settings.terms} className="min-h-[100px]" />
+              <RichTextEditor value={terms} onChange={setTerms} />
+              <input type="hidden" name="terms" value={terms} />
             </div>
             <div className="space-y-2">
               <Label>Política de Privacidade</Label>
-              <Textarea name="privacy" defaultValue={settings.privacy} className="min-h-[100px]" />
+              <RichTextEditor value={privacy} onChange={setPrivacy} />
+              <input type="hidden" name="privacy" value={privacy} />
             </div>
             <div className="space-y-2">
               <Label>Trocas e Devoluções</Label>
-              <Textarea name="returns" defaultValue={settings.returns} className="min-h-[100px]" />
+              <RichTextEditor value={returns} onChange={setReturns} />
+              <input type="hidden" name="returns" value={returns} />
             </div>
             <Button type="submit">Salvar Conteúdos</Button>
           </form>
