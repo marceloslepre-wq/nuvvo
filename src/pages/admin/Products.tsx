@@ -25,6 +25,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Pencil, Trash2, Plus, Search, PowerOff } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { extractFieldErrors } from '@/lib/pocketbase/errors'
+import { sanitizeVideoUrl } from '@/lib/youtube'
+import { VideoPreview } from '@/components/VideoPreview'
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([])
@@ -306,7 +308,7 @@ export default function AdminProducts() {
         form.append('description', String(formData.description ?? ''))
         form.append('detailed_description', String(formData.detailed_description ?? ''))
         form.append('status', String(formData.status ?? 'active'))
-        form.append('external_link', String(formData.external_link ?? ''))
+        form.append('external_link', sanitizeVideoUrl(String(formData.external_link ?? '')))
         form.append('order', String(formData.order ?? 1))
         form.append('category', String(formData.category ?? ''))
         if (formData.variations && formData.variations.length > 0) {
@@ -725,7 +727,11 @@ export default function AdminProducts() {
                   type="url"
                   value={formData.external_link}
                   onChange={(e) => setFormData({ ...formData, external_link: e.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=..."
                 />
+                {formData.external_link && (
+                  <VideoPreview url={formData.external_link} className="mt-2" />
+                )}
               </div>
               <div className="space-y-2 col-span-2">
                 <Label>Imagem Principal</Label>

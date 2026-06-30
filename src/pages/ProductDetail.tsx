@@ -15,6 +15,7 @@ import { getProduct, getFileUrl, Product } from '@/services/products'
 import pb from '@/lib/pocketbase/client'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Image } from '@/components/Image'
+import { getYouTubeEmbedUrl } from '@/lib/youtube'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
@@ -213,25 +214,7 @@ export default function ProductDetail() {
     window.open(waUrl, '_blank')
   }
 
-  const getEmbedUrl = (url: string) => {
-    if (!url) return null
-    try {
-      const urlObj = new URL(url)
-      if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('v')) {
-        return `https://www.youtube.com/embed/${urlObj.searchParams.get('v')}`
-      }
-      if (urlObj.hostname === 'youtu.be') {
-        return `https://www.youtube.com/embed${urlObj.pathname}`
-      }
-      if (urlObj.hostname.includes('loom.com') && urlObj.pathname.includes('/share/')) {
-        return url.replace('/share/', '/embed/')
-      }
-    } catch (e) {
-      // ignore invalid URLs
-    }
-    return null
-  }
-  const embedUrl = product.external_link ? getEmbedUrl(product.external_link) : null
+  const embedUrl = product.external_link ? getYouTubeEmbedUrl(product.external_link) : null
 
   return (
     <div className="bg-white min-h-screen py-8">
