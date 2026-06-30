@@ -65,6 +65,8 @@ export default function AdminProducts() {
   })
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [mainVideo, setMainVideo] = useState<File | null>(null)
+  const [deleteMainImage, setDeleteMainImage] = useState(false)
+  const [deleteMainVideo, setDeleteMainVideo] = useState(false)
   const [extraImageFiles, setExtraImageFiles] = useState<File[]>([])
   const [extraVideoFiles, setExtraVideoFiles] = useState<File[]>([])
 
@@ -135,9 +137,13 @@ export default function AdminProducts() {
       external_link: p.external_link || '',
       order: p.order || 1,
       variations: p.variations || [],
+      image: p.image || '',
+      video: p.video || '',
     })
     setMainImage(null)
     setMainVideo(null)
+    setDeleteMainImage(false)
+    setDeleteMainVideo(false)
     setExtraImageFiles([])
     setExtraVideoFiles([])
     setNewMediaVariation('')
@@ -266,12 +272,20 @@ export default function AdminProducts() {
           } else {
             formData[k].forEach((vId: string) => form.append(k, vId))
           }
-        } else if (k !== 'id') {
+        } else if (k !== 'id' && k !== 'image' && k !== 'video') {
           form.append(k, formData[k])
         }
       })
-      if (mainImage) form.append('image', mainImage)
-      if (mainVideo) form.append('video', mainVideo)
+      if (mainImage) {
+        form.append('image', mainImage)
+      } else if (deleteMainImage) {
+        form.append('image', '')
+      }
+      if (mainVideo) {
+        form.append('video', mainVideo)
+      } else if (deleteMainVideo) {
+        form.append('video', '')
+      }
 
       let savedProductId = formData.id
       if (formData.id) {
@@ -684,8 +698,45 @@ export default function AdminProducts() {
                 <Input
                   type="file"
                   accept=".jpg,.jpeg,.png,.webp"
-                  onChange={(e) => setMainImage(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    setMainImage(e.target.files?.[0] || null)
+                    setDeleteMainImage(false)
+                  }}
                 />
+
+                {formData.image && !deleteMainImage && !mainImage && (
+                  <div className="flex items-center justify-between p-2 border rounded text-sm mt-2 bg-blue-50/50">
+                    <span className="text-gray-600 truncate max-w-[200px] font-medium">
+                      {formData.image}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      onClick={() => {
+                        setDeleteMainImage(true)
+                        setMainImage(null)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
+                {mainImage && (
+                  <div className="flex items-center justify-between p-2 border rounded text-sm mt-2 bg-green-50/50">
+                    <span className="text-gray-600 truncate max-w-[200px] font-medium">
+                      {mainImage.name} (novo)
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      onClick={() => setMainImage(null)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
 
                 {productMedia
                   .filter(
@@ -720,7 +771,7 @@ export default function AdminProducts() {
                   </div>
                 ))}
 
-                {(formData.image ? 1 : 0) +
+                {(formData.image && !deleteMainImage ? 1 : 0) +
                   productMedia.filter(
                     (pm) => !pm.expand?.variation && pm.file?.match(/\.(jpg|jpeg|png|webp)$/i),
                   ).length +
@@ -755,8 +806,45 @@ export default function AdminProducts() {
                 <Input
                   type="file"
                   accept=".mp4,.webm"
-                  onChange={(e) => setMainVideo(e.target.files?.[0] || null)}
+                  onChange={(e) => {
+                    setMainVideo(e.target.files?.[0] || null)
+                    setDeleteMainVideo(false)
+                  }}
                 />
+
+                {formData.video && !deleteMainVideo && !mainVideo && (
+                  <div className="flex items-center justify-between p-2 border rounded text-sm mt-2 bg-blue-50/50">
+                    <span className="text-gray-600 truncate max-w-[200px] font-medium">
+                      {formData.video}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      onClick={() => {
+                        setDeleteMainVideo(true)
+                        setMainVideo(null)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
+                {mainVideo && (
+                  <div className="flex items-center justify-between p-2 border rounded text-sm mt-2 bg-green-50/50">
+                    <span className="text-gray-600 truncate max-w-[200px] font-medium">
+                      {mainVideo.name} (novo)
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      type="button"
+                      onClick={() => setMainVideo(null)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
 
                 {productMedia
                   .filter((pm) => !pm.expand?.variation && pm.file?.match(/\.(mp4|webm)$/i))
@@ -789,7 +877,7 @@ export default function AdminProducts() {
                   </div>
                 ))}
 
-                {(formData.video ? 1 : 0) +
+                {(formData.video && !deleteMainVideo ? 1 : 0) +
                   productMedia.filter(
                     (pm) => !pm.expand?.variation && pm.file?.match(/\.(mp4|webm)$/i),
                   ).length +
