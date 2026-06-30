@@ -265,7 +265,42 @@ export default function AdminProducts() {
     try {
       const hasFileChanges = !!(mainImage || deleteMainImage || mainVideo || deleteMainVideo)
 
-      const appendBaseFields = (form: FormData) => {
+      let savedProductId = formData.id
+
+      if (formData.id) {
+        // Step 1: Always update metadata via JSON PATCH (more reliable than FormData for text/relation fields)
+        await pb.collection('products').update(formData.id, {
+          name: String(formData.name ?? ''),
+          reference: String(formData.reference ?? ''),
+          description: String(formData.description ?? ''),
+          detailed_description: String(formData.detailed_description ?? ''),
+          status: String(formData.status ?? 'active'),
+          category: formData.category || null,
+          order: Number(formData.order ?? 1),
+          external_link: formData.external_link || null,
+          variations: formData.variations || [],
+          rental_period: formData.rental_period || [],
+        })
+
+        // Step 2: If there are file changes, send a separate FormData PATCH with ONLY file fields.
+        // PocketBase keeps all omitted fields as-is when updating via FormData.
+        if (hasFileChanges) {
+          const fileForm = new FormData()
+          if (mainImage) {
+            fileForm.append('image', mainImage)
+          } else if (deleteMainImage) {
+            fileForm.append('image', '')
+          }
+          if (mainVideo) {
+            fileForm.append('video', mainVideo)
+          } else if (deleteMainVideo) {
+            fileForm.append('video', '')
+          }
+          await pb.collection('products').update(formData.id, fileForm)
+        }
+      } else {
+        // Create new product — must send everything in one FormData request
+        const form = new FormData()
         form.append('name', String(formData.name ?? ''))
         form.append('reference', String(formData.reference ?? ''))
         form.append('description', String(formData.description ?? ''))
@@ -284,42 +319,6 @@ export default function AdminProducts() {
         } else {
           form.append('rental_period', '')
         }
-      }
-
-      let savedProductId = formData.id
-
-      if (formData.id) {
-        if (hasFileChanges) {
-          const form = new FormData()
-          appendBaseFields(form)
-          if (mainImage) {
-            form.append('image', mainImage)
-          } else if (deleteMainImage) {
-            form.append('image', '')
-          }
-          if (mainVideo) {
-            form.append('video', mainVideo)
-          } else if (deleteMainVideo) {
-            form.append('video', '')
-          }
-          await pb.collection('products').update(formData.id, form)
-        } else {
-          await pb.collection('products').update(formData.id, {
-            name: formData.name ?? '',
-            reference: formData.reference ?? '',
-            description: formData.description ?? '',
-            detailed_description: formData.detailed_description ?? '',
-            status: formData.status ?? 'active',
-            category: formData.category || null,
-            order: formData.order ?? 1,
-            external_link: formData.external_link ?? '',
-            variations: formData.variations || [],
-            rental_period: formData.rental_period || [],
-          })
-        }
-      } else {
-        const form = new FormData()
-        appendBaseFields(form)
         if (mainImage) {
           form.append('image', mainImage)
         }

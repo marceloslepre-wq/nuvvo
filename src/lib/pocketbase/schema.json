@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T19:03:18.162Z",
+  "generatedAt": "2026-06-30T19:33:03.706Z",
   "collections": [
     {
       "name": "users",
@@ -83,7 +83,7 @@
         {
           "name": "image",
           "type": "file",
-          "required": true,
+          "required": false,
           "system": false
         },
         {
