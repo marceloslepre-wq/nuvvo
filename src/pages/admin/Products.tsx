@@ -55,7 +55,6 @@ export default function AdminProducts() {
     reference: '',
     description: '',
     detailed_description: '',
-    price: 0,
     status: 'active',
     category: '',
     rental_period: [],
@@ -235,7 +234,7 @@ export default function AdminProducts() {
         ])
       }
       setNewMediaFile(null)
-      setNewMediaFile(null)
+      setNewMediaVariation('')
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     }
@@ -264,33 +263,69 @@ export default function AdminProducts() {
     setLoading(true)
     setFieldErrors({})
     try {
-      const form = new FormData()
-      Object.keys(formData).forEach((k) => {
-        if (k === 'variations' || k === 'rental_period') {
-          if (formData[k].length === 0) {
-            form.append(k, '')
-          } else {
-            formData[k].forEach((vId: string) => form.append(k, vId))
-          }
-        } else if (k !== 'id' && k !== 'image' && k !== 'video') {
-          form.append(k, formData[k])
+      const hasFileChanges = !!(mainImage || deleteMainImage || mainVideo || deleteMainVideo)
+
+      const appendBaseFields = (form: FormData) => {
+        form.append('name', String(formData.name ?? ''))
+        form.append('reference', String(formData.reference ?? ''))
+        form.append('description', String(formData.description ?? ''))
+        form.append('detailed_description', String(formData.detailed_description ?? ''))
+        form.append('status', String(formData.status ?? 'active'))
+        form.append('external_link', String(formData.external_link ?? ''))
+        form.append('order', String(formData.order ?? 1))
+        form.append('category', String(formData.category ?? ''))
+        if (formData.variations && formData.variations.length > 0) {
+          formData.variations.forEach((vId: string) => form.append('variations', vId))
+        } else {
+          form.append('variations', '')
         }
-      })
-      if (mainImage) {
-        form.append('image', mainImage)
-      } else if (deleteMainImage) {
-        form.append('image', '')
-      }
-      if (mainVideo) {
-        form.append('video', mainVideo)
-      } else if (deleteMainVideo) {
-        form.append('video', '')
+        if (formData.rental_period && formData.rental_period.length > 0) {
+          formData.rental_period.forEach((rpId: string) => form.append('rental_period', rpId))
+        } else {
+          form.append('rental_period', '')
+        }
       }
 
       let savedProductId = formData.id
+
       if (formData.id) {
-        await pb.collection('products').update(formData.id, form)
+        if (hasFileChanges) {
+          const form = new FormData()
+          appendBaseFields(form)
+          if (mainImage) {
+            form.append('image', mainImage)
+          } else if (deleteMainImage) {
+            form.append('image', '')
+          }
+          if (mainVideo) {
+            form.append('video', mainVideo)
+          } else if (deleteMainVideo) {
+            form.append('video', '')
+          }
+          await pb.collection('products').update(formData.id, form)
+        } else {
+          await pb.collection('products').update(formData.id, {
+            name: formData.name ?? '',
+            reference: formData.reference ?? '',
+            description: formData.description ?? '',
+            detailed_description: formData.detailed_description ?? '',
+            status: formData.status ?? 'active',
+            category: formData.category || null,
+            order: formData.order ?? 1,
+            external_link: formData.external_link ?? '',
+            variations: formData.variations || [],
+            rental_period: formData.rental_period || [],
+          })
+        }
       } else {
+        const form = new FormData()
+        appendBaseFields(form)
+        if (mainImage) {
+          form.append('image', mainImage)
+        }
+        if (mainVideo) {
+          form.append('video', mainVideo)
+        }
         const newProd = await pb.collection('products').create(form)
         savedProductId = newProd.id
         for (const pm of pendingMedia) {
