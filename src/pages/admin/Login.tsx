@@ -22,7 +22,7 @@ export default function AdminLogin() {
     const { error } = await signIn(email, password)
     setLoading(false)
     if (error) {
-      toast({ title: 'Erro', description: 'Credenciais inválidas.', variant: 'destructive' })
+      toast({ title: 'Erro', description: 'E-mail ou senha inválidos.', variant: 'destructive' })
     } else {
       navigate('/admin/dashboard')
     }

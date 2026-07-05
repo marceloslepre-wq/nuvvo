@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { ClientResponseError } from 'pocketbase'
 import pb from '@/lib/pocketbase/client'
 
 interface AuthContextType {
@@ -47,7 +48,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await pb.collection('users').authWithPassword(email, password)
       return { error: null }
     } catch (error) {
-      return { error }
+      if (error instanceof ClientResponseError) {
+        return { error }
+      }
+      return { error: new Error('Erro de conexão. Tente novamente.') }
     }
   }
 
