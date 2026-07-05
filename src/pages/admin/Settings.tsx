@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
+import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -84,8 +85,8 @@ export default function AdminSettings() {
       e.currentTarget.reset()
       toast({ title: 'Usuário Adicionado' })
     } catch (err: any) {
-      const errObj = err?.response?.data
-      if (errObj && typeof errObj === 'object' && errObj.email?.code === 'validation_not_unique') {
+      const fieldErrors = extractFieldErrors(err)
+      if (fieldErrors.email && err?.response?.data?.email?.code === 'validation_not_unique') {
         toast({
           title: 'E-mail já cadastrado',
           description: 'Este e-mail já está cadastrado no sistema.',
@@ -93,15 +94,7 @@ export default function AdminSettings() {
         })
         return
       }
-      let errMsg = err.message
-      if (errObj && typeof errObj === 'object') {
-        errMsg =
-          Object.values(errObj)
-            .map((e: any) => e?.message)
-            .filter(Boolean)
-            .join(' ') || errMsg
-      }
-      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
+      toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
     }
   }
 
