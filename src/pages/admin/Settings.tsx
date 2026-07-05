@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from '@/components/ui/use-toast'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Pencil } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import {
   Select,
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
@@ -32,6 +33,7 @@ export default function AdminSettings() {
   const [categories, setCategories] = useState<any[]>([])
   const [variations, setVariations] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
+  const [editingUser, setEditingUser] = useState<any | null>(null)
 
   const loadData = async () => {
     const [u, c, v, r] = await Promise.all([
@@ -72,7 +74,8 @@ export default function AdminSettings() {
 
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const fd = new FormData(form)
     try {
       await pb.collection('users').create({
         email: fd.get('email'),
@@ -82,7 +85,7 @@ export default function AdminSettings() {
         role: fd.get('role'),
       })
       loadData()
-      e.currentTarget.reset()
+      form.reset()
       toast({ title: 'Usuário Adicionado' })
     } catch (err: any) {
       const fieldErrors = extractFieldErrors(err)
@@ -104,13 +107,14 @@ export default function AdminSettings() {
     extra?: string,
   ) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const fd = new FormData(form)
     const data: any = { name: fd.get('name') }
     if (extra && fd.get(extra)) data[extra] = fd.get(extra)
     try {
       await pb.collection(col).create(data)
       loadData()
-      e.currentTarget.reset()
+      form.reset()
       toast({ title: 'Adicionado' })
     } catch (err: any) {
       const errObj = err.response?.data
@@ -188,6 +192,9 @@ export default function AdminSettings() {
                     <TableCell>{u.email}</TableCell>
                     <TableCell>{u.role}</TableCell>
                     <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -344,6 +351,72 @@ export default function AdminSettings() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const form = e.currentTarget
+                const fd = new FormData(form)
+                try {
+                  await pb.send(`/backend/v1/users/${editingUser.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                      name: fd.get('name'),
+                      email: fd.get('email'),
+                      role: fd.get('role'),
+                    }),
+                    headers: { 'Content-Type': 'application/json' },
+                  })
+                  loadData()
+                  setEditingUser(null)
+                  form.reset()
+                  toast({ title: 'Usuário Atualizado' })
+                } catch (err: any) {
+                  toast({
+                    title: 'Erro',
+                    description: getErrorMessage(err),
+                    variant: 'destructive',
+                  })
+                }
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome</label>
+                <Input name="name" defaultValue={editingUser.name} required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">E-mail</label>
+                <Input name="email" type="email" defaultValue={editingUser.email} required />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Perfil</label>
+                <Select name="role" defaultValue={editingUser.role}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                    <SelectItem value="funcionario">Funcionário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">Salvar</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
