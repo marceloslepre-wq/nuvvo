@@ -84,7 +84,15 @@ export default function AdminSettings() {
       e.currentTarget.reset()
       toast({ title: 'Usuário Adicionado' })
     } catch (err: any) {
-      const errObj = err.response?.data
+      const errObj = err?.response?.data
+      if (errObj && typeof errObj === 'object' && errObj.email?.code === 'validation_not_unique') {
+        toast({
+          title: 'E-mail já cadastrado',
+          description: 'Este e-mail já está cadastrado no sistema.',
+          variant: 'destructive',
+        })
+        return
+      }
       let errMsg = err.message
       if (errObj && typeof errObj === 'object') {
         errMsg =
