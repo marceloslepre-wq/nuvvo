@@ -107,6 +107,12 @@ export default function Layout() {
                 Contato
               </Link>
               <Link
+                to="/nossas-lojas"
+                className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
+              >
+                Nossas Lojas
+              </Link>
+              <Link
                 to="/admin"
                 className="text-sm font-medium text-primary hover:text-primary/80 transition-colors bg-primary/10 px-3 py-1 rounded-md"
               >
@@ -166,6 +172,14 @@ export default function Layout() {
                       className="text-lg font-medium hover:text-primary transition-colors"
                     >
                       Contato
+                    </Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link
+                      to="/nossas-lojas"
+                      className="text-lg font-medium hover:text-primary transition-colors"
+                    >
+                      Nossas Lojas
                     </Link>
                   </SheetClose>
                   <SheetClose asChild>

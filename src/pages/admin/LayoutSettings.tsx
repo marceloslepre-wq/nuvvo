@@ -175,6 +175,14 @@ export default function AdminLayoutSettings() {
               <Label className="mb-2 block">Imagem do Local</Label>
               <Input type="file" name="image" accept="image/*" />
             </div>
+            <div className="col-span-2">
+              <Label className="mb-2 block">Video URL (YouTube/Vimeo)</Label>
+              <Input name="video_url" placeholder="https://www.youtube.com/watch?v=..." />
+            </div>
+            <div className="col-span-2">
+              <Label className="mb-2 block">Upload de Vídeo</Label>
+              <Input type="file" name="video_file" accept="video/*" />
+            </div>
             <Button type="submit" className="col-span-2">
               <Plus className="h-4 w-4 mr-2" /> Adicionar Local
             </Button>

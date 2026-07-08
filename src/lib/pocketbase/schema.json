@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-06T22:08:18.368Z",
+  "generatedAt": "2026-07-08T20:13:26.547Z",
   "collections": [
     {
       "name": "users",
@@ -352,6 +352,18 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "video_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "video_file",
+          "type": "file",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
