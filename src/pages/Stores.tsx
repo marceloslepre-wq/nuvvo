@@ -3,7 +3,7 @@ import pb from '@/lib/pocketbase/client'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Skeleton } from '@/components/ui/skeleton'
 import { VideoPreview } from '@/components/VideoPreview'
-import { MapPin, Clock } from 'lucide-react'
+import { MapPin, Clock, Store } from 'lucide-react'
 import { getFileUrl } from '@/services/products'
 
 interface LocationRecord {
@@ -80,15 +80,20 @@ export default function StoresPage() {
                     key={loc.id}
                     className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300 flex flex-col"
                   >
-                    {loc.image && (
-                      <div className="aspect-video w-full overflow-hidden bg-gray-100">
+                    <div className="aspect-video w-full overflow-hidden bg-gray-100">
+                      {loc.image ? (
                         <img
                           src={pb.files.getURL(loc as any, loc.image)}
                           alt={`${loc.city} - ${loc.state}`}
                           className="w-full h-full object-cover"
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
+                          <Store className="h-12 w-12 mb-2" />
+                          <span className="text-sm font-medium">Sem imagem</span>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="p-6 flex-1 flex flex-col gap-4">
                       <div>

@@ -16,9 +16,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Pencil } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 export default function AdminLayoutSettings() {
   const { user } = useAuth()
@@ -109,6 +116,27 @@ export default function AdminLayoutSettings() {
     loadData()
   }
 
+  const handleEditLocation = async (id: string, e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    try {
+      await pb.collection('pickup_locations').update(id, fd)
+      loadData()
+      toast({ title: 'Local Atualizado' })
+    } catch (err: any) {
+      const errObj = err.response?.data
+      let errMsg = err.message
+      if (errObj && typeof errObj === 'object') {
+        errMsg =
+          Object.values(errObj)
+            .map((e: any) => e?.message)
+            .filter(Boolean)
+            .join(' ') || errMsg
+      }
+      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
+    }
+  }
+
   if (user?.role !== 'gestor') {
     return <Navigate to="/admin/dashboard" />
   }
@@ -194,6 +222,7 @@ export default function AdminLayoutSettings() {
                   <TableHead>Endereço</TableHead>
                   <TableHead>Cidade/UF</TableHead>
                   <TableHead>Horário</TableHead>
+                  <TableHead>Imagem</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -207,10 +236,104 @@ export default function AdminLayoutSettings() {
                       {l.city}/{l.state}
                     </TableCell>
                     <TableCell>{l.hours}</TableCell>
+                    <TableCell>
+                      {l.image ? (
+                        <img
+                          src={pb.files.getURL(l, l.image)}
+                          alt="Local"
+                          className="h-10 w-16 object-cover rounded"
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400">Sem imagem</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => delLocation(l.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Editar Local</DialogTitle>
+                            </DialogHeader>
+                            <form
+                              onSubmit={(e) => handleEditLocation(l.id, e)}
+                              className="grid grid-cols-2 gap-4"
+                            >
+                              <Input
+                                name="street"
+                                placeholder="Rua"
+                                defaultValue={l.street}
+                                required
+                                className="col-span-2 sm:col-span-1"
+                              />
+                              <Input
+                                name="number"
+                                placeholder="Número"
+                                defaultValue={l.number}
+                                required
+                              />
+                              <Input
+                                name="neighborhood"
+                                placeholder="Bairro"
+                                defaultValue={l.neighborhood}
+                                required
+                              />
+                              <Input
+                                name="city"
+                                placeholder="Cidade"
+                                defaultValue={l.city}
+                                required
+                              />
+                              <Input
+                                name="state"
+                                placeholder="Estado"
+                                defaultValue={l.state}
+                                required
+                              />
+                              <Input name="zip" placeholder="CEP" defaultValue={l.zip} />
+                              <Input
+                                name="hours"
+                                placeholder="Horário de Func."
+                                defaultValue={l.hours}
+                                className="col-span-2"
+                              />
+                              <div className="col-span-2">
+                                <Label className="mb-2 block">Imagem do Local</Label>
+                                {l.image && (
+                                  <img
+                                    src={pb.files.getURL(l, l.image)}
+                                    alt="Preview"
+                                    className="h-20 w-full object-cover rounded mb-2"
+                                  />
+                                )}
+                                <Input type="file" name="image" accept="image/*" />
+                              </div>
+                              <div className="col-span-2">
+                                <Label className="mb-2 block">Video URL (YouTube/Vimeo)</Label>
+                                <Input
+                                  name="video_url"
+                                  placeholder="https://www.youtube.com/watch?v=..."
+                                  defaultValue={l.video_url}
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                <Label className="mb-2 block">Upload de Vídeo</Label>
+                                <Input type="file" name="video_file" accept="video/*" />
+                              </div>
+                              <Button type="submit" className="col-span-2">
+                                Salvar Alterações
+                              </Button>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                        <Button variant="ghost" size="icon" onClick={() => delLocation(l.id)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
