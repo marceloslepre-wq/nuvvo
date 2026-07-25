@@ -35,7 +35,7 @@ export default function CategoryPage() {
         }
 
         const prods = await pb.collection('products').getFullList({
-          filter: `status='active' && category='${id}' && available_locations='${selectedCityId}'`,
+          filter: `status='active' && category='${id}' && available_locations~'${selectedCityId}'`,
           sort: 'order',
         })
         setProducts(prods as Product[])

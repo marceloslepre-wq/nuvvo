@@ -21,7 +21,7 @@ export interface Product extends RecordModel {
 export const getActiveProducts = async (locationId?: string): Promise<Product[]> => {
   let filter = "status='active'"
   if (locationId) {
-    filter += ` && available_locations='${locationId}'`
+    filter += ` && available_locations~'${locationId}'`
   } else {
     filter += ` && available_locations='__none__'`
   }
