@@ -18,9 +18,15 @@ export interface Product extends RecordModel {
   }
 }
 
-export const getActiveProducts = async (): Promise<Product[]> => {
+export const getActiveProducts = async (locationId?: string): Promise<Product[]> => {
+  let filter = "status='active'"
+  if (locationId) {
+    filter += ` && available_locations='${locationId}'`
+  } else {
+    filter += ` && available_locations='__none__'`
+  }
   return pb.collection<Product>('products').getFullList({
-    filter: "status='active'",
+    filter,
     sort: 'order',
   })
 }

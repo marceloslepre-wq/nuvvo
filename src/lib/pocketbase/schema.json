@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-08T20:21:29.845Z",
+  "generatedAt": "2026-07-25T14:39:00.828Z",
   "collections": [
     {
       "name": "users",
@@ -157,12 +157,20 @@
           "required": false,
           "system": false,
           "collectionRef": "variations"
+        },
+        {
+          "name": "available_locations",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "pickup_locations"
         }
       ],
       "indexes": [
         "CREATE INDEX idx_products_order ON products (`order`)",
         "CREATE INDEX idx_products_status ON products (status)",
-        "CREATE INDEX `idx_products_variations` ON `products` (variations)"
+        "CREATE INDEX `idx_products_variations` ON `products` (variations)",
+        "CREATE INDEX `idx_products_available_locations` ON `products` (available_locations)"
       ]
     },
     {

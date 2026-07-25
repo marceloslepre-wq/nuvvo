@@ -40,6 +40,7 @@ export default function AdminProducts() {
   const [productMedia, setProductMedia] = useState<any[]>([])
   const [pvdList, setPvdList] = useState<any[]>([])
   const [prpList, setPrpList] = useState<any[]>([])
+  const [pickupLocations, setPickupLocations] = useState<any[]>([])
 
   const [variantDetails, setVariantDetails] = useState<Record<string, string>>({})
   const [rentalPrices, setRentalPrices] = useState<Record<string, number>>({})
@@ -63,6 +64,7 @@ export default function AdminProducts() {
     external_link: '',
     order: 1,
     variations: [],
+    available_locations: [],
   })
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [mainVideo, setMainVideo] = useState<File | null>(null)
@@ -74,13 +76,14 @@ export default function AdminProducts() {
   const loadData = async () => {
     try {
       const filter = search ? `name ~ "${search}"` : ''
-      const [pRes, cRes, rRes, vRes, pvdRes, prpRes] = await Promise.all([
+      const [pRes, cRes, rRes, vRes, pvdRes, prpRes, plRes] = await Promise.all([
         pb.collection('products').getFullList({ filter, sort: '-created', expand: 'variations' }),
         pb.collection('categories').getFullList(),
         pb.collection('rental_periods').getFullList(),
         pb.collection('variations').getFullList(),
         pb.collection('product_variant_details').getFullList(),
         pb.collection('product_rental_prices').getFullList(),
+        pb.collection('pickup_locations').getFullList(),
       ])
 
       const augmentedProducts = pRes.map((p: any) => ({
@@ -93,6 +96,7 @@ export default function AdminProducts() {
       setVariations(vRes)
       setPvdList(pvdRes)
       setPrpList(prpRes)
+      setPickupLocations(plRes)
     } catch {
       /* intentionally ignored */
     }
@@ -138,6 +142,7 @@ export default function AdminProducts() {
       external_link: p.external_link || '',
       order: p.order || 1,
       variations: p.variations || [],
+      available_locations: p.available_locations || [],
       image: p.image || '',
       video: p.video || '',
     })
@@ -282,6 +287,7 @@ export default function AdminProducts() {
           external_link: formData.external_link || null,
           variations: formData.variations || [],
           rental_period: formData.rental_period || [],
+          available_locations: formData.available_locations || [],
         })
 
         // Step 2: If there are file changes, send a separate FormData PATCH with ONLY file fields.
@@ -320,6 +326,13 @@ export default function AdminProducts() {
           formData.rental_period.forEach((rpId: string) => form.append('rental_period', rpId))
         } else {
           form.append('rental_period', '')
+        }
+        if (formData.available_locations && formData.available_locations.length > 0) {
+          formData.available_locations.forEach((lId: string) =>
+            form.append('available_locations', lId),
+          )
+        } else {
+          form.append('available_locations', '')
         }
         if (mainImage) {
           form.append('image', mainImage)
@@ -624,6 +637,27 @@ export default function AdminProducts() {
                     )}
                   </ToggleGroup>
                 )}
+              </div>
+
+              <div className="space-y-2 col-span-2">
+                <Label>Cidades Disponíveis</Label>
+                <ToggleGroup
+                  type="multiple"
+                  value={formData.available_locations}
+                  onValueChange={(v) => setFormData({ ...formData, available_locations: v })}
+                  className="justify-start flex-wrap"
+                >
+                  {pickupLocations.map((loc: any) => (
+                    <ToggleGroupItem key={loc.id} value={loc.id} className="border border-gray-200">
+                      {loc.city}
+                    </ToggleGroupItem>
+                  ))}
+                  {pickupLocations.length === 0 && (
+                    <p className="text-sm text-gray-500 italic">
+                      Nenhuma cidade cadastrada. Cadastre locais de retirada primeiro.
+                    </p>
+                  )}
+                </ToggleGroup>
               </div>
 
               {(formData.variations || []).length === 0 && (
