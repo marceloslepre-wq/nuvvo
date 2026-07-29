@@ -16,7 +16,6 @@ import pb from '@/lib/pocketbase/client'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Image } from '@/components/Image'
 import { getYouTubeEmbedUrl } from '@/lib/youtube'
-import { trackGoogleAdsConversion } from '@/lib/gtag'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
@@ -196,8 +195,6 @@ export default function ProductDetail() {
 
   const handleRentClick = () => {
     if (!canRent) return
-
-    trackGoogleAdsConversion()
 
     const phoneRaw = siteSettings?.phone || ''
     const phone = phoneRaw.replace(/\D/g, '')
