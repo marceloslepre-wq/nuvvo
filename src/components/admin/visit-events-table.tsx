@@ -47,9 +47,10 @@ export function VisitEventsTable({ logs }: VisitEventsTableProps) {
             <TableRow>
               <TableHead className="w-[110px]">Data</TableHead>
               <TableHead className="w-[90px]">Hora</TableHead>
+              <TableHead className="w-[130px]">IP</TableHead>
+              <TableHead>Origem</TableHead>
               <TableHead className="w-[100px]">Tipo</TableHead>
               <TableHead>Modalidade</TableHead>
-              <TableHead>Origem</TableHead>
               <TableHead className="w-[110px]">Dispositivo</TableHead>
               <TableHead>Localização</TableHead>
             </TableRow>
@@ -57,7 +58,7 @@ export function VisitEventsTable({ logs }: VisitEventsTableProps) {
           <TableBody>
             {pageItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={8} className="text-center text-gray-400 py-8">
                   Nenhum evento registrado no período.
                 </TableCell>
               </TableRow>
@@ -68,6 +69,12 @@ export function VisitEventsTable({ logs }: VisitEventsTableProps) {
                   <TableRow key={log.id}>
                     <TableCell className="text-sm text-gray-600">{date}</TableCell>
                     <TableCell className="text-sm text-gray-600">{time}</TableCell>
+                    <TableCell className="text-sm text-gray-600 font-mono">
+                      {(log as any).ip ? (log as any).ip : 'Desconhecido'}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600 max-w-[180px] truncate">
+                      {log.source || log.referrer || '—'}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="secondary"
@@ -82,9 +89,6 @@ export function VisitEventsTable({ logs }: VisitEventsTableProps) {
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {MODALITY_LABELS[log.modality] || log.modality || '—'}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 max-w-[180px] truncate">
-                      {log.source || log.referrer || '—'}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
                       {DEVICE_LABELS[log.device] || log.device || '—'}

@@ -50,6 +50,7 @@ routerAdd('POST', '/backend/v1/track', (e) => {
   record.set('device', validDevices.includes(body.device) ? body.device : '')
   record.set('browser', typeof body.browser === 'string' ? body.browser : '')
   record.set('os', typeof body.os === 'string' ? body.os : '')
+  record.set('ip', ip)
   record.set('country', country)
   record.set('region', region)
   record.set('city', city)

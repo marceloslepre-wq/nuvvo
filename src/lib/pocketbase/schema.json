@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-04T12:33:13.025Z",
+  "generatedAt": "2026-08-04T13:15:47.258Z",
   "collections": [
     {
       "name": "users",
@@ -742,13 +742,20 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "ip",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_visit_logs_created ON visit_logs (created)",
         "CREATE INDEX idx_visit_logs_type ON visit_logs (type)",
         "CREATE INDEX idx_visit_logs_modality ON visit_logs (modality)",
-        "CREATE INDEX idx_visit_logs_device ON visit_logs (device)"
+        "CREATE INDEX idx_visit_logs_device ON visit_logs (device)",
+        "CREATE INDEX `idx_visit_logs_ip` ON `visit_logs` (ip)"
       ]
     }
   ]
