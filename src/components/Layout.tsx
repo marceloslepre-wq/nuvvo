@@ -7,10 +7,12 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/s
 import { Badge } from '@/components/ui/badge'
 import { useCart } from '@/contexts/cart-context'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useVisitTracking } from '@/hooks/use-visit-tracking'
 
 export default function Layout() {
   const { count } = useCart()
   const { pathname, hash } = useLocation()
+  useVisitTracking()
   const [locations, setLocations] = useState<any[]>([])
   const [settings, setSettings] = useState<any>(null)
 

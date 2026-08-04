@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T20:15:04.624Z",
+  "generatedAt": "2026-08-04T12:33:13.025Z",
   "collections": [
     {
       "name": "users",
@@ -635,6 +635,120 @@
         "CREATE INDEX idx_prp_product ON product_rental_prices (product)",
         "CREATE INDEX idx_prp_rental_period ON product_rental_prices (rental_period)",
         "CREATE UNIQUE INDEX idx_prp_unique ON product_rental_prices (product, rental_period)"
+      ]
+    },
+    {
+      "name": "visit_logs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = 'gestor'",
+        "view": "@request.auth.role = 'gestor'",
+        "create": "",
+        "update": "@request.auth.role = 'gestor'",
+        "delete": "@request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["pageview", "click"]
+        },
+        {
+          "name": "modality",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["direct", "organic", "social", "referral", "paid", "unknown"]
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "device",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["mobile", "desktop", "tablet"]
+        },
+        {
+          "name": "browser",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "os",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "region",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ip_hash",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "referrer",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "path",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "session_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_visit_logs_created ON visit_logs (created)",
+        "CREATE INDEX idx_visit_logs_type ON visit_logs (type)",
+        "CREATE INDEX idx_visit_logs_modality ON visit_logs (modality)",
+        "CREATE INDEX idx_visit_logs_device ON visit_logs (device)"
       ]
     }
   ]
