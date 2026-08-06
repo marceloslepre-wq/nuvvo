@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
 import {
   Table,
@@ -16,16 +15,33 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Trash2, Pencil } from 'lucide-react'
+import { Plus, Trash2, Pencil, X, RotateCcw } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { RichTextEditor } from '@/components/RichTextEditor'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
+interface EditLocForm {
+  street: string
+  number: string
+  neighborhood: string
+  city: string
+  state: string
+  zip: string
+  hours: string
+  video_url: string
+}
+
+const emptyEditForm: EditLocForm = {
+  street: '',
+  number: '',
+  neighborhood: '',
+  city: '',
+  state: '',
+  zip: '',
+  hours: '',
+  video_url: '',
+}
 
 export default function AdminLayoutSettings() {
   const { user } = useAuth()
@@ -36,6 +52,21 @@ export default function AdminLayoutSettings() {
   const [privacy, setPrivacy] = useState('')
   const [returns, setReturns] = useState('')
 
+  // Contact form file state (explicit control so files are never cleared accidentally)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [deleteLogo, setDeleteLogo] = useState(false)
+  const [heroFile, setHeroFile] = useState<File | null>(null)
+  const [deleteHero, setDeleteHero] = useState(false)
+
+  // Edit pickup location state
+  const [editingLocation, setEditingLocation] = useState<any | null>(null)
+  const [editForm, setEditForm] = useState<EditLocForm>(emptyEditForm)
+  const [editImageFile, setEditImageFile] = useState<File | null>(null)
+  const [deleteEditImage, setDeleteEditImage] = useState(false)
+  const [editVideoFile, setEditVideoFile] = useState<File | null>(null)
+  const [deleteEditVideo, setDeleteEditVideo] = useState(false)
+  const [savingLocation, setSavingLocation] = useState(false)
+
   const loadData = async () => {
     try {
       const res = await pb.collection('site_settings').getFirstListItem('')
@@ -44,7 +75,7 @@ export default function AdminLayoutSettings() {
       setTerms(res.terms || '')
       setPrivacy(res.privacy || '')
       setReturns(res.returns || '')
-    } catch (e) {
+    } catch {
       const s = await pb.collection('site_settings').create({ phone: '', email: '' })
       setSettings(s)
       setAboutUs('')
@@ -67,24 +98,47 @@ export default function AdminLayoutSettings() {
     loadData()
   })
 
-  const saveSettings = async (e: React.FormEvent<HTMLFormElement>) => {
+  const saveContact = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    // Text fields come from the form (phone, email). File fields are handled
+    // explicitly via state: only appended when a new file is selected or an
+    // explicit removal is requested. Omitted file fields are preserved by
+    // PocketBase, so existing files never get cleared unintentionally.
     const fd = new FormData(e.currentTarget)
+    if (logoFile) {
+      fd.append('logo', logoFile)
+    } else if (deleteLogo) {
+      fd.append('logo', '')
+    }
+    if (heroFile) {
+      fd.append('hero_media', heroFile)
+    } else if (deleteHero) {
+      fd.append('hero_media', '')
+    }
     try {
       await pb.collection('site_settings').update(settings.id, fd)
       toast({ title: 'Sucesso', description: 'Configurações salvas.' })
+      setLogoFile(null)
+      setDeleteLogo(false)
+      setHeroFile(null)
+      setDeleteHero(false)
       loadData()
     } catch (err: any) {
-      const errObj = err.response?.data
-      let errMsg = err.message
-      if (errObj && typeof errObj === 'object') {
-        errMsg =
-          Object.values(errObj)
-            .map((e: any) => e?.message)
-            .filter(Boolean)
-            .join(' ') || errMsg
-      }
-      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
+      toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
+    }
+  }
+
+  const savePages = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    // Only the rich-text fields are sent; phone/email/logo/hero_media are
+    // omitted and therefore preserved by PocketBase.
+    const fd = new FormData(e.currentTarget)
+    try {
+      await pb.collection('site_settings').update(settings.id, fd)
+      toast({ title: 'Sucesso', description: 'Conteúdos salvos.' })
+      loadData()
+    } catch (err: any) {
+      toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
     }
   }
 
@@ -97,16 +151,7 @@ export default function AdminLayoutSettings() {
       e.currentTarget.reset()
       toast({ title: 'Local Adicionado' })
     } catch (err: any) {
-      const errObj = err.response?.data
-      let errMsg = err.message
-      if (errObj && typeof errObj === 'object') {
-        errMsg =
-          Object.values(errObj)
-            .map((e: any) => e?.message)
-            .filter(Boolean)
-            .join(' ') || errMsg
-      }
-      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
+      toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
     }
   }
 
@@ -116,25 +161,63 @@ export default function AdminLayoutSettings() {
     loadData()
   }
 
-  const handleEditLocation = async (id: string, e: React.FormEvent<HTMLFormElement>) => {
+  const openEditLocation = (loc: any) => {
+    setEditingLocation(loc)
+    setEditForm({
+      street: loc.street || '',
+      number: loc.number || '',
+      neighborhood: loc.neighborhood || '',
+      city: loc.city || '',
+      state: loc.state || '',
+      zip: loc.zip || '',
+      hours: loc.hours || '',
+      video_url: loc.video_url || '',
+    })
+    setEditImageFile(null)
+    setDeleteEditImage(false)
+    setEditVideoFile(null)
+    setDeleteEditVideo(false)
+  }
+
+  const closeEditLocation = () => {
+    setEditingLocation(null)
+  }
+
+  const saveEditLocation = async (e: React.FormEvent) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+    if (!editingLocation) return
+    setSavingLocation(true)
     try {
-      await pb.collection('pickup_locations').update(id, fd)
+      const fd = new FormData()
+      fd.append('street', editForm.street)
+      fd.append('number', editForm.number)
+      fd.append('neighborhood', editForm.neighborhood)
+      fd.append('city', editForm.city)
+      fd.append('state', editForm.state)
+      fd.append('zip', editForm.zip)
+      fd.append('hours', editForm.hours)
+      fd.append('video_url', editForm.video_url)
+      // Only touch file fields when a new file is selected or an explicit
+      // removal is requested. Otherwise the field is omitted and the
+      // existing file is preserved by PocketBase.
+      if (editImageFile) {
+        fd.append('image', editImageFile)
+      } else if (deleteEditImage) {
+        fd.append('image', '')
+      }
+      if (editVideoFile) {
+        fd.append('video_file', editVideoFile)
+      } else if (deleteEditVideo) {
+        fd.append('video_file', '')
+      }
+      await pb.collection('pickup_locations').update(editingLocation.id, fd)
+      closeEditLocation()
       loadData()
       toast({ title: 'Local Atualizado' })
     } catch (err: any) {
-      const errObj = err.response?.data
-      let errMsg = err.message
-      if (errObj && typeof errObj === 'object') {
-        errMsg =
-          Object.values(errObj)
-            .map((e: any) => e?.message)
-            .filter(Boolean)
-            .join(' ') || errMsg
-      }
-      toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
+      toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
     }
+    setSavingLocation(false)
   }
 
   if (user?.role !== 'gestor') {
@@ -154,7 +237,7 @@ export default function AdminLayoutSettings() {
         </TabsList>
 
         <TabsContent value="contact" className="pt-4 max-w-2xl">
-          <form onSubmit={saveSettings} className="space-y-4 bg-white p-4 border rounded-md">
+          <form onSubmit={saveContact} className="space-y-4 bg-white p-4 border rounded-md">
             <div className="space-y-2">
               <Label>Telefone / WhatsApp</Label>
               <Input name="phone" defaultValue={settings.phone} />
@@ -163,26 +246,109 @@ export default function AdminLayoutSettings() {
               <Label>E-mail de Contato</Label>
               <Input name="email" defaultValue={settings.email} />
             </div>
+
+            {/* Logo — explicit file control */}
             <div className="space-y-2">
               <Label>Logomarca da Empresa</Label>
-              {settings.logo && (
-                <div className="mb-2">
+              {settings.logo && !deleteLogo && !logoFile && (
+                <div className="mb-2 flex items-center gap-3 rounded-md border p-2">
                   <img
                     src={pb.files.getURL(settings, settings.logo)}
                     alt="Logo"
                     className="h-12 object-contain"
                   />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteLogo(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Remover Logo
+                  </Button>
                 </div>
               )}
-              <Input type="file" name="logo" accept="image/*" />
+              {deleteLogo && !logoFile && (
+                <div className="mb-2 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+                  A logomarca será removida ao salvar.
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteLogo(false)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" /> Desfazer
+                  </Button>
+                </div>
+              )}
+              {logoFile && (
+                <div className="mb-2 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-700">
+                  {logoFile.name} (novo)
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setLogoFile(null)}>
+                    <X className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              )}
+              {!logoFile && !deleteLogo && (
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    setLogoFile(e.target.files?.[0] || null)
+                    setDeleteLogo(false)
+                  }}
+                />
+              )}
             </div>
+
+            {/* Hero media — explicit file control */}
             <div className="space-y-2">
               <Label>Hero Media (Fundo da Home)</Label>
-              {settings.hero_media && (
-                <div className="mb-2 text-sm text-gray-500">Mídia atual salva.</div>
+              {settings.hero_media && !deleteHero && !heroFile && (
+                <div className="mb-2 flex items-center gap-3 rounded-md border p-2 text-sm text-gray-600">
+                  <span>Mídia atual salva.</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteHero(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Remover Mídia
+                  </Button>
+                </div>
               )}
-              <Input type="file" name="hero_media" accept="image/*,video/*" />
+              {deleteHero && !heroFile && (
+                <div className="mb-2 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+                  A mídia hero será removida ao salvar.
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteHero(false)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" /> Desfazer
+                  </Button>
+                </div>
+              )}
+              {heroFile && (
+                <div className="mb-2 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-700">
+                  {heroFile.name} (novo)
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setHeroFile(null)}>
+                    <X className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              )}
+              {!heroFile && !deleteHero && (
+                <Input
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={(e) => {
+                    setHeroFile(e.target.files?.[0] || null)
+                    setDeleteHero(false)
+                  }}
+                />
+              )}
             </div>
+
             <Button type="submit">Salvar Alterações</Button>
           </form>
         </TabsContent>
@@ -249,87 +415,9 @@ export default function AdminLayoutSettings() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Pencil className="h-4 w-4 text-blue-500" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-md">
-                            <DialogHeader>
-                              <DialogTitle>Editar Local</DialogTitle>
-                            </DialogHeader>
-                            <form
-                              onSubmit={(e) => handleEditLocation(l.id, e)}
-                              className="grid grid-cols-2 gap-4"
-                            >
-                              <Input
-                                name="street"
-                                placeholder="Rua"
-                                defaultValue={l.street}
-                                required
-                                className="col-span-2 sm:col-span-1"
-                              />
-                              <Input
-                                name="number"
-                                placeholder="Número"
-                                defaultValue={l.number}
-                                required
-                              />
-                              <Input
-                                name="neighborhood"
-                                placeholder="Bairro"
-                                defaultValue={l.neighborhood}
-                                required
-                              />
-                              <Input
-                                name="city"
-                                placeholder="Cidade"
-                                defaultValue={l.city}
-                                required
-                              />
-                              <Input
-                                name="state"
-                                placeholder="Estado"
-                                defaultValue={l.state}
-                                required
-                              />
-                              <Input name="zip" placeholder="CEP" defaultValue={l.zip} />
-                              <Input
-                                name="hours"
-                                placeholder="Horário de Func."
-                                defaultValue={l.hours}
-                                className="col-span-2"
-                              />
-                              <div className="col-span-2">
-                                <Label className="mb-2 block">Imagem do Local</Label>
-                                {l.image && (
-                                  <img
-                                    src={pb.files.getURL(l, l.image)}
-                                    alt="Preview"
-                                    className="h-20 w-full object-cover rounded mb-2"
-                                  />
-                                )}
-                                <Input type="file" name="image" accept="image/*" />
-                              </div>
-                              <div className="col-span-2">
-                                <Label className="mb-2 block">Video URL (YouTube/Vimeo)</Label>
-                                <Input
-                                  name="video_url"
-                                  placeholder="https://www.youtube.com/watch?v=..."
-                                  defaultValue={l.video_url}
-                                />
-                              </div>
-                              <div className="col-span-2">
-                                <Label className="mb-2 block">Upload de Vídeo</Label>
-                                <Input type="file" name="video_file" accept="video/*" />
-                              </div>
-                              <Button type="submit" className="col-span-2">
-                                Salvar Alterações
-                              </Button>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
+                        <Button variant="ghost" size="icon" onClick={() => openEditLocation(l)}>
+                          <Pencil className="h-4 w-4 text-blue-500" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => delLocation(l.id)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
@@ -343,7 +431,7 @@ export default function AdminLayoutSettings() {
         </TabsContent>
 
         <TabsContent value="pages" className="pt-4 max-w-3xl">
-          <form onSubmit={saveSettings} className="space-y-6 bg-white p-4 border rounded-md">
+          <form onSubmit={savePages} className="space-y-6 bg-white p-4 border rounded-md">
             <div className="space-y-2">
               <Label>Sobre Nós</Label>
               <RichTextEditor value={aboutUs} onChange={setAboutUs} />
@@ -368,6 +456,192 @@ export default function AdminLayoutSettings() {
           </form>
         </TabsContent>
       </Tabs>
+
+      {/* Edit pickup location dialog — explicit file preservation & removal */}
+      <Dialog open={!!editingLocation} onOpenChange={(open) => !open && closeEditLocation()}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Local</DialogTitle>
+          </DialogHeader>
+          {editingLocation && (
+            <form onSubmit={saveEditLocation} className="grid grid-cols-2 gap-4">
+              <Input
+                placeholder="Rua"
+                value={editForm.street}
+                onChange={(e) => setEditForm({ ...editForm, street: e.target.value })}
+                required
+                className="col-span-2 sm:col-span-1"
+              />
+              <Input
+                placeholder="Número"
+                value={editForm.number}
+                onChange={(e) => setEditForm({ ...editForm, number: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="Bairro"
+                value={editForm.neighborhood}
+                onChange={(e) => setEditForm({ ...editForm, neighborhood: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="Cidade"
+                value={editForm.city}
+                onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="Estado"
+                value={editForm.state}
+                onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="CEP"
+                value={editForm.zip}
+                onChange={(e) => setEditForm({ ...editForm, zip: e.target.value })}
+              />
+              <Input
+                placeholder="Horário de Func."
+                value={editForm.hours}
+                onChange={(e) => setEditForm({ ...editForm, hours: e.target.value })}
+                className="col-span-2"
+              />
+
+              {/* Image — preserved unless a new file is chosen or removal is explicit */}
+              <div className="col-span-2 space-y-2">
+                <Label>Imagem do Local</Label>
+                {editingLocation.image && !deleteEditImage && !editImageFile && (
+                  <div className="flex items-center gap-3 rounded-md border p-2">
+                    <img
+                      src={pb.files.getURL(editingLocation, editingLocation.image)}
+                      alt="Preview"
+                      className="h-20 w-full max-w-[180px] object-cover rounded"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteEditImage(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Remover
+                    </Button>
+                  </div>
+                )}
+                {deleteEditImage && !editImageFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+                    A imagem será removida ao salvar.
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteEditImage(false)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" /> Desfazer
+                    </Button>
+                  </div>
+                )}
+                {editImageFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-700">
+                    {editImageFile.name} (novo)
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditImageFile(null)}
+                    >
+                      <X className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
+                {!editImageFile && !deleteEditImage && (
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      setEditImageFile(e.target.files?.[0] || null)
+                      setDeleteEditImage(false)
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Video URL (text) */}
+              <div className="col-span-2 space-y-2">
+                <Label>Video URL (YouTube/Vimeo)</Label>
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={editForm.video_url}
+                  onChange={(e) => setEditForm({ ...editForm, video_url: e.target.value })}
+                />
+              </div>
+
+              {/* Video file — preserved unless a new file is chosen or removal is explicit */}
+              <div className="col-span-2 space-y-2">
+                <Label>Upload de Vídeo</Label>
+                {editingLocation.video_file && !deleteEditVideo && !editVideoFile && (
+                  <div className="flex items-center gap-3 rounded-md border p-2 text-sm text-gray-600">
+                    <span className="truncate max-w-[150px]">{editingLocation.video_file}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteEditVideo(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Remover
+                    </Button>
+                  </div>
+                )}
+                {deleteEditVideo && !editVideoFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+                    O vídeo será removido ao salvar.
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteEditVideo(false)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" /> Desfazer
+                    </Button>
+                  </div>
+                )}
+                {editVideoFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-700">
+                    {editVideoFile.name} (novo)
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditVideoFile(null)}
+                    >
+                      <X className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
+                {!editVideoFile && !deleteEditVideo && (
+                  <Input
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => {
+                      setEditVideoFile(e.target.files?.[0] || null)
+                      setDeleteEditVideo(false)
+                    }}
+                  />
+                )}
+              </div>
+
+              <div className="col-span-2 flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={closeEditLocation}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={savingLocation}>
+                  {savingLocation ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
