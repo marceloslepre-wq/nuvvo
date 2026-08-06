@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronRight, ShoppingCart } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import { WhatsAppIcon } from '@/components/WhatsAppIcon'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -397,12 +398,12 @@ export default function ProductDetail() {
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Button
                 size="lg"
-                className="flex-1 h-12 text-base bg-primary hover:bg-primary/90 text-white active:scale-95 transition-transform shadow-md"
+                className="flex-1 h-12 text-base bg-[#25D366] hover:bg-[#1ebe5d] text-white active:scale-95 transition-transform shadow-md"
                 disabled={!canRent}
                 onClick={handleRentClick}
               >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Alugue Agora
+                <WhatsAppIcon className="w-5 h-5 mr-2" />
+                Continuar pelo WhatsApp
               </Button>
             </div>
           </div>
