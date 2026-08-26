@@ -197,6 +197,10 @@ export default function ProductDetail() {
   const handleRentClick = () => {
     if (!canRent) return
 
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      window.gtag('event', 'conversion', { send_to: 'AW-403144958' })
+    }
+
     const phoneRaw = siteSettings?.phone || ''
     const phone = phoneRaw.replace(/\D/g, '')
 

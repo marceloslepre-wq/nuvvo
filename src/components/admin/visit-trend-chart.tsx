@@ -34,7 +34,7 @@ export function VisitTrendChart({ data }: VisitTrendChartProps) {
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
             <YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
-            <Tooltip content={<ChartTooltipContent />} />
+            <Tooltip content={<ChartTooltipContent payload={[]} />} />
             <Line
               type="monotone"
               dataKey="visits"

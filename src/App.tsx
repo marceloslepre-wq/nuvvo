@@ -23,7 +23,7 @@ import StoresPage from './pages/Stores'
 const App = () => (
   <AuthProvider>
     <CartProvider>
-      <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+      <BrowserRouter>
         <TooltipProvider>
           <Toaster />
           <Sonner />

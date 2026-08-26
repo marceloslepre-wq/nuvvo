@@ -366,9 +366,9 @@ export default function AdminProducts() {
 
       const existingPvd = await pb
         .collection('product_variant_details')
-        .getFullList({ filter: `product='${savedProductId}'` })
+        .getFullList<any>({ filter: `product='${savedProductId}'` })
         .catch(() => [])
-      const existingMap = new Map(existingPvd.map((vd) => [vd.variation, vd]))
+      const existingMap = new Map<string, any>(existingPvd.map((vd: any) => [vd.variation, vd]))
 
       for (const vId of formData.variations) {
         const refCode = variantDetails[vId] || ''
@@ -394,9 +394,9 @@ export default function AdminProducts() {
 
       const existingPrp = await pb
         .collection('product_rental_prices')
-        .getFullList({ filter: `product='${savedProductId}'` })
+        .getFullList<any>({ filter: `product='${savedProductId}'` })
         .catch(() => [])
-      const existingPrpMap = new Map(existingPrp.map((r) => [r.rental_period, r]))
+      const existingPrpMap = new Map<string, any>(existingPrp.map((r: any) => [r.rental_period, r]))
 
       for (const rpId of formData.rental_period) {
         const pValue = rentalPrices[rpId] || 0
