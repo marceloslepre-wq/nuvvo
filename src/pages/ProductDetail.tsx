@@ -198,7 +198,11 @@ export default function ProductDetail() {
     if (!canRent) return
 
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-      window.gtag('event', 'conversion', { send_to: 'AW-403144958' })
+      window.gtag('event', 'conversion', {
+        send_to: 'AW-403144958/CLIQUE_WHATSAPP',
+        value: 1.0,
+        currency: 'BRL',
+      })
     }
 
     const phoneRaw = siteSettings?.phone || ''
