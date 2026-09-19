@@ -187,7 +187,7 @@ export default function PublicOnboarding() {
             15 Dias de Teste Grátis — Sem cartão de crédito
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Crie a conta da sua locadora
+            Crie a conta da sua Empresa.
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto">
             Comece em minutos com catálogo de produtos, controle de pedidos, integração com WhatsApp
