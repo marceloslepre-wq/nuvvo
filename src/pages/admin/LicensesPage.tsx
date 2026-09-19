@@ -554,6 +554,7 @@ export default function LicensesPage() {
                 <TableHead className="text-xs font-bold text-gray-600">
                   Período / Validade
                 </TableHead>
+                <TableHead className="text-xs font-bold text-gray-600">Valor</TableHead>
                 <TableHead className="text-xs font-bold text-gray-600">Descrição</TableHead>
                 <TableHead className="text-xs font-bold text-gray-600 text-right">
                   Data do Registro
@@ -563,7 +564,7 @@ export default function LicensesPage() {
             <TableBody>
               {renewals.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-xs text-gray-400">
+                  <TableCell colSpan={7} className="text-center py-12 text-xs text-gray-400">
                     Nenhum histórico registrado até o momento.
                   </TableCell>
                 </TableRow>
@@ -575,6 +576,13 @@ export default function LicensesPage() {
                       ? `+${r.days_added} dias (até ${formatDateOnly(r.new_expiration)})`
                       : formatDateOnly(r.new_expiration))
 
+                  const amountDisplay =
+                    typeof r.amount_paid === 'number' && r.amount_paid > 0
+                      ? `R$ ${r.amount_paid.toFixed(2).replace('.', ',')}`
+                      : r.amount_paid === 0
+                        ? 'Grátis'
+                        : '-'
+
                   return (
                     <TableRow key={r.id} className="text-xs hover:bg-gray-50/50">
                       <TableCell className="font-mono font-semibold text-gray-900">
@@ -585,6 +593,7 @@ export default function LicensesPage() {
                         {r.plan_name || planName}
                       </TableCell>
                       <TableCell className="text-gray-600">{periodText}</TableCell>
+                      <TableCell className="font-medium text-gray-900">{amountDisplay}</TableCell>
                       <TableCell className="text-gray-600 max-w-xs truncate">
                         {r.description || r.notes || '-'}
                       </TableCell>

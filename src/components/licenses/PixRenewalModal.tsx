@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tenant } from '@/types/tenant'
-import { QrCode, Copy, Check, Loader2, Clock, AlertCircle } from 'lucide-react'
-import { createPixPayment, CreatePixResponse } from '@/services/tenants'
+import { QrCode, Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { createPixPayment, getPaymentStatus, CreatePixResponse } from '@/services/tenants'
 import { toast } from '@/components/ui/use-toast'
 
 interface PixRenewalModalProps {
@@ -21,22 +21,68 @@ interface PixRenewalModalProps {
   onSuccess: () => void
 }
 
-export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({ open, onClose, tenant }) => {
+export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
+  open,
+  onClose,
+  tenant,
+  onSuccess,
+}) => {
   const [loading, setLoading] = useState(false)
   const [pixData, setPixData] = useState<CreatePixResponse | null>(null)
   const [copied, setCopied] = useState(false)
+  const [paymentApproved, setPaymentApproved] = useState(false)
 
   const planName = tenant.expand?.plan?.name || 'Plano Pratinum'
   const amountToPay = tenant.effective_value ?? (tenant.expand?.plan?.price || 799.0)
 
   useEffect(() => {
     if (open && tenant) {
+      setPaymentApproved(false)
       loadPix()
     } else {
       setPixData(null)
       setCopied(false)
+      setPaymentApproved(false)
     }
   }, [open, tenant?.id])
+
+  // Polling automático para verificar o status do pagamento no Mercado Pago a cada 5 segundos
+  useEffect(() => {
+    if (!open || !pixData?.payment_id || paymentApproved || pixData.mode === 'demo') {
+      return
+    }
+
+    let isSubscribed = true
+    const interval = setInterval(async () => {
+      try {
+        const res = await getPaymentStatus(pixData.payment_id)
+        if (!isSubscribed) return
+
+        if (res.status === 'approved' || res.renewed) {
+          setPaymentApproved(true)
+          clearInterval(interval)
+          toast({
+            title: 'Pagamento confirmado!',
+            description: 'Licença renovada por 30 dias com sucesso.',
+          })
+          onSuccess()
+          // Fechar modal após 3.5 segundos para o usuário ver o feedback de sucesso
+          setTimeout(() => {
+            if (isSubscribed) {
+              onClose()
+            }
+          }, 3500)
+        }
+      } catch (err) {
+        // Ignora erros transitórios de rede no polling
+      }
+    }, 5000)
+
+    return () => {
+      isSubscribed = false
+      clearInterval(interval)
+    }
+  }, [open, pixData?.payment_id, paymentApproved, pixData?.mode, onSuccess, onClose])
 
   const loadPix = async () => {
     setLoading(true)
@@ -110,19 +156,39 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({ open, onClose,
           </div>
         ) : (
           <div className="space-y-4 pt-1">
-            {/* Box Aguardando Pagamento */}
-            <div className="bg-amber-50/70 border border-amber-200 rounded-lg px-3.5 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold text-amber-900">
-                <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-                <span>Aguardando Pagamento do PIX...</span>
+            {/* Box Status de Pagamento (Aguardando ou Aprovado) */}
+            {paymentApproved ? (
+              <div className="bg-emerald-50 border border-emerald-300 rounded-lg px-4 py-3 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5 text-xs font-bold text-emerald-900">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">Pagamento confirmado!</p>
+                    <p className="text-[11px] font-normal text-emerald-700">
+                      Licença renovada por 30 dias.
+                    </p>
+                  </div>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-[11px] px-2.5 py-0.5"
+                >
+                  Aprovado
+                </Badge>
               </div>
-              <Badge
-                variant="outline"
-                className="bg-amber-100/80 text-amber-800 border-amber-300 font-bold text-[11px] px-2.5 py-0.5"
-              >
-                Pendente
-              </Badge>
-            </div>
+            ) : (
+              <div className="bg-amber-50/70 border border-amber-200 rounded-lg px-3.5 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-amber-900">
+                  <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                  <span>Aguardando Pagamento do PIX...</span>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="bg-amber-100/80 text-amber-800 border-amber-300 font-bold text-[11px] px-2.5 py-0.5"
+                >
+                  Pendente
+                </Badge>
+              </div>
+            )}
 
             {/* Bloco Plano Selecionado e Valor */}
             <div className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between">

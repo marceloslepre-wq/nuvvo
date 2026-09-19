@@ -184,6 +184,22 @@ export const createPixPayment = async (tenantId: string): Promise<CreatePixRespo
   })
 }
 
+export interface PaymentStatusResponse {
+  payment_id: string
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'in_process' | string
+  renewed: boolean
+  tenant_id?: string
+  mode?: string
+  message?: string
+  error?: string
+}
+
+export const getPaymentStatus = async (paymentId: string): Promise<PaymentStatusResponse> => {
+  return pb.send<PaymentStatusResponse>(`/backend/v1/licenses/payment-status/${paymentId}`, {
+    method: 'GET',
+  })
+}
+
 export const changeTenantPlan = async (
   tenant: Tenant,
   newPlan: Plan,

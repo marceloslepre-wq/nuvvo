@@ -64,6 +64,9 @@ routerAdd(
             email: payerEmail,
             first_name: payerName,
           },
+          external_reference: tenantRecord.id,
+          notification_url:
+            'https://aluguelhospitalhome.sholver.com.br/backend/v1/licenses/pix-webhook',
           metadata: {
             tenant_id: tenantRecord.id,
             plan_name: planName,
