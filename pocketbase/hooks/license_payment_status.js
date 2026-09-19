@@ -10,7 +10,35 @@ routerAdd(
 
     const role = authRecord.getString('role')
     const userTenant = authRecord.getString('tenant')
-    const paymentId = (e.requestInfo().pathParameters.paymentId || '').trim()
+
+    let paymentId = ''
+    try {
+      if (e.request && typeof e.request.pathValue === 'function') {
+        paymentId = (e.request.pathValue('paymentId') || '').trim()
+      }
+    } catch (_) {}
+
+    if (!paymentId) {
+      try {
+        const pathParams = e.requestInfo().pathParameters || {}
+        paymentId = (pathParams.paymentId || '').trim()
+      } catch (_) {}
+    }
+
+    if (!paymentId) {
+      try {
+        const queryParams = e.requestInfo().query || {}
+        paymentId = (queryParams.paymentId || queryParams.id || '').trim()
+      } catch (_) {}
+    }
+
+    if (!paymentId) {
+      try {
+        const urlPath = (e.request && e.request.url && e.request.url.path) || ''
+        const parts = urlPath.split('/')
+        paymentId = (parts[parts.length - 1] || '').trim()
+      } catch (_) {}
+    }
 
     if (!paymentId) {
       return e.badRequestError('ID do pagamento é obrigatório')

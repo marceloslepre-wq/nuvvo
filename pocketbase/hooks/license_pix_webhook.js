@@ -14,11 +14,25 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
 
   // Extrair paymentId dos diferentes formatos que o Mercado Pago pode enviar
   let paymentId = ''
-  if (query['data.id']) paymentId = String(query['data.id'])
-  else if (query.id) paymentId = String(query.id)
-  else if (query['id']) paymentId = String(query['id'])
-  else if (body.data && body.data.id) paymentId = String(body.data.id)
-  else if (body.id) paymentId = String(body.id)
+  if (query['data.id']) paymentId = String(query['data.id']).trim()
+  else if (query.id) paymentId = String(query.id).trim()
+  else if (query['id']) paymentId = String(query['id']).trim()
+  else if (body.data && body.data.id) paymentId = String(body.data.id).trim()
+  else if (body.id) paymentId = String(body.id).trim()
+
+  // Se a query tiver resource = "/v1/payments/{id}" ou similar
+  if (!paymentId && query.resource) {
+    const match = String(query.resource).match(/\/payments\/(\d+)/)
+    if (match && match[1]) {
+      paymentId = match[1]
+    }
+  }
+  if (!paymentId && body.resource) {
+    const match = String(body.resource).match(/\/payments\/(\d+)/)
+    if (match && match[1]) {
+      paymentId = match[1]
+    }
+  }
 
   // Alguns webhooks enviam type/topic = payment / payment.created / payment.updated
   const action = body.action || query.action || body.type || query.type || query.topic || ''
@@ -27,7 +41,6 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
   if (!paymentId) {
     return e.json(200, { received: true, ignored: 'no_payment_id' })
   }
-
   const mpToken = $os.getenv('MERCADO_PAGO_ACCESS_TOKEN') || ''
   if (!mpToken) {
     console.log('[Webhook MP] Recebido evento mas MERCADO_PAGO_ACCESS_TOKEN não está configurado')
