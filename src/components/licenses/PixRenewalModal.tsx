@@ -10,7 +10,16 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tenant } from '@/types/tenant'
-import { QrCode, Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2 } from 'lucide-react'
+import {
+  QrCode,
+  Copy,
+  Check,
+  Loader2,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  RotateCw,
+} from 'lucide-react'
 import { createPixPayment, getPaymentStatus, CreatePixResponse } from '@/services/tenants'
 import { toast } from '@/components/ui/use-toast'
 
@@ -28,6 +37,7 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
   onSuccess,
 }) => {
   const [loading, setLoading] = useState(false)
+  const [checkingStatus, setCheckingStatus] = useState(false)
   const [pixData, setPixData] = useState<CreatePixResponse | null>(null)
   const [copied, setCopied] = useState(false)
   const [paymentApproved, setPaymentApproved] = useState(false)
@@ -83,6 +93,42 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
       clearInterval(interval)
     }
   }, [open, pixData?.payment_id, paymentApproved, pixData?.mode, onSuccess, onClose])
+
+  // Consulta manual forçada pelo usuário ("Atualizar")
+  const handleCheckStatusManual = async () => {
+    if (!pixData?.payment_id || checkingStatus || paymentApproved) return
+
+    setCheckingStatus(true)
+    try {
+      const res = await getPaymentStatus(pixData.payment_id)
+
+      if (res.status === 'approved' || res.renewed) {
+        setPaymentApproved(true)
+        toast({
+          title: 'Pagamento confirmado!',
+          description: 'Licença renovada por 30 dias com sucesso.',
+        })
+        onSuccess()
+        setTimeout(() => {
+          onClose()
+        }, 3500)
+      } else {
+        toast({
+          title: 'Pagamento ainda não identificado',
+          description:
+            'Aguardando compensação pelo banco. Se você já pagou, aguarde alguns instantes e tente novamente.',
+        })
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Não foi possível atualizar o status',
+        description: err?.message || 'Tente novamente em instantes.',
+        variant: 'destructive',
+      })
+    } finally {
+      setCheckingStatus(false)
+    }
+  }
 
   const loadPix = async () => {
     setLoading(true)
@@ -156,7 +202,7 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
           </div>
         ) : (
           <div className="space-y-4 pt-1">
-            {/* Box Status de Pagamento (Aguardando ou Aprovado) */}
+            {/* Box Status de Pagamento (Aguardando ou Aprovado) com botão Atualizar */}
             {paymentApproved ? (
               <div className="bg-emerald-50 border border-emerald-300 rounded-lg px-4 py-3 flex items-center justify-between shadow-xs">
                 <div className="flex items-center gap-2.5 text-xs font-bold text-emerald-900">
@@ -176,17 +222,31 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
                 </Badge>
               </div>
             ) : (
-              <div className="bg-amber-50/70 border border-amber-200 rounded-lg px-3.5 py-2.5 flex items-center justify-between">
+              <div className="bg-amber-50/70 border border-amber-200 rounded-lg px-3.5 py-2.5 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-900">
-                  <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
+                  <Clock className="w-4 h-4 text-amber-600 animate-pulse shrink-0" />
                   <span>Aguardando Pagamento do PIX...</span>
                 </div>
-                <Badge
-                  variant="outline"
-                  className="bg-amber-100/80 text-amber-800 border-amber-300 font-bold text-[11px] px-2.5 py-0.5"
-                >
-                  Pendente
-                </Badge>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCheckStatusManual}
+                    disabled={checkingStatus}
+                    className="h-7 px-2.5 text-[11px] font-semibold bg-white border-amber-300 text-amber-900 hover:bg-amber-100/60 gap-1.5 shadow-2xs"
+                    title="Forçar consulta imediata do status de pagamento"
+                  >
+                    <RotateCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} />
+                    <span>{checkingStatus ? 'Consultando...' : 'Atualizar'}</span>
+                  </Button>
+                  <Badge
+                    variant="outline"
+                    className="bg-amber-100/80 text-amber-800 border-amber-300 font-bold text-[11px] px-2.5 py-0.5"
+                  >
+                    Pendente
+                  </Badge>
+                </div>
               </div>
             )}
 

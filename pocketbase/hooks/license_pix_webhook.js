@@ -111,9 +111,21 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
         }
       }
 
-      const amountPaid = Number(
-        payData.transaction_amount || tenantRecord.get('effective_value') || 0,
-      )
+      // Usar sempre o valor bruto que o cliente pagou (transaction_amount), NUNCA o valor líquido com desconto de taxas (net_received_amount)
+      let grossAmount = 0
+      if (
+        payData.transaction_amount !== undefined &&
+        payData.transaction_amount !== null &&
+        Number(payData.transaction_amount) > 0
+      ) {
+        grossAmount = Number(payData.transaction_amount)
+      } else if (
+        tenantRecord.get('effective_value') !== undefined &&
+        Number(tenantRecord.get('effective_value')) > 0
+      ) {
+        grossAmount = Number(tenantRecord.get('effective_value'))
+      }
+      const amountPaid = Number(grossAmount.toFixed(2))
 
       const renewalsCol = $app.findCollectionByNameOrId('license_renewals')
       const renewalRecord = new Record(renewalsCol)
