@@ -62,6 +62,8 @@ export default function AdminSettings() {
       }
     }
 
+    const catalogFilter = targetTenantId ? `tenant = '${targetTenantId}'` : undefined
+
     const [u, c, v, r] = await Promise.all([
       pb
         .collection('users')
@@ -75,21 +77,30 @@ export default function AdminSettings() {
         }),
       pb
         .collection('categories')
-        .getFullList()
+        .getFullList({
+          sort: 'order',
+          filter: catalogFilter,
+        })
         .catch((err) => {
           console.error('Erro ao carregar categorias:', err)
           return []
         }),
       pb
         .collection('variations')
-        .getFullList()
+        .getFullList({
+          sort: 'order',
+          filter: catalogFilter,
+        })
         .catch((err) => {
           console.error('Erro ao carregar variações:', err)
           return []
         }),
       pb
         .collection('rental_periods')
-        .getFullList()
+        .getFullList({
+          sort: 'order',
+          filter: catalogFilter,
+        })
         .catch((err) => {
           console.error('Erro ao carregar prazos de locação:', err)
           return []
@@ -189,8 +200,12 @@ export default function AdminSettings() {
     e.preventDefault()
     const form = e.currentTarget
     const fd = new FormData(form)
+    const targetTenantId = activeAdminTenant?.id || user?.tenant || ''
     const data: any = { name: fd.get('name') }
     if (extra && fd.get(extra)) data[extra] = fd.get(extra)
+    if (targetTenantId) {
+      data.tenant = targetTenantId
+    }
     try {
       await pb.collection(col).create(data)
       loadData()

@@ -35,10 +35,22 @@ export default function Index() {
     try {
       const tenantFilter = `tenant = '${currentTenant.id}'`
       const [cats, rPeriods, rPrices, locs, settings] = await Promise.all([
-        pb.collection('categories').getFullList(),
-        pb.collection('rental_periods').getFullList(),
-        pb.collection('product_rental_prices').getFullList(),
-        pb.collection('pickup_locations').getFullList({ filter: tenantFilter }),
+        pb
+          .collection('categories')
+          .getFullList({ filter: tenantFilter, sort: 'order' })
+          .catch(() => []),
+        pb
+          .collection('rental_periods')
+          .getFullList({ filter: tenantFilter, sort: 'order' })
+          .catch(() => []),
+        pb
+          .collection('product_rental_prices')
+          .getFullList()
+          .catch(() => []),
+        pb
+          .collection('pickup_locations')
+          .getFullList({ filter: tenantFilter })
+          .catch(() => []),
         pb
           .collection('site_settings')
           .getFirstListItem(tenantFilter)

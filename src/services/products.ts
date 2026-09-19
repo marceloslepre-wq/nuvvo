@@ -22,10 +22,8 @@ export const getActiveProducts = async (
   locationId?: string,
   tenantId?: string,
 ): Promise<Product[]> => {
-  let filter = "status='active'"
-  if (tenantId) {
-    filter += ` && tenant='${tenantId}'`
-  }
+  if (!tenantId) return []
+  let filter = `status='active' && tenant='${tenantId}'`
   if (locationId) {
     filter += ` && available_locations~'${locationId}'`
   } else {

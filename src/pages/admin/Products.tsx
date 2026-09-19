@@ -79,27 +79,46 @@ export default function AdminProducts() {
   const loadData = async () => {
     try {
       const tenantId = activeAdminTenant?.id
-      const filterParts: string[] = []
-      if (tenantId) {
-        filterParts.push(`tenant = '${tenantId}'`)
+      if (!tenantId) {
+        setProducts([])
+        setCategories([])
+        setRentalPeriods([])
+        setVariations([])
+        setPvdList([])
+        setPrpList([])
+        setPickupLocations([])
+        return
       }
+
+      const filterParts: string[] = [`tenant = '${tenantId}'`]
       if (search) {
         filterParts.push(`name ~ "${search}"`)
       }
       const prodFilter = filterParts.join(' && ')
-
-      const locFilter = tenantId ? `tenant = '${tenantId}'` : ''
+      const tenantFilter = `tenant = '${tenantId}'`
 
       const [pRes, cRes, rRes, vRes, pvdRes, prpRes, plRes] = await Promise.all([
         pb
           .collection('products')
           .getFullList({ filter: prodFilter, sort: '-created', expand: 'variations' }),
-        pb.collection('categories').getFullList(),
-        pb.collection('rental_periods').getFullList(),
-        pb.collection('variations').getFullList(),
+        pb
+          .collection('categories')
+          .getFullList({ filter: tenantFilter, sort: 'order' })
+          .catch(() => []),
+        pb
+          .collection('rental_periods')
+          .getFullList({ filter: tenantFilter, sort: 'order' })
+          .catch(() => []),
+        pb
+          .collection('variations')
+          .getFullList({ filter: tenantFilter, sort: 'order' })
+          .catch(() => []),
         pb.collection('product_variant_details').getFullList(),
         pb.collection('product_rental_prices').getFullList(),
-        pb.collection('pickup_locations').getFullList({ filter: locFilter }),
+        pb
+          .collection('pickup_locations')
+          .getFullList({ filter: tenantFilter })
+          .catch(() => []),
       ])
 
       const augmentedProducts = pRes.map((p: any) => ({

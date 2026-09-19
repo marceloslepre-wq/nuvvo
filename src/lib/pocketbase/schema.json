@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T19:43:46.977Z",
+  "generatedAt": "2026-09-19T19:58:15.324Z",
   "collections": [
     {
       "name": "users",
@@ -217,6 +217,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": []
@@ -258,6 +265,13 @@
           "required": true,
           "system": false,
           "collectionRef": "categories"
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": ["CREATE INDEX `idx_variations_category` ON `variations` (category)"]
@@ -298,6 +312,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": []

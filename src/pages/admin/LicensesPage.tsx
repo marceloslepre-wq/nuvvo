@@ -61,6 +61,11 @@ export default function LicensesPage() {
     else setLoading(true)
 
     try {
+      const isOrigin = activeAdminTenant?.is_origin
+      const userFilter = isOrigin
+        ? `tenant = '${tenantId}' || tenant = '' || tenant = null`
+        : `tenant = '${tenantId}'`
+
       const [tData, pData, rData, usersList] = await Promise.all([
         getTenantById(tenantId).catch(() => activeAdminTenant),
         getPlans().catch(() => [] as Plan[]),
@@ -68,7 +73,7 @@ export default function LicensesPage() {
         pb
           .collection('users')
           .getFullList({
-            filter: `tenant = '${tenantId}' || tenant = '' || tenant = null`,
+            filter: userFilter,
           })
           .catch(() => []),
       ])

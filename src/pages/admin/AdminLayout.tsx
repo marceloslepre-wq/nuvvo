@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useTenant } from '@/contexts/tenant-context'
@@ -36,6 +37,13 @@ export default function AdminLayout() {
 
   const isMaster = user?.role === 'master'
   const isImpersonating = Boolean(localStorage.getItem('master_impersonating_from'))
+
+  // Se o usuário não for master, travar a empresa ativa na empresa do usuário logado
+  useEffect(() => {
+    if (user && !isMaster && user.tenant && selectedAdminTenantId !== user.tenant) {
+      setSelectedAdminTenantId(user.tenant)
+    }
+  }, [user, isMaster, selectedAdminTenantId, setSelectedAdminTenantId])
 
   // Se a locadora ativa estiver com plano vencido ou suspenso:
   // - O Master tem permissão de impersonar e visualizar (com aviso)
@@ -144,28 +152,34 @@ export default function AdminLayout() {
           </div>
         )}
 
-        {/* Tenant Switcher */}
+        {/* Tenant Switcher: Master pode alternar livremente; Gestor/Funcionário vê apenas sua empresa fixa */}
         {allTenants.length > 0 && (
           <div className="p-3 border-b bg-gray-50/50">
             <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1.5 font-medium">
               <Building2 className="w-3.5 h-3.5 text-primary" />
               <span>Empresa ativa:</span>
             </div>
-            <Select
-              value={activeAdminTenant?.id || selectedAdminTenantId || ''}
-              onValueChange={(val) => setSelectedAdminTenantId(val)}
-            >
-              <SelectTrigger className="w-full h-8 text-xs bg-white">
-                <SelectValue placeholder="Selecione a empresa" />
-              </SelectTrigger>
-              <SelectContent>
-                {allTenants.map((t) => (
-                  <SelectItem key={t.id} value={t.id} className="text-xs">
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isMaster ? (
+              <Select
+                value={activeAdminTenant?.id || selectedAdminTenantId || ''}
+                onValueChange={(val) => setSelectedAdminTenantId(val)}
+              >
+                <SelectTrigger className="w-full h-8 text-xs bg-white">
+                  <SelectValue placeholder="Selecione a empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allTenants.map((t) => (
+                    <SelectItem key={t.id} value={t.id} className="text-xs">
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="w-full h-8 px-2.5 flex items-center rounded-md border border-gray-200 bg-white text-xs font-semibold text-gray-800 truncate">
+                {activeAdminTenant?.name || user?.name || 'Minha Empresa'}
+              </div>
+            )}
             {activeAdminTenant && (
               <div className="mt-1.5 flex items-center justify-between text-[11px] text-gray-400">
                 <span
@@ -179,15 +193,15 @@ export default function AdminLayout() {
                     ? `${activeAdminTenant.subdomain}.sholver.com.br`
                     : activeAdminTenant.slug}
                 </span>
-                <Link
-                  to="/"
+                <a
+                  href={`https://${activeAdminTenant.subdomain ? `${activeAdminTenant.subdomain}.sholver.com.br` : window.location.host}`}
                   target="_blank"
                   rel="noreferrer"
                   className="text-primary hover:underline inline-flex items-center gap-0.5"
                   title="Abrir site público"
                 >
                   <ExternalLink className="w-3 h-3" />
-                </Link>
+                </a>
               </div>
             )}
           </div>
@@ -232,23 +246,28 @@ export default function AdminLayout() {
         <header className="h-16 bg-white border-b flex items-center justify-between px-4 md:hidden">
           <div className="flex items-center gap-2">
             <span className="font-bold text-lg text-primary">Painel</span>
-            {allTenants.length > 0 && (
-              <Select
-                value={activeAdminTenant?.id || selectedAdminTenantId || ''}
-                onValueChange={(val) => setSelectedAdminTenantId(val)}
-              >
-                <SelectTrigger className="h-8 text-xs max-w-[140px] truncate bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {allTenants.map((t) => (
-                    <SelectItem key={t.id} value={t.id} className="text-xs">
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {allTenants.length > 0 &&
+              (isMaster ? (
+                <Select
+                  value={activeAdminTenant?.id || selectedAdminTenantId || ''}
+                  onValueChange={(val) => setSelectedAdminTenantId(val)}
+                >
+                  <SelectTrigger className="h-8 text-xs max-w-[140px] truncate bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allTenants.map((t) => (
+                      <SelectItem key={t.id} value={t.id} className="text-xs">
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-xs font-semibold text-gray-700 max-w-[130px] truncate">
+                  {activeAdminTenant?.name || ''}
+                </span>
+              ))}
           </div>
           <Sheet>
             <SheetTrigger asChild>

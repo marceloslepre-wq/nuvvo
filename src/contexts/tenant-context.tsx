@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { Tenant } from '@/types/tenant'
 import { getTenants, resolveTenantByHost } from '@/services/tenants'
 import { useLocation } from 'react-router-dom'
+import pb from '@/lib/pocketbase/client'
 
 interface TenantContextValue {
   currentTenant: Tenant | null
@@ -101,6 +102,21 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   const activeAdminTenant = useMemo(() => {
+    // 1. Se houver um usuário autenticado no authStore que NÃO seja master (ex: gestor ou funcionário),
+    // ele DEVE ficar restrito estritamente à sua empresa (user.tenant)
+    const authRecord =
+      typeof window !== 'undefined' ? (window as any).pocketbaseAuthRecord || null : null
+    // Fallback lendo do pb.authStore.record
+    const pbUser = pb.authStore?.record
+    const effectiveUser = pbUser || authRecord
+    const isMaster = effectiveUser?.role === 'master'
+
+    if (effectiveUser && !isMaster && effectiveUser.tenant) {
+      const userTenant = allTenants.find((t) => t.id === effectiveUser.tenant)
+      if (userTenant) return userTenant
+    }
+
+    // 2. Se for Master ou impersonação ativa ou não logado:
     if (selectedAdminTenantId) {
       const found = allTenants.find((t) => t.id === selectedAdminTenantId)
       if (found) return found

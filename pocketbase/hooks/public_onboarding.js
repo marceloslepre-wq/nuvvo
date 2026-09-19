@@ -1,5 +1,6 @@
 // Hook de cadastro público /cadastro
 // Permite que uma nova empresa/locadora faça seu primeiro cadastro e entre em trial por padrão
+// Provisiona completamente a nova instância com site_settings vazia e evento em license_renewals
 routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   const body = e.requestInfo().body || {}
   const name = (body.name || '').trim()
@@ -69,12 +70,13 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   tenantRecord.set('start_date', now.toISOString())
   tenantRecord.set('expiration_date', expiration.toISOString())
   tenantRecord.set('whatsapp_status', 'disconnected')
+  tenantRecord.set('is_origin', false)
 
   if (selectedPlan) {
     tenantRecord.set('plan', selectedPlan.id)
     tenantRecord.set('effective_value', selectedPlan.getInt('price') || 0)
     tenantRecord.set('effective_unit_limit', 0)
-    tenantRecord.set('effective_user_limit', selectedPlan.getInt('user_limit') || 200)
+    tenantRecord.set('effective_user_limit', selectedPlan.getInt('user_limit') || 2)
   }
 
   try {
@@ -83,7 +85,43 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
     return e.badRequestError('Erro ao criar empresa: ' + err.message)
   }
 
-  // Criar usuário gestor da nova empresa (NUNCA master)
+  // 1. Criar site_settings própria do tenant (vazia/própria, sem herdar dados da origem)
+  try {
+    const siteSettingsCol = $app.findCollectionByNameOrId('site_settings')
+    const ssRecord = new Record(siteSettingsCol)
+    ssRecord.set('tenant', tenantRecord.id)
+    ssRecord.set('phone', phone)
+    ssRecord.set('email', email)
+    ssRecord.set('about_us', '')
+    ssRecord.set('terms', '')
+    ssRecord.set('privacy', '')
+    ssRecord.set('returns', '')
+    $app.save(ssRecord)
+  } catch (err) {
+    console.log('Erro ao criar site_settings:', err)
+  }
+
+  // 2. Criar registro inicial em license_renewals (evento license_created)
+  // Para que a licença apareça imediatamente e tenha histórico no Painel Master e admin
+  try {
+    const renewalsCol = $app.findCollectionByNameOrId('license_renewals')
+    const renRecord = new Record(renewalsCol)
+    renRecord.set('tenant', tenantRecord.id)
+    renRecord.set('new_expiration', expiration.toISOString())
+    renRecord.set('days_added', trialDays)
+    renRecord.set('amount_paid', 0)
+    renRecord.set('notes', 'Conta criada via Onboarding público (Trial 15 dias)')
+    renRecord.set('renewed_by', 'Auto Onboarding')
+    renRecord.set('event_type', 'license_created')
+    renRecord.set('plan_name', selectedPlan ? selectedPlan.getString('name') : 'Básico')
+    renRecord.set('description', 'Criação de licença em período de testes (15 dias)')
+    renRecord.set('period_display', '15 dias de teste grátis')
+    $app.save(renRecord)
+  } catch (err) {
+    console.log('Erro ao criar license_renewals:', err)
+  }
+
+  // 3. Criar usuário gestor da nova empresa (NUNCA master)
   const usersCol = $app.findCollectionByNameOrId('users')
   const userRecord = new Record(usersCol)
   userRecord.setEmail(email)

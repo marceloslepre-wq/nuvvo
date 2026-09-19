@@ -323,7 +323,7 @@ export default function AdminLayoutSettings() {
     setSavingLocation(false)
   }
 
-  if (user?.role !== 'gestor') {
+  if (user?.role !== 'gestor' && user?.role !== 'master') {
     return <Navigate to="/admin/dashboard" />
   }
 

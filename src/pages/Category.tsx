@@ -22,11 +22,22 @@ export default function CategoryPage() {
       try {
         setLoading(true)
         const cat = await pb.collection('categories').getOne(id!)
+        if (currentTenant && cat.tenant && cat.tenant !== currentTenant.id) {
+          setCategory(null)
+          return
+        }
         setCategory(cat)
 
+        const tenantFilter = currentTenant ? `tenant = '${currentTenant.id}'` : ''
         const [rPrices, rPeriods] = await Promise.all([
-          pb.collection('product_rental_prices').getFullList(),
-          pb.collection('rental_periods').getFullList(),
+          pb
+            .collection('product_rental_prices')
+            .getFullList()
+            .catch(() => []),
+          pb
+            .collection('rental_periods')
+            .getFullList({ filter: tenantFilter, sort: 'order' })
+            .catch(() => []),
         ])
         setRentalPrices(rPrices)
         setRentalPeriods(rPeriods)
