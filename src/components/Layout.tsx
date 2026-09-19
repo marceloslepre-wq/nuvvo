@@ -8,8 +8,11 @@ import { Badge } from '@/components/ui/badge'
 import { useCart } from '@/contexts/cart-context'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useVisitTracking } from '@/hooks/use-visit-tracking'
+import { useTenant } from '@/contexts/tenant-context'
+import TenantNotFound from '@/pages/TenantNotFound'
 
 export default function Layout() {
+  const { currentTenant, loading: tenantLoading } = useTenant()
   const { count } = useCart()
   const { pathname, hash } = useLocation()
   useVisitTracking()
@@ -17,23 +20,40 @@ export default function Layout() {
   const [settings, setSettings] = useState<any>(null)
 
   const loadSettings = () => {
+    if (!currentTenant) return
+    const filter = `tenant = '${currentTenant.id}'`
     pb.collection('site_settings')
-      .getFirstListItem('')
+      .getFirstListItem(filter)
       .then(setSettings)
-      .catch(() => {})
+      .catch(() => {
+        // Fallback caso ainda não tenha site_settings específico
+        setSettings({
+          phone: currentTenant.phone,
+          email: currentTenant.email,
+          about_us: currentTenant.about_us,
+          terms: currentTenant.terms,
+          privacy: currentTenant.privacy,
+          returns: currentTenant.returns,
+        })
+      })
   }
 
   const loadLocations = () => {
+    if (!currentTenant) return
     pb.collection('pickup_locations')
-      .getFullList()
+      .getFullList({
+        filter: `tenant = '${currentTenant.id}'`,
+      })
       .then(setLocations)
       .catch(() => {})
   }
 
   useEffect(() => {
-    loadLocations()
-    loadSettings()
-  }, [])
+    if (currentTenant) {
+      loadLocations()
+      loadSettings()
+    }
+  }, [currentTenant?.id])
 
   useRealtime('site_settings', () => {
     loadSettings()
@@ -73,20 +93,36 @@ export default function Layout() {
     }
   }, [pathname, hash])
 
+  if (tenantLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!currentTenant) {
+    return <TenantNotFound />
+  }
+
+  const logoUrl = settings?.logo
+    ? pb.files.getURL(settings, settings.logo)
+    : currentTenant.logo
+      ? pb.files.getURL(currentTenant as any, currentTenant.logo)
+      : null
+
+  const brandName = currentTenant.name || 'Plataforma'
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900">
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center shrink-0 mr-2">
-              {settings?.logo ? (
-                <img
-                  src={pb.files.getURL(settings, settings.logo)}
-                  alt="Logo"
-                  className="h-8 md:h-10 object-contain"
-                />
+              {logoUrl ? (
+                <img src={logoUrl} alt={brandName} className="h-8 md:h-10 object-contain" />
               ) : (
-                <span className="font-bold text-xl text-primary">Plataforma</span>
+                <span className="font-bold text-xl text-primary">{brandName}</span>
               )}
             </Link>
             <nav className="hidden md:flex gap-6">
@@ -310,7 +346,9 @@ export default function Layout() {
           </div>
         </div>
         <div className="container mx-auto px-4 mt-12 pt-8 border-t border-white/10 text-center text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} Skip Apps - Todos os direitos reservados</p>
+          <p>
+            © {new Date().getFullYear()} {brandName} - Todos os direitos reservados
+          </p>
         </div>
       </footer>
     </div>

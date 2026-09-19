@@ -21,11 +21,12 @@ export interface VisitLog extends RecordModel {
 export interface TrackPayload {
   type: 'pageview' | 'click'
   path: string
+  tenantId?: string
 }
 
 export const trackVisit = async (payload: TrackPayload): Promise<void> => {
   const info = detectVisitInfo()
-  const body = {
+  const body: Record<string, any> = {
     type: payload.type,
     modality: info.modality,
     source: info.source,
@@ -35,6 +36,9 @@ export const trackVisit = async (payload: TrackPayload): Promise<void> => {
     referrer: info.referrer,
     path: payload.path,
     session_id: info.session_id,
+  }
+  if (payload.tenantId) {
+    body.tenant_id = payload.tenantId
   }
   try {
     await pb.send('/backend/v1/track', {
@@ -50,6 +54,7 @@ export const trackVisit = async (payload: TrackPayload): Promise<void> => {
 export interface VisitFilter {
   periodDays: number
   modality: string
+  tenantId?: string
 }
 
 export const buildVisitFilter = (filter: VisitFilter): string => {
@@ -63,6 +68,9 @@ export const buildVisitFilter = (filter: VisitFilter): string => {
   if (filter.modality && filter.modality !== 'all') {
     parts.push(`modality = '${filter.modality}'`)
   }
+  if (filter.tenantId && filter.tenantId !== 'all') {
+    parts.push(`tenant = '${filter.tenantId}'`)
+  }
   return parts.length > 0 ? parts.join(' && ') : ''
 }
 
@@ -75,11 +83,15 @@ export const getVisitLogs = async (filter: VisitFilter, limit = 1000): Promise<V
   return result.items as unknown as VisitLog[]
 }
 
-export const getTodayVisitCount = async (): Promise<number> => {
+export const getTodayVisitCount = async (tenantId?: string): Promise<number> => {
   const start = new Date()
   start.setHours(0, 0, 0, 0)
+  let filter = `created >= '${formatDateForFilter(start)}'`
+  if (tenantId && tenantId !== 'all') {
+    filter += ` && tenant = '${tenantId}'`
+  }
   const result = await pb.collection('visit_logs').getList(1, 1, {
-    filter: `created >= '${formatDateForFilter(start)}'`,
+    filter,
   })
   return result.totalItems
 }

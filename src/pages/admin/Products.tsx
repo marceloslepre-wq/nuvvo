@@ -28,7 +28,10 @@ import { extractFieldErrors } from '@/lib/pocketbase/errors'
 import { sanitizeVideoUrl } from '@/lib/youtube'
 import { VideoPreview } from '@/components/VideoPreview'
 
+import { useTenant } from '@/contexts/tenant-context'
+
 export default function AdminProducts() {
+  const { activeAdminTenant } = useTenant()
   const [products, setProducts] = useState<any[]>([])
   const [search, setSearch] = useState('')
   const [isOpen, setIsOpen] = useState(false)
@@ -75,15 +78,28 @@ export default function AdminProducts() {
 
   const loadData = async () => {
     try {
-      const filter = search ? `name ~ "${search}"` : ''
+      const tenantId = activeAdminTenant?.id
+      const filterParts: string[] = []
+      if (tenantId) {
+        filterParts.push(`tenant = '${tenantId}'`)
+      }
+      if (search) {
+        filterParts.push(`name ~ "${search}"`)
+      }
+      const prodFilter = filterParts.join(' && ')
+
+      const locFilter = tenantId ? `tenant = '${tenantId}'` : ''
+
       const [pRes, cRes, rRes, vRes, pvdRes, prpRes, plRes] = await Promise.all([
-        pb.collection('products').getFullList({ filter, sort: '-created', expand: 'variations' }),
+        pb
+          .collection('products')
+          .getFullList({ filter: prodFilter, sort: '-created', expand: 'variations' }),
         pb.collection('categories').getFullList(),
         pb.collection('rental_periods').getFullList(),
         pb.collection('variations').getFullList(),
         pb.collection('product_variant_details').getFullList(),
         pb.collection('product_rental_prices').getFullList(),
-        pb.collection('pickup_locations').getFullList(),
+        pb.collection('pickup_locations').getFullList({ filter: locFilter }),
       ])
 
       const augmentedProducts = pRes.map((p: any) => ({
@@ -104,7 +120,7 @@ export default function AdminProducts() {
 
   useEffect(() => {
     loadData()
-  }, [search])
+  }, [search, activeAdminTenant?.id])
 
   useRealtime('products', () => {
     loadData()
@@ -309,6 +325,9 @@ export default function AdminProducts() {
       } else {
         // Create new product — must send everything in one FormData request
         const form = new FormData()
+        if (activeAdminTenant?.id) {
+          form.append('tenant', activeAdminTenant.id)
+        }
         form.append('name', String(formData.name ?? ''))
         form.append('reference', String(formData.reference ?? ''))
         form.append('description', String(formData.description ?? ''))

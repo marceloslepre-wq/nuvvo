@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
+import { useTenant } from '@/contexts/tenant-context'
 
 const SLUG_MAP: Record<string, { title: string; field: string }> = {
   'sobre-nos': { title: 'Sobre Nós', field: 'about_us' },
@@ -11,29 +12,30 @@ const SLUG_MAP: Record<string, { title: string; field: string }> = {
 
 export default function ContentPage() {
   const { slug } = useParams()
+  const { currentTenant } = useTenant()
   const [content, setContent] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   const pageInfo = slug ? SLUG_MAP[slug] : null
 
   useEffect(() => {
-    if (!pageInfo) {
+    if (!pageInfo || !currentTenant) {
       setLoading(false)
       return
     }
 
     pb.collection('site_settings')
-      .getFirstListItem('')
+      .getFirstListItem(`tenant = '${currentTenant.id}'`)
       .then((settings) => {
-        setContent(settings[pageInfo.field] || '')
+        setContent(settings[pageInfo.field] || (currentTenant as any)[pageInfo.field] || '')
       })
       .catch(() => {
-        setContent('')
+        setContent((currentTenant as any)[pageInfo.field] || '')
       })
       .finally(() => {
         setLoading(false)
       })
-  }, [pageInfo])
+  }, [pageInfo, currentTenant?.id])
 
   if (!pageInfo) return <Navigate to="/404" />
 

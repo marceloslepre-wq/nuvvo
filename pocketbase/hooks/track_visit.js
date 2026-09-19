@@ -44,6 +44,9 @@ routerAdd('POST', '/backend/v1/track', (e) => {
 
   const collection = $app.findCollectionByNameOrId('visit_logs')
   const record = new Record(collection)
+  if (body.tenant_id && typeof body.tenant_id === 'string') {
+    record.set('tenant', body.tenant_id)
+  }
   record.set('type', validTypes.includes(body.type) ? body.type : 'pageview')
   record.set('modality', validModalities.includes(body.modality) ? body.modality : 'unknown')
   record.set('source', typeof body.source === 'string' ? body.source : '')

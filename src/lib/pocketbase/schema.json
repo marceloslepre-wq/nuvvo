@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T15:08:20.559Z",
+  "generatedAt": "2026-09-19T15:10:46.848Z",
   "collections": [
     {
       "name": "users",
@@ -164,6 +164,13 @@
           "required": false,
           "system": false,
           "collectionRef": "pickup_locations"
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": [
@@ -372,6 +379,13 @@
           "type": "file",
           "required": false,
           "system": false
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": []
@@ -448,6 +462,13 @@
           "type": "file",
           "required": false,
           "system": false
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": []
@@ -748,6 +769,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": [
@@ -757,6 +785,131 @@
         "CREATE INDEX idx_visit_logs_device ON visit_logs (device)",
         "CREATE INDEX `idx_visit_logs_ip` ON `visit_logs` (ip)"
       ]
+    },
+    {
+      "name": "tenants",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.role = 'gestor'",
+        "update": "@request.auth.role = 'gestor'",
+        "delete": "@request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "subdomain",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "custom_domain",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preview_host",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "extra_hosts",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["active", "inactive"]
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "logo",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "hero_media",
+          "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "about_us",
+          "type": "editor",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "terms",
+          "type": "editor",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "privacy",
+          "type": "editor",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "returns",
+          "type": "editor",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "primary_color",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_tenants_slug ON tenants (slug)"]
     }
   ]
 }

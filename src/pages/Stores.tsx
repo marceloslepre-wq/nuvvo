@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useTenant } from '@/contexts/tenant-context'
 import { Skeleton } from '@/components/ui/skeleton'
 import { VideoPreview } from '@/components/VideoPreview'
 import { MapPin, Clock, Store } from 'lucide-react'
@@ -18,15 +19,20 @@ interface LocationRecord {
   image: string
   video_url: string
   video_file: string
+  tenant?: string
 }
 
 export default function StoresPage() {
+  const { currentTenant } = useTenant()
   const [locations, setLocations] = useState<LocationRecord[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadData = async () => {
+    if (!currentTenant) return
     try {
-      const data = await pb.collection('pickup_locations').getFullList<LocationRecord>()
+      const data = await pb.collection('pickup_locations').getFullList<LocationRecord>({
+        filter: `tenant = '${currentTenant.id}'`,
+      })
       setLocations(data)
     } catch (e) {
       setLocations([])
@@ -36,8 +42,10 @@ export default function StoresPage() {
   }
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (currentTenant) {
+      loadData()
+    }
+  }, [currentTenant?.id])
 
   useRealtime('pickup_locations', () => {
     loadData()

@@ -8,6 +8,7 @@ import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import { CartProvider } from './contexts/cart-context'
 import { AuthProvider } from './hooks/use-auth'
+import { TenantProvider } from './contexts/tenant-context'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminLogin from './pages/admin/Login'
@@ -21,51 +22,53 @@ import ContentPage from './pages/ContentPage'
 import StoresPage from './pages/Stores'
 
 const App = () => (
-  <AuthProvider>
-    <CartProvider>
-      <BrowserRouter>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/categoria/:id" element={<CategoryPage />} />
-              <Route path="/produto/:id" element={<ProductDetail />} />
-              <Route path="/pagina/:slug" element={<ContentPage />} />
-              <Route path="/nossas-lojas" element={<StoresPage />} />
-            </Route>
+  <BrowserRouter>
+    <TenantProvider>
+      <AuthProvider>
+        <CartProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/categoria/:id" element={<CategoryPage />} />
+                <Route path="/produto/:id" element={<ProductDetail />} />
+                <Route path="/pagina/:slug" element={<ContentPage />} />
+                <Route path="/nossas-lojas" element={<StoresPage />} />
+              </Route>
 
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route
-              path="/admin/reset-password"
-              element={
-                <ProtectedRoute>
-                  <AdminResetPassword />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="layout" element={<AdminLayoutSettings />} />
-            </Route>
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route
+                path="/admin/reset-password"
+                element={
+                  <ProtectedRoute>
+                    <AdminResetPassword />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="layout" element={<AdminLayoutSettings />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-      </BrowserRouter>
-    </CartProvider>
-  </AuthProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
+        </CartProvider>
+      </AuthProvider>
+    </TenantProvider>
+  </BrowserRouter>
 )
 
 export default App

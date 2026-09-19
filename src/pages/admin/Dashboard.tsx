@@ -10,7 +10,10 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { BarChart3, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
+import { useTenant } from '@/contexts/tenant-context'
+
 export default function AdminDashboard() {
+  const { activeAdminTenant } = useTenant()
   const [filter, setFilter] = useState<VisitFilterState>({ periodDays: 30, modality: 'all' })
   const [appliedFilter, setAppliedFilter] = useState<VisitFilterState>(filter)
   const [logs, setLogs] = useState<VisitLog[]>([])
@@ -20,7 +23,14 @@ export default function AdminDashboard() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [items, today] = await Promise.all([getVisitLogs(appliedFilter), getTodayVisitCount()])
+      const tenantFilter = {
+        ...appliedFilter,
+        tenantId: activeAdminTenant?.id,
+      }
+      const [items, today] = await Promise.all([
+        getVisitLogs(tenantFilter),
+        getTodayVisitCount(activeAdminTenant?.id),
+      ])
       setLogs(items)
       setTodayCount(today)
     } catch {
@@ -28,7 +38,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [appliedFilter])
+  }, [appliedFilter, activeAdminTenant?.id])
 
   useEffect(() => {
     loadData()

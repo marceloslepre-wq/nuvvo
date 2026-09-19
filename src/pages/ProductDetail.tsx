@@ -13,6 +13,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel'
 import { getProduct, getFileUrl, Product } from '@/services/products'
+import { useTenant } from '@/contexts/tenant-context'
 import pb from '@/lib/pocketbase/client'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Image } from '@/components/Image'
@@ -20,6 +21,7 @@ import { getYouTubeEmbedUrl } from '@/lib/youtube'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
+  const { currentTenant } = useTenant()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -38,10 +40,15 @@ export default function ProductDetail() {
 
   useEffect(() => {
     const loadProduct = async () => {
-      if (!id) return
+      if (!id || !currentTenant) return
       try {
         setLoading(true)
         const p = await getProduct(id)
+        // Se o produto pertencer a outro tenant, bloqueia exibição
+        if (p.tenant && p.tenant !== currentTenant.id) {
+          setProduct(null)
+          return
+        }
         setProduct(p)
         setActiveMedia('image')
         setSelectedRentalPeriod(null)
@@ -71,10 +78,15 @@ export default function ProductDetail() {
           setRentalPrices([])
         }
         try {
-          const settings = await pb.collection('site_settings').getFirstListItem('')
+          const settings = await pb
+            .collection('site_settings')
+            .getFirstListItem(`tenant='${currentTenant.id}'`)
           setSiteSettings(settings)
         } catch (e) {
-          setSiteSettings(null)
+          setSiteSettings({
+            phone: currentTenant.phone,
+            email: currentTenant.email,
+          })
         }
         setSelectedVariation(null)
         setMainViewerItem(null)
@@ -86,7 +98,7 @@ export default function ProductDetail() {
       }
     }
     loadProduct()
-  }, [id])
+  }, [id, currentTenant?.id])
 
   const selectedMediaRecord = selectedVariation
     ? productMedia.find((m) => m.variation === selectedVariation && m.file)

@@ -4,10 +4,12 @@ import { ChevronRight, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getFileUrl, Product } from '@/services/products'
 import { useSelectedCity } from '@/hooks/use-selected-city'
+import { useTenant } from '@/contexts/tenant-context'
 import pb from '@/lib/pocketbase/client'
 
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>()
+  const { currentTenant } = useTenant()
   const { selectedCityId } = useSelectedCity()
   const [products, setProducts] = useState<Product[]>([])
   const [category, setCategory] = useState<any>(null)
@@ -29,13 +31,13 @@ export default function CategoryPage() {
         setRentalPrices(rPrices)
         setRentalPeriods(rPeriods)
 
-        if (!selectedCityId) {
+        if (!selectedCityId || !currentTenant) {
           setProducts([])
           return
         }
 
         const prods = await pb.collection('products').getFullList({
-          filter: `status='active' && category='${id}' && available_locations~'${selectedCityId}'`,
+          filter: `status='active' && tenant='${currentTenant.id}' && category='${id}' && available_locations~'${selectedCityId}'`,
           sort: 'order',
         })
         setProducts(prods as Product[])
@@ -45,8 +47,8 @@ export default function CategoryPage() {
         setLoading(false)
       }
     }
-    if (id) loadCategory()
-  }, [id, selectedCityId])
+    if (id && currentTenant) loadCategory()
+  }, [id, selectedCityId, currentTenant?.id])
 
   const stripHtml = (html: string) => {
     if (!html) return ''

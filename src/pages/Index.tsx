@@ -11,6 +11,7 @@ import {
 import { getActiveProducts, getFileUrl, Product } from '@/services/products'
 import { useSelectedCity } from '@/hooks/use-selected-city'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useTenant } from '@/contexts/tenant-context'
 import pb from '@/lib/pocketbase/client'
 import { Image } from '@/components/Image'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,6 +19,7 @@ import { MapPin } from 'lucide-react'
 
 export default function Index() {
   const navigate = useNavigate()
+  const { currentTenant } = useTenant()
   const { selectedCityId, setSelectedCityId } = useSelectedCity()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<any[]>([])
@@ -29,23 +31,33 @@ export default function Index() {
   const [imageLoaded, setImageLoaded] = useState(false)
 
   const loadData = async () => {
+    if (!currentTenant) return
     try {
+      const tenantFilter = `tenant = '${currentTenant.id}'`
       const [cats, rPeriods, rPrices, locs, settings] = await Promise.all([
         pb.collection('categories').getFullList(),
         pb.collection('rental_periods').getFullList(),
         pb.collection('product_rental_prices').getFullList(),
-        pb.collection('pickup_locations').getFullList(),
+        pb.collection('pickup_locations').getFullList({ filter: tenantFilter }),
         pb
           .collection('site_settings')
-          .getFirstListItem('')
+          .getFirstListItem(tenantFilter)
           .catch(() => null),
       ])
       setCategories(cats)
       setRentalPeriods(rPeriods)
       setRentalPrices(rPrices)
       setLocations(locs)
-      if (settings && settings.hero_media) {
+
+      const heroFile = settings?.hero_media || currentTenant.hero_media
+      if (settings?.hero_media) {
         const url = pb.files.getURL(settings, settings.hero_media)
+        setHeroMedia((prev) => {
+          if (prev !== url) setImageLoaded(false)
+          return url
+        })
+      } else if (currentTenant.hero_media) {
+        const url = pb.files.getURL(currentTenant as any, currentTenant.hero_media)
         setHeroMedia((prev) => {
           if (prev !== url) setImageLoaded(false)
           return url
@@ -57,7 +69,7 @@ export default function Index() {
 
       if (selectedCityId) {
         const data = await pb.collection('products').getFullList({
-          filter: `status='active' && available_locations~'${selectedCityId}'`,
+          filter: `status='active' && tenant='${currentTenant.id}' && available_locations~'${selectedCityId}'`,
           sort: 'order',
         })
         setProducts(data as Product[])
@@ -74,7 +86,7 @@ export default function Index() {
 
   useEffect(() => {
     loadData()
-  }, [selectedCityId])
+  }, [selectedCityId, currentTenant?.id])
 
   useRealtime('products', () => {
     loadData()
