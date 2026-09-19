@@ -17,7 +17,38 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
 
   const mpToken = $os.getenv('MERCADO_PAGO_ACCESS_TOKEN') || ''
   if (!mpToken) {
+    console.log('[Webhook MP] Recebido evento mas MERCADO_PAGO_ACCESS_TOKEN não está configurado')
     return e.json(200, { received: true, message: 'Mercado Pago token not set' })
+  }
+
+  // Validação opcional de assinatura HMAC caso MERCADO_PAGO_WEBHOOK_SECRET esteja configurado
+  const webhookSecret = $os.getenv('MERCADO_PAGO_WEBHOOK_SECRET') || ''
+  const xSignature = e.requestInfo().headers['x-signature'] || ''
+  const xRequestId = e.requestInfo().headers['x-request-id'] || ''
+
+  if (webhookSecret && xSignature) {
+    try {
+      // Extrair ts e v1 de x-signature (formato ts=...,v1=...)
+      let ts = ''
+      let hash = ''
+      const parts = xSignature.split(',')
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i].trim()
+        if (p.startsWith('ts=')) ts = p.substring(3)
+        if (p.startsWith('v1=')) hash = p.substring(3)
+      }
+
+      if (ts && hash) {
+        const manifest = 'id:' + paymentId + ';request-id:' + xRequestId + ';ts:' + ts + ';'
+        const calculated = $security.hs256(manifest, webhookSecret)
+        if (calculated !== hash) {
+          console.log('[Webhook MP] Assinatura X-Signature inválida para paymentId:', paymentId)
+          return e.json(401, { error: 'Invalid signature' })
+        }
+      }
+    } catch (sigErr) {
+      console.log('[Webhook MP] Erro ao validar X-Signature:', sigErr ? sigErr.message : sigErr)
+    }
   }
 
   try {
@@ -31,6 +62,12 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
     })
 
     if (res.statusCode !== 200) {
+      console.log(
+        '[Webhook MP] Consulta do pagamento falhou. ID:',
+        paymentId,
+        '| Status:',
+        res.statusCode,
+      )
       return e.json(200, { received: true, error: 'Could not fetch payment' })
     }
 

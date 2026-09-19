@@ -89,6 +89,8 @@ routerAdd(
           const pointOfInt = mpData.point_of_interaction || {}
           const transData = pointOfInt.transaction_data || {}
 
+          console.log('[Mercado Pago] PIX Live gerado com sucesso. Payment ID:', mpData.id)
+
           return e.json(200, {
             success: true,
             mode: 'live',
@@ -101,10 +103,12 @@ routerAdd(
             ticket_url: transData.ticket_url || '',
           })
         } else {
-          console.log('Erro Mercado Pago HTTP:', res.statusCode, res.raw)
+          const errBody = res.json || {}
+          const errMsg = errBody.message || errBody.error || 'HTTP ' + res.statusCode
+          console.log('[Mercado Pago Erro] Status:', res.statusCode, '| Mensagem:', errMsg)
         }
       } catch (apiErr) {
-        console.log('Exceção ao chamar Mercado Pago:', apiErr)
+        console.log('[Mercado Pago Exceção]:', apiErr ? apiErr.message : apiErr)
       }
     }
 
