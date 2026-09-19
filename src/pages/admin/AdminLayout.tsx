@@ -62,6 +62,12 @@ export default function AdminLayout() {
       label: 'Layout & Empresa',
       roles: ['master', 'gestor'],
     },
+    {
+      to: '/master',
+      icon: ShieldCheck,
+      label: 'Painel Master',
+      roles: ['master'],
+    },
   ].filter((link) => link.roles.includes(user?.role || 'gestor'))
 
   const NavLinks = () => (
@@ -108,8 +114,8 @@ export default function AdminLayout() {
           </div>
         </div>
 
-        {/* Botão de retorno ao Painel Master para o Master */}
-        {isMaster && (
+        {/* Botão de retorno ao Painel Master apenas quando em modo de impersonação */}
+        {isMaster && isImpersonating && (
           <div className="p-3 bg-slate-900 text-white border-b border-slate-800">
             <div className="text-[11px] text-slate-400 mb-1.5 flex items-center justify-between">
               <span className="font-semibold text-slate-300">Modo de Acesso:</span>
@@ -184,17 +190,29 @@ export default function AdminLayout() {
           <NavLinks />
         </nav>
         <div className="p-4 border-t">
-          <div className="text-sm font-medium mb-2 px-2 truncate flex items-center justify-between">
-            <span className="truncate">{user?.name || user?.email}</span>
-            {isMaster && (
-              <span className="text-[9px] bg-red-100 text-red-700 border border-red-300 font-bold px-1.5 py-0.5 rounded">
-                Master
-              </span>
-            )}
+          <div className="flex items-center gap-3 px-2 mb-3">
+            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs shrink-0">
+              {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-sm font-semibold text-slate-900 truncate">
+                  {user?.name || user?.email?.split('@')[0]}
+                </span>
+                {isMaster && (
+                  <span className="text-[9px] bg-red-100 text-red-700 border border-red-300 font-bold px-1.5 py-0.2 rounded shrink-0">
+                    Master
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-400 truncate">
+                {isMaster ? 'Master' : user?.role || 'gestor'}
+              </p>
+            </div>
           </div>
           <Button
             variant="ghost"
-            className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+            className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 h-8 text-xs"
             onClick={signOut}
           >
             <LogOut className="h-4 w-4 mr-2" />
@@ -239,9 +257,29 @@ export default function AdminLayout() {
                 <NavLinks />
               </nav>
               <div className="border-t pt-4">
+                <div className="flex items-center gap-3 px-2 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs shrink-0">
+                    {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-sm font-semibold text-slate-900 truncate">
+                        {user?.name || user?.email?.split('@')[0]}
+                      </span>
+                      {isMaster && (
+                        <span className="text-[9px] bg-red-100 text-red-700 border border-red-300 font-bold px-1.5 py-0.2 rounded shrink-0">
+                          Master
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {isMaster ? 'Master' : user?.role || 'gestor'}
+                    </p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start text-red-500"
+                  className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 h-8 text-xs"
                   onClick={signOut}
                 >
                   <LogOut className="h-4 w-4 mr-2" />

@@ -315,6 +315,15 @@ export default function MasterDashboard() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => navigate('/admin/dashboard')}
+              className="bg-slate-900 text-slate-200 border-slate-700 hover:bg-slate-800 hover:text-white h-9 px-3 gap-1.5 text-xs font-semibold"
+            >
+              <span>Ir ao Painel Gerencial</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={loadData}
               className="bg-slate-900 text-slate-200 border-slate-700 hover:bg-slate-800 hover:text-white h-9 px-3 gap-1.5 text-xs font-semibold"
             >

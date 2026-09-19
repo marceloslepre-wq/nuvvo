@@ -24,13 +24,8 @@ export default function AdminLogin() {
     if (error) {
       toast({ title: 'Erro', description: 'E-mail ou senha inválidos.', variant: 'destructive' })
     } else {
-      // Se for o usuário Master, redireciona diretamente para o Painel Master
-      const currentAuthUser = pb.authStore.record
-      if (currentAuthUser?.role === 'master') {
-        navigate('/master')
-      } else {
-        navigate('/admin/dashboard')
-      }
+      // Todos os usuários (inclusive Master) entram no painel gerencial normal do sistema
+      navigate('/admin/dashboard')
     }
   }
 
