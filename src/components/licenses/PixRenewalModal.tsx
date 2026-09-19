@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Dialog,
   DialogContent,
@@ -36,20 +37,51 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
   tenant,
   onSuccess,
 }) => {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [checkingStatus, setCheckingStatus] = useState(false)
   const [pixData, setPixData] = useState<CreatePixResponse | null>(null)
   const [copied, setCopied] = useState(false)
   const [paymentApproved, setPaymentApproved] = useState(false)
+  const handledApprovalRef = useRef(false)
 
   const planName = tenant.expand?.plan?.name || 'Plano Pratinum'
   const amountToPay = tenant.effective_value ?? (tenant.expand?.plan?.price || 799.0)
 
+  // Dispara o fluxo de pós-aprovação do pagamento:
+  // 1. Exibe feedback de sucesso ("Pagamento confirmado! Licença renovada por 30 dias")
+  // 2. Invoca onSuccess() para recarregar dados
+  // 3. Aguarda ~2 segundos para o usuário ver o feedback
+  // 4. Fecha o modal e redireciona automaticamente para a página /admin/licenses
+  const handleApprovedSuccess = () => {
+    if (handledApprovalRef.current) return
+    handledApprovalRef.current = true
+
+    setPaymentApproved(true)
+    toast({
+      title: 'Pagamento confirmado!',
+      description: 'Licença renovada por 30 dias com sucesso.',
+    })
+
+    try {
+      onSuccess()
+    } catch (_) {
+      // Ignora erro de callback
+    }
+
+    setTimeout(() => {
+      onClose()
+      navigate('/admin/licenses')
+    }, 2000)
+  }
+
   useEffect(() => {
     if (open && tenant) {
+      handledApprovalRef.current = false
       setPaymentApproved(false)
       loadPix()
     } else {
+      handledApprovalRef.current = false
       setPixData(null)
       setCopied(false)
       setPaymentApproved(false)
@@ -80,19 +112,8 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
         if (!isSubscribed) return
 
         if (res.status === 'approved' || res.renewed) {
-          setPaymentApproved(true)
           clearInterval(interval)
-          toast({
-            title: 'Pagamento confirmado!',
-            description: 'Licença renovada por 30 dias com sucesso.',
-          })
-          onSuccess()
-          // Fechar modal após 3.5 segundos para o usuário ver o feedback de sucesso
-          setTimeout(() => {
-            if (isSubscribed) {
-              onClose()
-            }
-          }, 3500)
+          handleApprovedSuccess()
         }
       } catch (err) {
         // Ignora erros transitórios de rede no polling
@@ -103,7 +124,7 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
       isSubscribed = false
       clearInterval(interval)
     }
-  }, [open, pixData?.payment_id, paymentApproved, pixData?.mode, onSuccess, onClose])
+  }, [open, pixData?.payment_id, paymentApproved, pixData?.mode])
 
   // Consulta manual forçada pelo usuário ("Atualizar")
   const handleCheckStatusManual = async () => {
@@ -114,15 +135,7 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
       const res = await getPaymentStatus(pixData.payment_id)
 
       if (res.status === 'approved' || res.renewed) {
-        setPaymentApproved(true)
-        toast({
-          title: 'Pagamento confirmado!',
-          description: 'Licença renovada por 30 dias com sucesso.',
-        })
-        onSuccess()
-        setTimeout(() => {
-          onClose()
-        }, 3500)
+        handleApprovedSuccess()
       } else {
         toast({
           title: 'Pagamento ainda não identificado',

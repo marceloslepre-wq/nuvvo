@@ -634,7 +634,10 @@ export default function LicensesPage() {
             open={pixModalOpen}
             onClose={() => setPixModalOpen(false)}
             tenant={tenant}
-            onSuccess={() => loadAllData()}
+            onSuccess={async () => {
+              await refreshTenants()
+              await loadAllData()
+            }}
           />
 
           <ChangePlanModal
