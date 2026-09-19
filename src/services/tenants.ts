@@ -210,7 +210,7 @@ export const changeTenantPlan = async (
   return updateTenant(tenant.id, {
     plan: newPlan.id,
     effective_value: newPlan.price,
-    effective_unit_limit: newPlan.unit_limit,
+    effective_unit_limit: 0,
     effective_user_limit: newPlan.user_limit,
   })
 }

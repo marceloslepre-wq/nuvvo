@@ -44,7 +44,6 @@ export default function LicensesPage() {
 
   // Métricas de uso real da instância
   const [userCount, setUserCount] = useState<number>(0)
-  const [unitCount, setUnitCount] = useState<number>(0)
 
   // Modais
   const [pixModalOpen, setPixModalOpen] = useState(false)
@@ -62,18 +61,12 @@ export default function LicensesPage() {
     else setLoading(true)
 
     try {
-      const [tData, pData, rData, usersList, productsList] = await Promise.all([
+      const [tData, pData, rData, usersList] = await Promise.all([
         getTenantById(tenantId).catch(() => activeAdminTenant),
         getPlans().catch(() => [] as Plan[]),
         getRenewalsByTenant(tenantId).catch(() => [] as LicenseRenewal[]),
         pb
           .collection('users')
-          .getFullList({
-            filter: `tenant = '${tenantId}' || tenant = '' || tenant = null`,
-          })
-          .catch(() => []),
-        pb
-          .collection('products')
           .getFullList({
             filter: `tenant = '${tenantId}' || tenant = '' || tenant = null`,
           })
@@ -84,7 +77,6 @@ export default function LicensesPage() {
       setPlans(pData)
       setRenewals(rData)
       setUserCount(usersList.length)
-      setUnitCount(productsList.length)
 
       if (isManualRefresh) {
         await refreshTenants()
@@ -207,13 +199,6 @@ export default function LicensesPage() {
   const userPercent = isUserUnlimited
     ? 0
     : Math.min(100, Math.round((userCount / (userLimit || 1)) * 100))
-
-  const unitLimit = tenant?.effective_unit_limit ?? currentPlan?.unit_limit ?? 500
-  const isUnitUnlimited = unitLimit >= 99999
-  const unitRemaining = Math.max(0, unitLimit - unitCount)
-  const unitPercent = isUnitUnlimited
-    ? 0
-    : Math.min(100, Math.round((unitCount / (unitLimit || 1)) * 100))
 
   // Status Badge
   const renderStatusBadge = () => {
@@ -499,33 +484,6 @@ export default function LicensesPage() {
             </div>
           </div>
 
-          {/* Limite de Unidades / Apartamentos */}
-          <div className="space-y-2 pt-2 border-t border-gray-100">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 text-gray-700 font-semibold">
-                <Building className="w-3.5 h-3.5 text-gray-400" />
-                <span>Unidades / Apartamentos</span>
-              </div>
-              <span className="font-bold text-gray-900 font-mono">
-                {unitCount} / {isUnitUnlimited ? 'Ilimitado' : unitLimit}
-              </span>
-            </div>
-
-            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-indigo-600 h-2 rounded-full"
-                style={{ width: `${unitPercent}%` }}
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] text-gray-400 font-medium">
-              <span>
-                {isUnitUnlimited ? 'Capacidade ilimitada' : `${unitRemaining} unidades restantes`}
-              </span>
-              <span>{isUnitUnlimited ? '0%' : `${unitPercent}% ocupado`}</span>
-            </div>
-          </div>
-
           {/* Box Informativo Azul */}
           <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-900 space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-blue-950">
@@ -533,8 +491,8 @@ export default function LicensesPage() {
               <span>Precisa de mais capacidade?</span>
             </div>
             <p className="text-[11px] text-blue-800 leading-relaxed">
-              Precisa cadastrar novos usuários ou unidades? Você pode mudar para um plano superior a
-              qualquer momento.
+              Precisa cadastrar novos usuários? Você pode mudar para um plano superior a qualquer
+              momento.
             </p>
           </div>
 

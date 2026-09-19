@@ -329,7 +329,7 @@ export default function PublicOnboarding() {
                         <span className="text-[10px] text-slate-500 font-normal">/mês</span>
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1">
-                        Até {p.unit_limit} unidades • {p.user_limit} usuários
+                        Até {p.user_limit} usuários
                       </div>
                     </div>
                   )

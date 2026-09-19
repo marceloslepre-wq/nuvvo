@@ -73,7 +73,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   if (selectedPlan) {
     tenantRecord.set('plan', selectedPlan.id)
     tenantRecord.set('effective_value', selectedPlan.getInt('price') || 0)
-    tenantRecord.set('effective_unit_limit', selectedPlan.getInt('unit_limit') || 50)
+    tenantRecord.set('effective_unit_limit', 0)
     tenantRecord.set('effective_user_limit', selectedPlan.getInt('user_limit') || 200)
   }
 

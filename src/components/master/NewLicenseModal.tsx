@@ -43,7 +43,6 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
   const [planStatus, setPlanStatus] = useState<PlanStatus>('trial')
   const [trialDays, setTrialDays] = useState(15)
   const [effectiveValue, setEffectiveValue] = useState<number>(0)
-  const [effectiveUnitLimit, setEffectiveUnitLimit] = useState<number>(50)
   const [effectiveUserLimit, setEffectiveUserLimit] = useState<number>(200)
 
   const handleNameChange = (val: string) => {
@@ -62,7 +61,6 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
     const sel = plans.find((p) => p.id === pId)
     if (sel) {
       setEffectiveValue(sel.price ?? 0)
-      setEffectiveUnitLimit(sel.unit_limit ?? 50)
       setEffectiveUserLimit(sel.user_limit ?? 200)
     }
   }
@@ -88,7 +86,7 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
         start_date: now.toISOString(),
         expiration_date: expiration.toISOString(),
         effective_value: Number(effectiveValue),
-        effective_unit_limit: Number(effectiveUnitLimit),
+        effective_unit_limit: 0,
         effective_user_limit: Number(effectiveUserLimit),
         status: 'active',
         whatsapp_status: 'disconnected',
@@ -213,7 +211,7 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="font-medium text-gray-700">Valor Mensal (R$)</label>
               <Input
@@ -221,15 +219,6 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
                 step="0.01"
                 value={effectiveValue}
                 onChange={(e) => setEffectiveValue(Number(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="font-medium text-gray-700">Lim. Unidades</label>
-              <Input
-                type="number"
-                value={effectiveUnitLimit}
-                onChange={(e) => setEffectiveUnitLimit(Number(e.target.value))}
                 className="mt-1"
               />
             </div>

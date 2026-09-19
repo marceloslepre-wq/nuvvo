@@ -157,12 +157,6 @@ export const ChangePlanModal: React.FC<ChangePlanModalProps> = ({
                         {p.user_limit ? `${p.user_limit} usuários` : 'Ilimitado'}
                       </strong>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] py-0.5">
-                      <span className="text-gray-500">Unidades / Produtos:</span>
-                      <strong className="text-gray-800 font-semibold">
-                        {p.unit_limit ? `${p.unit_limit} unidades` : 'Ilimitado'}
-                      </strong>
-                    </div>
                   </div>
 
                   {features.length > 0 && (

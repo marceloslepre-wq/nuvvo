@@ -38,7 +38,6 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState<number>(0)
   const [isFree, setIsFree] = useState(false)
-  const [unitLimit, setUnitLimit] = useState<number>(50)
   const [userLimit, setUserLimit] = useState<number>(200)
   const [status, setStatus] = useState<'active' | 'inactive'>('active')
   const [isMasterExclusive, setIsMasterExclusive] = useState(false)
@@ -52,7 +51,6 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
       setDescription(plan.description || '')
       setPrice(plan.price ?? 0)
       setIsFree(Boolean(plan.is_free))
-      setUnitLimit(plan.unit_limit ?? 50)
       setUserLimit(plan.user_limit ?? 200)
       setStatus(plan.status || 'active')
       setIsMasterExclusive(Boolean(plan.is_master_exclusive))
@@ -64,7 +62,6 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
       setDescription('')
       setPrice(199.9)
       setIsFree(false)
-      setUnitLimit(50)
       setUserLimit(200)
       setStatus('active')
       setIsMasterExclusive(false)
@@ -97,7 +94,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
         description,
         price: isFree ? 0 : Number(price),
         is_free: isFree,
-        unit_limit: Number(unitLimit),
+        unit_limit: 0,
         user_limit: Number(userLimit),
         status,
         is_master_exclusive: isMasterExclusive,
@@ -211,29 +208,16 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="font-medium text-gray-700">Limite de Unidades/Lojas</label>
-              <Input
-                type="number"
-                min="1"
-                value={unitLimit}
-                onChange={(e) => setUnitLimit(Number(e.target.value))}
-                required
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="font-medium text-gray-700">Limite de Usuários</label>
-              <Input
-                type="number"
-                min="1"
-                value={userLimit}
-                onChange={(e) => setUserLimit(Number(e.target.value))}
-                required
-                className="mt-1"
-              />
-            </div>
+          <div>
+            <label className="font-medium text-gray-700">Limite de Usuários</label>
+            <Input
+              type="number"
+              min="1"
+              value={userLimit}
+              onChange={(e) => setUserLimit(Number(e.target.value))}
+              required
+              className="mt-1"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-2">

@@ -609,14 +609,6 @@ export default function MasterDashboard() {
                                   : t.effective_user_limit || 200}
                               </strong>
                             </div>
-                            <div>
-                              Unidades:{' '}
-                              <strong>
-                                {t.effective_unit_limit && t.effective_unit_limit > 50000
-                                  ? 'Ilimitado'
-                                  : t.effective_unit_limit || 50}
-                              </strong>
-                            </div>
                           </TableCell>
 
                           {/* Valor */}
@@ -868,15 +860,6 @@ export default function MasterDashboard() {
                         </div>
 
                         <div className="flex items-center justify-between text-gray-600 pt-1">
-                          <span>Limite de Unidades:</span>
-                          <strong className="text-gray-900">
-                            {plan.unit_limit && plan.unit_limit > 50000
-                              ? 'Ilimitado'
-                              : `${plan.unit_limit || 50} unidades`}
-                          </strong>
-                        </div>
-
-                        <div className="flex items-center justify-between text-gray-600">
                           <span>Limite de Usuários:</span>
                           <strong className="text-gray-900">
                             {plan.user_limit && plan.user_limit > 50000
