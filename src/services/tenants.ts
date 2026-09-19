@@ -187,6 +187,7 @@ export const createPixPayment = async (tenantId: string): Promise<CreatePixRespo
 export interface PaymentStatusResponse {
   payment_id: string
   status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'in_process' | string
+  status_detail?: string
   renewed: boolean
   tenant_id?: string
   mode?: string
@@ -197,6 +198,27 @@ export interface PaymentStatusResponse {
 export const getPaymentStatus = async (paymentId: string): Promise<PaymentStatusResponse> => {
   return pb.send<PaymentStatusResponse>(`/backend/v1/licenses/payment-status/${paymentId}`, {
     method: 'GET',
+  })
+}
+
+export interface ReconcilePendingResponse {
+  success: boolean
+  reconciled_count: number
+  results?: Array<{
+    tenant_id: string
+    payment_id: string
+    status?: string
+    detail?: string
+    error?: string
+  }>
+}
+
+export const reconcilePendingPayments = async (
+  tenantId?: string,
+): Promise<ReconcilePendingResponse> => {
+  return pb.send<ReconcilePendingResponse>('/backend/v1/licenses/reconcile-pending', {
+    method: 'POST',
+    body: { tenant_id: tenantId },
   })
 }
 

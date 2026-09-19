@@ -82,6 +82,7 @@ export interface Tenant {
   document_cnpj?: string
   whatsapp_status?: WhatsAppStatus
   is_origin?: boolean
+  pending_pix_payment_id?: string
 }
 
 /**

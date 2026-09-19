@@ -2,7 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTenant } from '@/contexts/tenant-context'
 import { Tenant, Plan, LicenseRenewal } from '@/types/tenant'
-import { getTenantById, getPlans, getRenewalsByTenant } from '@/services/tenants'
+import {
+  getTenantById,
+  getPlans,
+  getRenewalsByTenant,
+  reconcilePendingPayments,
+} from '@/services/tenants'
 import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -61,6 +66,19 @@ export default function LicensesPage() {
     else setLoading(true)
 
     try {
+      // Reconciliar pagamentos pendentes no backend silenciosamente
+      try {
+        const reconcileRes = await reconcilePendingPayments(tenantId)
+        if (reconcileRes.reconciled_count > 0) {
+          toast({
+            title: 'Pagamento PIX confirmado!',
+            description: 'Sua licença foi renovada por 30 dias com sucesso.',
+          })
+        }
+      } catch (_) {
+        // Falha de reconciliação não impede carregamento dos dados
+      }
+
       const isOrigin = activeAdminTenant?.is_origin
       const userFilter = isOrigin
         ? `tenant = '${tenantId}' || tenant = '' || tenant = null`

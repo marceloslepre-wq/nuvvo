@@ -92,12 +92,21 @@ routerAdd(
           const pointOfInt = mpData.point_of_interaction || {}
           const transData = pointOfInt.transaction_data || {}
 
-          console.log('[Mercado Pago] PIX Live gerado com sucesso. Payment ID:', mpData.id)
+          const newPaymentId = String(mpData.id || '')
+          console.log('[Mercado Pago] PIX Live gerado com sucesso. Payment ID:', newPaymentId)
+
+          // Salva o payment_id pendente no tenant para reconciliação automática contínua
+          try {
+            tenantRecord.set('pending_pix_payment_id', newPaymentId)
+            $app.save(tenantRecord)
+          } catch (saveErr) {
+            console.log('[Mercado Pago] Falha ao salvar pending_pix_payment_id:', saveErr)
+          }
 
           return e.json(200, {
             success: true,
             mode: 'live',
-            payment_id: String(mpData.id || ''),
+            payment_id: newPaymentId,
             status: mpData.status || 'pending',
             plan_name: planName,
             amount: amountToPay,

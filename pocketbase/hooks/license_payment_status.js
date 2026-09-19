@@ -81,6 +81,8 @@ routerAdd(
           paymentId,
           '| Status:',
           res.statusCode,
+          '| Body:',
+          JSON.stringify(res.json || res.raw || {}),
         )
         return e.json(res.statusCode === 404 ? 404 : 400, {
           error: 'Pagamento não encontrado no gateway',
@@ -89,12 +91,35 @@ routerAdd(
 
       const payData = res.json || {}
       const status = payData.status || 'pending'
+      const statusDetail = payData.status_detail || ''
       const metadata = payData.metadata || {}
       const externalRef = payData.external_reference || ''
       const tenantId = metadata.tenant_id || externalRef
 
+      console.log(
+        '[Payment Status] MP ID:',
+        paymentId,
+        '| Status:',
+        status,
+        '| Detail:',
+        statusDetail,
+        '| Tenant:',
+        tenantId,
+        '| UserTenant:',
+        userTenant,
+        '| Amount:',
+        payData.transaction_amount,
+      )
+
       // Segurança: gestor só pode consultar pagamentos vinculados ao seu tenant
       if (role !== 'master' && tenantId && tenantId !== userTenant) {
+        console.log(
+          '[Payment Status] Acesso negado: tenantId (' +
+            tenantId +
+            ') != userTenant (' +
+            userTenant +
+            ')',
+        )
         return e.json(403, { error: 'Acesso negado para este pagamento' })
       }
 
@@ -179,6 +204,7 @@ routerAdd(
 
             tenantRecord.set('expiration_date', newExp.toISOString())
             tenantRecord.set('plan_status', 'active')
+            tenantRecord.set('pending_pix_payment_id', '')
             $app.save(tenantRecord)
 
             renewedNow = true
@@ -189,6 +215,14 @@ routerAdd(
                 tenantRecord.id +
                 ' +30d',
             )
+          } else {
+            // Já havia sido processado anteriormente, limpa pending se for este
+            if (tenantRecord.getString('pending_pix_payment_id') === String(paymentId)) {
+              tenantRecord.set('pending_pix_payment_id', '')
+              try {
+                $app.save(tenantRecord)
+              } catch (_) {}
+            }
           }
         }
       }
@@ -196,6 +230,7 @@ routerAdd(
       return e.json(200, {
         payment_id: paymentId,
         status: status,
+        status_detail: statusDetail,
         renewed: renewedNow || status === 'approved',
         tenant_id: tenantId,
       })

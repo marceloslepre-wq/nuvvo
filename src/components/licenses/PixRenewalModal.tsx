@@ -56,14 +56,25 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
     }
   }, [open, tenant?.id])
 
-  // Polling automático para verificar o status do pagamento no Mercado Pago a cada 5 segundos
+  // Polling automático para verificar o status do pagamento no Mercado Pago a cada 4 segundos por até 15 minutos
   useEffect(() => {
     if (!open || !pixData?.payment_id || paymentApproved || pixData.mode === 'demo') {
       return
     }
 
     let isSubscribed = true
+    let pollCount = 0
+    const maxPolls = 225 // ~15 minutos com intervalo de 4s
+
     const interval = setInterval(async () => {
+      if (!isSubscribed) return
+      pollCount++
+
+      if (pollCount > maxPolls) {
+        clearInterval(interval)
+        return
+      }
+
       try {
         const res = await getPaymentStatus(pixData.payment_id)
         if (!isSubscribed) return
@@ -86,7 +97,7 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
       } catch (err) {
         // Ignora erros transitórios de rede no polling
       }
-    }, 5000)
+    }, 4000)
 
     return () => {
       isSubscribed = false
@@ -116,7 +127,7 @@ export const PixRenewalModal: React.FC<PixRenewalModalProps> = ({
         toast({
           title: 'Pagamento ainda não identificado',
           description:
-            'Aguardando compensação pelo banco. Se você já pagou, aguarde alguns instantes e tente novamente.',
+            'Aguardando compensação pelo banco. Se você já realizou o pagamento no app do banco, aguarde alguns instantes (a compensação PIX costuma levar de alguns segundos a até 2 minutos).',
         })
       }
     } catch (err: any) {

@@ -162,6 +162,7 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
 
       tenantRecord.set('expiration_date', newExp.toISOString())
       tenantRecord.set('plan_status', 'active')
+      tenantRecord.set('pending_pix_payment_id', '')
       $app.save(tenantRecord)
 
       console.log(

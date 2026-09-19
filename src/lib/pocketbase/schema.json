@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T21:12:30.678Z",
+  "generatedAt": "2026-09-19T21:17:31.955Z",
   "collections": [
     {
       "name": "users",
@@ -1002,6 +1002,12 @@
         {
           "name": "is_origin",
           "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pending_pix_payment_id",
+          "type": "text",
           "required": false,
           "system": false
         }
