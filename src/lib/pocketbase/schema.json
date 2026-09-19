@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T17:43:31.618Z",
+  "generatedAt": "2026-09-19T18:00:36.293Z",
   "collections": [
     {
       "name": "users",
@@ -1092,8 +1092,8 @@
       "name": "license_renewals",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && (tenant = @request.auth.tenant || tenant = '' || tenant = null))",
+        "view": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && (tenant = @request.auth.tenant || tenant = '' || tenant = null))",
         "create": "@request.auth.role = 'master' || @request.auth.role = 'gestor'",
         "update": "@request.auth.role = 'master' || @request.auth.role = 'gestor'",
         "delete": "@request.auth.role = 'master' || @request.auth.role = 'gestor'"
@@ -1155,6 +1155,51 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "event_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "license_created",
+            "renewal_pix",
+            "renewal_manual",
+            "plan_change",
+            "license_suspended",
+            "license_reactivated"
+          ]
+        },
+        {
+          "name": "plan_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "period_display",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payment_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payment_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pending", "approved", "rejected", "canceled"]
         }
       ],
       "indexes": []

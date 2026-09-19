@@ -69,6 +69,12 @@ export const createRenewal = async (data: {
   amount_paid?: number
   notes?: string
   renewed_by?: string
+  event_type?: string
+  plan_name?: string
+  description?: string
+  period_display?: string
+  payment_id?: string
+  payment_status?: string
 }): Promise<LicenseRenewal> => {
   return pb.collection<LicenseRenewal>('license_renewals').create(data)
 }
@@ -91,6 +97,10 @@ export const quickRenew30Days = async (
     amount_paid: tenant.effective_value ?? 0,
     notes: 'Renovação rápida +30 dias aplicada pelo painel Master',
     renewed_by: renewedBy,
+    event_type: 'renewal_manual',
+    plan_name: tenant.expand?.plan?.name || 'Plano Atual',
+    description: 'Renovação rápida de 30 dias',
+    period_display: '30 dias adicionados',
   })
 
   // 2. Atualiza tenant
@@ -132,4 +142,55 @@ export const resolveTenantByHost = async (host: string): Promise<Tenant | null> 
   }
 
   return null
+}
+
+export interface CreatePixResponse {
+  success: boolean
+  mode: 'demo' | 'live'
+  payment_id: string
+  status: string
+  plan_name: string
+  amount: number
+  qr_code: string
+  qr_code_base64?: string
+  ticket_url?: string
+  message?: string
+}
+
+export const createPixPayment = async (tenantId: string): Promise<CreatePixResponse> => {
+  return pb.send<CreatePixResponse>('/backend/v1/licenses/create-pix', {
+    method: 'POST',
+    body: { tenant_id: tenantId },
+  })
+}
+
+export const changeTenantPlan = async (
+  tenant: Tenant,
+  newPlan: Plan,
+  changedBy: string = 'Gestor',
+): Promise<Tenant> => {
+  const currentPlanName = tenant.expand?.plan?.name || 'Plano Anterior'
+
+  // Registra evento de histórico
+  await createRenewal({
+    tenant: tenant.id,
+    previous_expiration: tenant.expiration_date,
+    new_expiration: tenant.expiration_date || new Date().toISOString(),
+    days_added: 0,
+    amount_paid: newPlan.price,
+    notes: `Alteração de plano: ${currentPlanName} -> ${newPlan.name}`,
+    renewed_by: changedBy,
+    event_type: 'plan_change',
+    plan_name: newPlan.name,
+    description: `Mudança de plano para ${newPlan.name}`,
+    period_display: 'Vigência mantida',
+  })
+
+  // Atualiza tenant com novo plano e novos limites
+  return updateTenant(tenant.id, {
+    plan: newPlan.id,
+    effective_value: newPlan.price,
+    effective_unit_limit: newPlan.unit_limit,
+    effective_user_limit: newPlan.user_limit,
+  })
 }

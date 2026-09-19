@@ -19,6 +19,14 @@ export interface Plan {
 export type PlanStatus = 'trial' | 'active' | 'suspended' | 'canceled'
 export type WhatsAppStatus = 'connected' | 'disconnected'
 
+export type LicenseEventType =
+  | 'license_created'
+  | 'renewal_pix'
+  | 'renewal_manual'
+  | 'plan_change'
+  | 'license_suspended'
+  | 'license_reactivated'
+
 export interface LicenseRenewal {
   id: string
   tenant: string
@@ -28,6 +36,12 @@ export interface LicenseRenewal {
   amount_paid?: number
   notes?: string
   renewed_by?: string
+  event_type?: LicenseEventType
+  plan_name?: string
+  description?: string
+  period_display?: string
+  payment_id?: string
+  payment_status?: 'pending' | 'approved' | 'rejected' | 'canceled'
   created?: string
   updated?: string
 }

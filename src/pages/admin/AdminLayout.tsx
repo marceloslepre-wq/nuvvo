@@ -14,6 +14,7 @@ import {
   ExternalLink,
   ShieldCheck,
   ArrowLeft,
+  KeyRound,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -54,6 +55,12 @@ export default function AdminLayout() {
       icon: Package,
       label: 'Produtos',
       roles: ['master', 'gestor', 'funcionario'],
+    },
+    {
+      to: '/admin/licenses',
+      icon: KeyRound,
+      label: 'Licenças e Planos',
+      roles: ['master', 'gestor'],
     },
     { to: '/admin/settings', icon: Settings, label: 'Configurações', roles: ['master', 'gestor'] },
     {

@@ -17,6 +17,7 @@ import AdminDashboard from './pages/admin/Dashboard'
 import AdminProducts from './pages/admin/Products'
 import AdminSettings from './pages/admin/Settings'
 import AdminLayoutSettings from './pages/admin/LayoutSettings'
+import LicensesPage from './pages/admin/LicensesPage'
 import CategoryPage from './pages/Category'
 import ContentPage from './pages/ContentPage'
 import StoresPage from './pages/Stores'
@@ -73,6 +74,7 @@ const App = () => (
                 <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="products" element={<AdminProducts />} />
+                <Route path="licenses" element={<LicensesPage />} />
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="layout" element={<AdminLayoutSettings />} />
               </Route>
