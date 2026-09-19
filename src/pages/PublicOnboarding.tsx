@@ -43,7 +43,7 @@ export default function PublicOnboarding() {
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [cnpj, setCnpj] = useState('')
-  const [planId, setPlanId] = useState(preSelectedPlanId || '')
+  const [planId, setPlanId] = useState('')
 
   useEffect(() => {
     getPlans()
@@ -52,8 +52,6 @@ export default function PublicOnboarding() {
         setPlans(publicPlans)
         if (preSelectedPlanId && publicPlans.some((p) => p.id === preSelectedPlanId)) {
           setPlanId(preSelectedPlanId)
-        } else if (publicPlans.length > 0) {
-          setPlanId(publicPlans[0].id)
         }
       })
       .catch(() => {})
@@ -62,17 +60,38 @@ export default function PublicOnboarding() {
 
   const handleNameChange = (val: string) => {
     setName(val)
-    const genSlug = val
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-    setSlug(genSlug)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const missingFields: string[] = []
+    if (!name.trim()) missingFields.push('Nome da Empresa')
+    if (!slug.trim()) missingFields.push('Subdomínio Desejado')
+    if (!cnpj.trim()) missingFields.push('CNPJ')
+    if (!email.trim()) missingFields.push('E-mail do Administrador')
+    if (!phone.trim()) missingFields.push('WhatsApp / Telefone')
+    if (!password) missingFields.push('Senha de Acesso')
+    if (!planId) missingFields.push('Plano')
+
+    if (missingFields.length > 0) {
+      toast({
+        title: 'Preencha todos os campos obrigatórios',
+        description: `Por favor, preencha: ${missingFields.join(', ')}.`,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.trim())) {
+      toast({
+        title: 'E-mail inválido',
+        description: 'Por favor, informe um endereço de e-mail válido.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     if (password.length < 8) {
       toast({
@@ -203,13 +222,10 @@ export default function PublicOnboarding() {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="sm:col-span-2">
-              <label className="font-semibold text-slate-200 block mb-1">
-                Nome da Locadora / Empresa
-              </label>
+              <label className="font-semibold text-slate-200 block mb-1">Nome da Empresa</label>
               <Input
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Ex: Aluguel Festas & Cia"
                 required
                 className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 h-10 text-xs"
               />
@@ -221,7 +237,6 @@ export default function PublicOnboarding() {
                 <Input
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  placeholder="minhalocadora"
                   required
                   className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 h-10 text-xs rounded-r-none font-mono"
                 />
@@ -232,11 +247,11 @@ export default function PublicOnboarding() {
             </div>
 
             <div>
-              <label className="font-semibold text-slate-200 block mb-1">CNPJ (Opcional)</label>
+              <label className="font-semibold text-slate-200 block mb-1">CNPJ</label>
               <Input
                 value={cnpj}
                 onChange={(e) => setCnpj(e.target.value)}
-                placeholder="00.000.000/0000-00"
+                required
                 className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 h-10 text-xs"
               />
             </div>
@@ -249,7 +264,6 @@ export default function PublicOnboarding() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="contato@minhalocadora.com"
                 required
                 className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 h-10 text-xs"
               />
@@ -260,7 +274,6 @@ export default function PublicOnboarding() {
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="(27) 99999-9999"
                 required
                 className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 h-10 text-xs"
               />
@@ -274,7 +287,6 @@ export default function PublicOnboarding() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Crie uma senha segura"
                 required
                 className="bg-slate-950 border-slate-700 text-white placeholder:text-slate-500 h-10 text-xs"
               />
