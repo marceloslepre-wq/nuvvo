@@ -53,7 +53,7 @@ export interface Tenant {
   created?: string
   updated?: string
 
-  // Campos comerciais / licenciamento CondPack
+  // Campos comerciais / licenciamento Nuvvo
   plan?: string
   expand?: {
     plan?: Plan

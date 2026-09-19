@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import nuvvoLogo from '@/assets/logomarca-nuvvo-87c9b.png'
 import {
   Building2,
   ShieldAlert,
@@ -278,16 +279,20 @@ export default function MasterDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
-      {/* 1. HEADER ESCURO GLOBAL COND PACK */}
+      {/* 1. HEADER ESCURO GLOBAL NUVVO */}
       <header className="bg-slate-950 text-white border-b border-slate-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-indigo-400" />
+            <div className="h-10 px-2.5 py-1 rounded-lg bg-white flex items-center justify-center shadow-sm">
+              <img
+                src={nuvvoLogo}
+                alt="Nuvvo"
+                className="h-7 w-auto object-contain max-w-[110px]"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg tracking-tight text-white">CondPack</span>
+                <span className="font-extrabold text-lg tracking-tight text-white">Nuvvo</span>
                 <span className="text-[10px] font-black tracking-wider uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
                   MASTER MULTI-TENANT
                 </span>
