@@ -1,3 +1,37 @@
+export interface Plan {
+  id: string
+  name: string
+  slug: string
+  badge?: string
+  description?: string
+  price: number
+  is_free?: boolean
+  unit_limit?: number
+  user_limit?: number
+  features?: string[] | any
+  status: 'active' | 'inactive'
+  is_master_exclusive?: boolean
+  order?: number
+  created?: string
+  updated?: string
+}
+
+export type PlanStatus = 'trial' | 'active' | 'suspended' | 'canceled'
+export type WhatsAppStatus = 'connected' | 'disconnected'
+
+export interface LicenseRenewal {
+  id: string
+  tenant: string
+  previous_expiration?: string
+  new_expiration: string
+  days_added?: number
+  amount_paid?: number
+  notes?: string
+  renewed_by?: string
+  created?: string
+  updated?: string
+}
+
 export interface Tenant {
   id: string
   name: string
@@ -18,6 +52,22 @@ export interface Tenant {
   primary_color?: string
   created?: string
   updated?: string
+
+  // Campos comerciais / licenciamento CondPack
+  plan?: string
+  expand?: {
+    plan?: Plan
+  }
+  plan_status?: PlanStatus
+  trial_days?: number
+  start_date?: string
+  expiration_date?: string
+  effective_value?: number
+  effective_unit_limit?: number
+  effective_user_limit?: number
+  document_cnpj?: string
+  whatsapp_status?: WhatsAppStatus
+  is_origin?: boolean
 }
 
 /**
@@ -83,4 +133,32 @@ export function matchesHost(tenant: Tenant, host: string): boolean {
   }
 
   return false
+}
+
+/**
+ * Checa se o tenant está expirado ou bloqueado
+ */
+export function isTenantBlocked(tenant: Tenant | null): {
+  blocked: boolean
+  reason: string | null
+} {
+  if (!tenant) return { blocked: false, reason: null }
+  if (tenant.is_origin) return { blocked: false, reason: null }
+
+  if (tenant.plan_status === 'suspended') {
+    return { blocked: true, reason: 'Licença suspensa' }
+  }
+  if (tenant.plan_status === 'canceled') {
+    return { blocked: true, reason: 'Licença cancelada' }
+  }
+
+  if (tenant.expiration_date) {
+    const exp = new Date(tenant.expiration_date)
+    const now = new Date()
+    if (exp.getTime() < now.getTime()) {
+      return { blocked: true, reason: 'Licença expirada' }
+    }
+  }
+
+  return { blocked: false, reason: null }
 }

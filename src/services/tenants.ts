@@ -1,14 +1,103 @@
 import pb from '@/lib/pocketbase/client'
-import { Tenant, matchesHost, normalizeHost } from '@/types/tenant'
+import { Tenant, Plan, LicenseRenewal, matchesHost, normalizeHost } from '@/types/tenant'
 
 export const getTenants = async (): Promise<Tenant[]> => {
   return pb.collection<Tenant>('tenants').getFullList({
-    sort: 'name',
+    sort: '-created',
+    expand: 'plan',
   })
 }
 
 export const getTenantById = async (id: string): Promise<Tenant> => {
-  return pb.collection<Tenant>('tenants').getOne(id)
+  return pb.collection<Tenant>('tenants').getOne(id, {
+    expand: 'plan',
+  })
+}
+
+export const updateTenant = async (id: string, data: Partial<Tenant>): Promise<Tenant> => {
+  return pb.collection<Tenant>('tenants').update(id, data, {
+    expand: 'plan',
+  })
+}
+
+export const createTenant = async (data: Partial<Tenant>): Promise<Tenant> => {
+  return pb.collection<Tenant>('tenants').create(data, {
+    expand: 'plan',
+  })
+}
+
+export const deleteTenant = async (id: string): Promise<boolean> => {
+  return pb.collection('tenants').delete(id)
+}
+
+// Planos Comerciais
+export const getPlans = async (): Promise<Plan[]> => {
+  return pb.collection<Plan>('plans').getFullList({
+    sort: 'order',
+  })
+}
+
+export const getPlanById = async (id: string): Promise<Plan> => {
+  return pb.collection<Plan>('plans').getOne(id)
+}
+
+export const createPlan = async (data: Partial<Plan>): Promise<Plan> => {
+  return pb.collection<Plan>('plans').create(data)
+}
+
+export const updatePlan = async (id: string, data: Partial<Plan>): Promise<Plan> => {
+  return pb.collection<Plan>('plans').update(id, data)
+}
+
+export const deletePlan = async (id: string): Promise<boolean> => {
+  return pb.collection('plans').delete(id)
+}
+
+// Histórico de renovações
+export const getRenewalsByTenant = async (tenantId: string): Promise<LicenseRenewal[]> => {
+  return pb.collection<LicenseRenewal>('license_renewals').getFullList({
+    filter: `tenant = '${tenantId}'`,
+    sort: '-created',
+  })
+}
+
+export const createRenewal = async (data: {
+  tenant: string
+  previous_expiration?: string
+  new_expiration: string
+  days_added?: number
+  amount_paid?: number
+  notes?: string
+  renewed_by?: string
+}): Promise<LicenseRenewal> => {
+  return pb.collection<LicenseRenewal>('license_renewals').create(data)
+}
+
+// Renovação rápida +30 dias
+export const quickRenew30Days = async (
+  tenant: Tenant,
+  renewedBy: string = 'Master',
+): Promise<Tenant> => {
+  const currentExp = tenant.expiration_date ? new Date(tenant.expiration_date) : new Date()
+  const baseDate = currentExp.getTime() > Date.now() ? currentExp : new Date()
+  const newExp = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+  // 1. Cria histórico de renovação
+  await createRenewal({
+    tenant: tenant.id,
+    previous_expiration: tenant.expiration_date,
+    new_expiration: newExp.toISOString(),
+    days_added: 30,
+    amount_paid: tenant.effective_value ?? 0,
+    notes: 'Renovação rápida +30 dias aplicada pelo painel Master',
+    renewed_by: renewedBy,
+  })
+
+  // 2. Atualiza tenant
+  return updateTenant(tenant.id, {
+    expiration_date: newExp.toISOString(),
+    plan_status: 'active',
+  })
 }
 
 /**

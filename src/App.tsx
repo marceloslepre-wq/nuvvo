@@ -20,6 +20,9 @@ import AdminLayoutSettings from './pages/admin/LayoutSettings'
 import CategoryPage from './pages/Category'
 import ContentPage from './pages/ContentPage'
 import StoresPage from './pages/Stores'
+import PublicOnboarding from './pages/PublicOnboarding'
+import MasterDashboard from './pages/master/MasterDashboard'
+import { MasterRoute } from './components/MasterRoute'
 
 const App = () => (
   <BrowserRouter>
@@ -38,6 +41,7 @@ const App = () => (
                 <Route path="/nossas-lojas" element={<StoresPage />} />
               </Route>
 
+              <Route path="/cadastro" element={<PublicOnboarding />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route
                 path="/admin/reset-password"
@@ -47,6 +51,17 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+
+              {/* Rota do Painel Master Global */}
+              <Route
+                path="/master"
+                element={
+                  <MasterRoute>
+                    <MasterDashboard />
+                  </MasterRoute>
+                }
+              />
+
               <Route
                 path="/admin"
                 element={

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-19T15:10:46.848Z",
+  "generatedAt": "2026-09-19T15:36:52.954Z",
   "collections": [
     {
       "name": "users",
@@ -43,13 +43,20 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["gestor", "funcionario"]
+          "selectValues": ["master", "gestor", "funcionario"]
         },
         {
           "name": "needs_password_reset",
           "type": "bool",
           "required": false,
           "system": false
+        },
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "tenants"
         }
       ],
       "indexes": [
@@ -907,9 +914,250 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "plan",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "plans"
+        },
+        {
+          "name": "plan_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["trial", "active", "suspended", "canceled"]
+        },
+        {
+          "name": "trial_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expiration_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effective_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effective_unit_limit",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "effective_user_limit",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "document_cnpj",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["connected", "disconnected"]
+        },
+        {
+          "name": "is_origin",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_tenants_slug ON tenants (slug)"]
+    },
+    {
+      "name": "plans",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'gestor'",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'gestor'",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "slug",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "badge",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "price",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_free",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "unit_limit",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "user_limit",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "features",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["active", "inactive"]
+        },
+        {
+          "name": "is_master_exclusive",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE UNIQUE INDEX idx_plans_slug ON plans (slug)"]
+    },
+    {
+      "name": "license_renewals",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.role = 'master' || @request.auth.role = 'gestor'",
+        "update": "@request.auth.role = 'master' || @request.auth.role = 'gestor'",
+        "delete": "@request.auth.role = 'master' || @request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "tenant",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "tenants"
+        },
+        {
+          "name": "previous_expiration",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_expiration",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "days_added",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "amount_paid",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "renewed_by",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }

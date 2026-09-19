@@ -34,10 +34,13 @@ export default function AdminSettings() {
   const [variations, setVariations] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
   const [editingUser, setEditingUser] = useState<any | null>(null)
+  const [roleFilter, setRoleFilter] = useState<string>('all')
+
+  const isMaster = user?.role === 'master'
 
   const loadData = async () => {
     const [u, c, v, r] = await Promise.all([
-      pb.collection('users').getFullList(),
+      pb.collection('users').getFullList({ sort: 'name' }),
       pb.collection('categories').getFullList(),
       pb.collection('variations').getFullList(),
       pb.collection('rental_periods').getFullList(),
@@ -66,10 +69,29 @@ export default function AdminSettings() {
   })
 
   const deleteRecord = async (col: string, id: string) => {
+    if (col === 'users') {
+      const targetUser = users.find((u) => u.id === id)
+      if (targetUser?.role === 'master' || targetUser?.email === 'marceloslepre@gmail.com') {
+        toast({
+          title: 'Ação não permitida',
+          description: 'O usuário Master é único e não pode ser excluído.',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
     if (!confirm('Excluir?')) return
-    await pb.collection(col).delete(id)
-    loadData()
-    toast({ title: 'Excluído' })
+    try {
+      await pb.collection(col).delete(id)
+      loadData()
+      toast({ title: 'Excluído' })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao excluir',
+        description: err.message,
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -130,9 +152,14 @@ export default function AdminSettings() {
     }
   }
 
-  if (user?.role !== 'gestor') {
+  if (user?.role !== 'gestor' && user?.role !== 'master') {
     return <Navigate to="/admin/dashboard" />
   }
+
+  const filteredUsers = users.filter((u) => {
+    if (roleFilter === 'all') return true
+    return u.role === roleFilter
+  })
 
   return (
     <div className="space-y-6">
@@ -146,65 +173,123 @@ export default function AdminSettings() {
         </TabsList>
 
         <TabsContent value="users" className="space-y-4 pt-4">
-          <form onSubmit={handleAddUser} className="flex gap-2 mb-4 max-w-3xl flex-wrap">
-            <Input name="name" placeholder="Nome" required className="w-auto flex-1" />
-            <Input
-              name="email"
-              type="email"
-              placeholder="E-mail"
-              required
-              className="w-auto flex-1"
-            />
-            <Input
-              name="password"
-              type="password"
-              placeholder="Senha"
-              required
-              className="w-auto flex-1"
-            />
-            <Select name="role" defaultValue="funcionario">
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="gestor">Gestor</SelectItem>
-                <SelectItem value="funcionario">Funcionário</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button type="submit">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </form>
-          <div className="bg-white border rounded-md">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-2">
+            <form onSubmit={handleAddUser} className="flex gap-2 flex-1 max-w-2xl flex-wrap">
+              <Input
+                name="name"
+                placeholder="Nome"
+                required
+                className="w-auto flex-1 min-w-[130px]"
+              />
+              <Input
+                name="email"
+                type="email"
+                placeholder="E-mail"
+                required
+                className="w-auto flex-1 min-w-[140px]"
+              />
+              <Input
+                name="password"
+                type="password"
+                placeholder="Senha"
+                required
+                className="w-auto flex-1 min-w-[100px]"
+              />
+              <Select name="role" defaultValue="funcionario">
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gestor">Gestor</SelectItem>
+                  <SelectItem value="funcionario">Funcionário</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </Button>
+            </form>
+
+            {/* Filtro por Perfil */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 font-medium">Filtrar perfil:</span>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-[140px] h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os perfis</SelectItem>
+                  {isMaster && <SelectItem value="master">Master</SelectItem>}
+                  <SelectItem value="gestor">Gestores</SelectItem>
+                  <SelectItem value="funcionario">Funcionários</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="bg-white border rounded-md shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Perfil</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.name}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                    <TableCell>{u.role}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => setEditingUser(u)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteRecord('users', u.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredUsers.map((u) => {
+                  const isUserMaster = u.role === 'master' || u.email === 'marceloslepre@gmail.com'
+
+                  return (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium text-gray-900">{u.name}</TableCell>
+                      <TableCell className="text-gray-600">{u.email}</TableCell>
+                      <TableCell>
+                        {isUserMaster ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-red-600 text-white shadow-sm">
+                            Master
+                          </span>
+                        ) : u.role === 'gestor' ? (
+                          <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                            Gestor
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                            Funcionário
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingUser(u)}
+                          title="Editar dados do usuário"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteRecord('users', u.id)}
+                          disabled={isUserMaster}
+                          title={
+                            isUserMaster
+                              ? 'O usuário Master é único e não pode ser excluído'
+                              : 'Excluir usuário'
+                          }
+                        >
+                          <Trash2
+                            className={`h-4 w-4 ${
+                              isUserMaster ? 'text-gray-300 cursor-not-allowed' : 'text-red-500'
+                            }`}
+                          />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
@@ -397,15 +482,21 @@ export default function AdminSettings() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Perfil</label>
-                <Select name="role" defaultValue={editingUser.role}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gestor">Gestor</SelectItem>
-                    <SelectItem value="funcionario">Funcionário</SelectItem>
-                  </SelectContent>
-                </Select>
+                {editingUser.role === 'master' ? (
+                  <div className="p-2 bg-red-50 text-red-700 text-xs font-bold rounded border border-red-200">
+                    Master (Perfil único global e protegido)
+                  </div>
+                ) : (
+                  <Select name="role" defaultValue={editingUser.role}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gestor">Gestor</SelectItem>
+                      <SelectItem value="funcionario">Funcionário</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
