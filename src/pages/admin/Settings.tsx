@@ -26,9 +26,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { useTenant } from '@/contexts/tenant-context'
 
 export default function AdminSettings() {
   const { user } = useAuth()
+  const { activeAdminTenant } = useTenant()
   const [users, setUsers] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [variations, setVariations] = useState<any[]>([])
@@ -40,10 +42,34 @@ export default function AdminSettings() {
 
   const loadData = async () => {
     const [u, c, v, r] = await Promise.all([
-      pb.collection('users').getFullList({ sort: 'name' }),
-      pb.collection('categories').getFullList(),
-      pb.collection('variations').getFullList(),
-      pb.collection('rental_periods').getFullList(),
+      pb
+        .collection('users')
+        .getFullList({ sort: 'name' })
+        .catch((err) => {
+          console.error('Erro ao carregar usuários:', err)
+          return []
+        }),
+      pb
+        .collection('categories')
+        .getFullList()
+        .catch((err) => {
+          console.error('Erro ao carregar categorias:', err)
+          return []
+        }),
+      pb
+        .collection('variations')
+        .getFullList()
+        .catch((err) => {
+          console.error('Erro ao carregar variações:', err)
+          return []
+        }),
+      pb
+        .collection('rental_periods')
+        .getFullList()
+        .catch((err) => {
+          console.error('Erro ao carregar prazos de locação:', err)
+          return []
+        }),
     ])
     setUsers(u)
     setCategories(c)
@@ -99,12 +125,14 @@ export default function AdminSettings() {
     const form = e.currentTarget
     const fd = new FormData(form)
     try {
+      const targetTenantId = activeAdminTenant?.id || user?.tenant || ''
       await pb.collection('users').create({
         email: fd.get('email'),
         password: fd.get('password'),
         passwordConfirm: fd.get('password'),
         name: fd.get('name'),
         role: fd.get('role'),
+        tenant: targetTenantId || null,
       })
       loadData()
       form.reset()
