@@ -41,10 +41,34 @@ export default function AdminSettings() {
   const isMaster = user?.role === 'master'
 
   const loadData = async () => {
+    // Determinar o tenant ativo para filtragem
+    const targetTenantId = activeAdminTenant?.id || user?.tenant || ''
+
+    // Se for master e estiver gerenciando uma locadora selecionada:
+    // filtra os usuários daquela locadora (incluindo usuários legados sem tenant se for a locadora de origem)
+    // Se for gestor: a API Rule já isola no backend, mas podemos reforçar com tenant filter se targetTenantId existir
+    let userFilter = ''
+    if (isMaster && targetTenantId) {
+      if (activeAdminTenant?.is_origin) {
+        userFilter = `tenant = '${targetTenantId}' || tenant = '' || tenant = null`
+      } else {
+        userFilter = `tenant = '${targetTenantId}'`
+      }
+    } else if (!isMaster && targetTenantId) {
+      if (activeAdminTenant?.is_origin) {
+        userFilter = `tenant = '${targetTenantId}' || tenant = '' || tenant = null`
+      } else {
+        userFilter = `tenant = '${targetTenantId}'`
+      }
+    }
+
     const [u, c, v, r] = await Promise.all([
       pb
         .collection('users')
-        .getFullList({ sort: 'name' })
+        .getFullList({
+          sort: 'name',
+          filter: userFilter || undefined,
+        })
         .catch((err) => {
           console.error('Erro ao carregar usuários:', err)
           return []
@@ -79,7 +103,7 @@ export default function AdminSettings() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [activeAdminTenant?.id, user?.id])
 
   useRealtime('users', () => {
     loadData()
@@ -126,13 +150,19 @@ export default function AdminSettings() {
     const fd = new FormData(form)
     try {
       const targetTenantId = activeAdminTenant?.id || user?.tenant || ''
+      const email = fd.get('email') as string
+      const password = fd.get('password') as string
+      const name = fd.get('name') as string
+      const role = fd.get('role') as string
+
       await pb.collection('users').create({
-        email: fd.get('email'),
-        password: fd.get('password'),
-        passwordConfirm: fd.get('password'),
-        name: fd.get('name'),
-        role: fd.get('role'),
+        email,
+        password,
+        passwordConfirm: password,
+        name,
+        role,
         tenant: targetTenantId || null,
+        emailVisibility: true,
       })
       loadData()
       form.reset()
@@ -185,6 +215,12 @@ export default function AdminSettings() {
   }
 
   const filteredUsers = users.filter((u) => {
+    // Para usuários com papel 'gestor', o Master nunca deve vazar na tabela da empresa,
+    // a não ser que o próprio usuário logado seja o Master
+    if (!isMaster && (u.role === 'master' || u.email === 'marceloslepre@gmail.com')) {
+      return false
+    }
+
     if (roleFilter === 'all') return true
     return u.role === roleFilter
   })

@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-09-19T17:24:29.912Z",
+  "generatedAt": "2026-09-19T17:25:55.047Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && role != 'master' && (tenant = @request.auth.tenant || tenant = '' || tenant = null)) || id = @request.auth.id",
-        "view": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && role != 'master' && (tenant = @request.auth.tenant || tenant = '' || tenant = null)) || id = @request.auth.id",
+        "list": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && (role != 'master' || id = @request.auth.id) && (tenant = @request.auth.tenant || tenant = '' || tenant = null)) || id = @request.auth.id",
+        "view": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && (role != 'master' || id = @request.auth.id) && (tenant = @request.auth.tenant || tenant = '' || tenant = null)) || id = @request.auth.id",
         "create": "@request.auth.role = 'master' || @request.auth.role = 'gestor'",
-        "update": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && role != 'master' && (tenant = @request.auth.tenant || tenant = '' || tenant = null)) || id = @request.auth.id",
+        "update": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && (role != 'master' || id = @request.auth.id) && (tenant = @request.auth.tenant || tenant = '' || tenant = null)) || id = @request.auth.id",
         "delete": "@request.auth.role = 'master' || (@request.auth.role = 'gestor' && role != 'master' && (tenant = @request.auth.tenant || tenant = '' || tenant = null))"
       },
       "fields": [
