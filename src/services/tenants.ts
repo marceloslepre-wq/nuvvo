@@ -1,5 +1,12 @@
 import pb from '@/lib/pocketbase/client'
-import { Tenant, Plan, LicenseRenewal, matchesHost, normalizeHost } from '@/types/tenant'
+import {
+  Tenant,
+  Plan,
+  LicenseRenewal,
+  matchesHost,
+  normalizeHost,
+  isNuvvoOfficialHost,
+} from '@/types/tenant'
 
 export const getTenants = async (): Promise<Tenant[]> => {
   return pb.collection<Tenant>('tenants').getFullList({
@@ -120,15 +127,26 @@ export const resolveTenantByHost = async (host: string): Promise<Tenant | null> 
 
   const allTenants = await getTenants()
 
-  // Procura correspondência direta com o host
+  // 1. Tratamento específico para o domínio oficial da plataforma Master Nuvvo
+  // Quando acessado via nuvvo.sholver.com.br (ou www.nuvvo.sholver.com.br),
+  // deve tratar como a INSTÂNCIA DE ORIGEM (a mesma de demonstração/master).
+  if (isNuvvoOfficialHost(normHost)) {
+    const originTenant =
+      allTenants.find((t) => t.is_origin) ||
+      allTenants.find((t) => t.slug === 'hospital-home') ||
+      (allTenants.length > 0 ? allTenants[0] : null)
+    return originTenant
+  }
+
+  // 2. Procura correspondência direta com o host (subdomínio, custom_domain, preview_host, extra_hosts)
   for (const t of allTenants) {
     if (matchesHost(t, normHost)) {
       return t
     }
   }
 
-  // Fallback seguro: se estiver rodando em localhost / dev sem match ou no preview sem match explícito,
-  // ou se for a plataforma default, localiza o Hospital Home
+  // 3. Fallback seguro: se estiver rodando em localhost / dev sem match ou no preview sem match explícito,
+  // ou se for a plataforma default, localiza a instância de origem
   const isLocalOrPreview =
     normHost === 'localhost' ||
     normHost === '127.0.0.1' ||
@@ -136,9 +154,11 @@ export const resolveTenantByHost = async (host: string): Promise<Tenant | null> 
     normHost.endsWith('.goskip.dev')
 
   if (isLocalOrPreview) {
-    const hospital = allTenants.find((t) => t.slug === 'hospital-home')
-    if (hospital) return hospital
-    if (allTenants.length > 0) return allTenants[0]
+    const origin =
+      allTenants.find((t) => t.is_origin) ||
+      allTenants.find((t) => t.slug === 'hospital-home') ||
+      (allTenants.length > 0 ? allTenants[0] : null)
+    if (origin) return origin
   }
 
   return null

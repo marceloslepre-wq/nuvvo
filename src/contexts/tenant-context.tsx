@@ -76,6 +76,16 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Atualizar documento title / branding se tenant tiver nome
   useEffect(() => {
+    const isNuvvoHost =
+      typeof window !== 'undefined' &&
+      (window.location.host.toLowerCase().startsWith('nuvvo.sholver.com.br') ||
+        window.location.host.toLowerCase().startsWith('www.nuvvo.sholver.com.br'))
+
+    if (isNuvvoHost) {
+      document.title = 'Nuvvo - Plataforma de Vendas e Locação'
+      return
+    }
+
     if (currentTenant?.name && !location.pathname.startsWith('/admin')) {
       document.title = `${currentTenant.name} - Venda e Locação`
     }

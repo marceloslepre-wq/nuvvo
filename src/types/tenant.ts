@@ -85,11 +85,25 @@ export interface Tenant {
 }
 
 /**
+ * URL pública oficial da plataforma Nuvvo Master
+ */
+export const NUVVO_OFFICIAL_URL = 'https://nuvvo.sholver.com.br'
+
+/**
  * Normaliza um hostname removendo porta e convertendo para minúsculas.
  */
 export function normalizeHost(rawHost: string): string {
   if (!rawHost) return ''
   return rawHost.split(':')[0].toLowerCase().trim()
+}
+
+/**
+ * Identifica se o host corresponde ao domínio oficial do Master Nuvvo
+ * (nuvvo.sholver.com.br ou www.nuvvo.sholver.com.br)
+ */
+export function isNuvvoOfficialHost(rawHost?: string): boolean {
+  const host = normalizeHost(rawHost || (typeof window !== 'undefined' ? window.location.host : ''))
+  return host === 'nuvvo.sholver.com.br' || host === 'www.nuvvo.sholver.com.br'
 }
 
 /**
@@ -143,6 +157,14 @@ export function matchesHost(tenant: Tenant, host: string): boolean {
 
   // 5. Comparação direta com slug se for um subdomínio
   if (sub && tenant.slug && tenant.slug.toLowerCase() === sub) {
+    return true
+  }
+
+  // 6. Host oficial do Nuvvo mapeia para a instância de origem
+  if (
+    tenant.is_origin &&
+    (norm === 'nuvvo.sholver.com.br' || norm === 'www.nuvvo.sholver.com.br')
+  ) {
     return true
   }
 

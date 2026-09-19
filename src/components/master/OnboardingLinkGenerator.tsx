@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from '@/components/ui/use-toast'
-import { Plan } from '@/types/tenant'
+import { Plan, NUVVO_OFFICIAL_URL } from '@/types/tenant'
 
 interface OnboardingLinkGeneratorProps {
   plans: Plan[]
@@ -19,11 +19,8 @@ export const OnboardingLinkGenerator: React.FC<OnboardingLinkGeneratorProps> = (
   const [selectedPlanId, setSelectedPlanId] = useState<string>('none')
   const [copied, setCopied] = useState(false)
 
-  // Monta URL pública /cadastro
-  const baseUrl =
-    typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://aluguelhospitalhome.sholver.com.br'
+  // Link público padrão oficial da plataforma Nuvvo
+  const baseUrl = NUVVO_OFFICIAL_URL
   const generatedUrl =
     selectedPlanId && selectedPlanId !== 'none'
       ? `${baseUrl}/cadastro?plano=${selectedPlanId}`

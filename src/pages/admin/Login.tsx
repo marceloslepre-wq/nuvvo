@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import nuvvoLogo from '@/assets/logomarca-nuvvo-87c9b.png'
+import { isNuvvoOfficialHost } from '@/types/tenant'
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
@@ -59,15 +61,26 @@ export default function AdminLogin() {
     setLoading(false)
   }
 
+  const isNuvvo = isNuvvoOfficialHost()
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>{isForgot ? 'Recuperar Senha' : 'Login Administrativo'}</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
+      <Card className="w-full max-w-md shadow-lg border border-slate-200">
+        <CardHeader className="text-center pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="h-12 px-3 py-1.5 rounded-xl bg-slate-950 flex items-center justify-center shadow-sm">
+              <img src={nuvvoLogo} alt="Nuvvo" className="h-8 w-auto object-contain" />
+            </div>
+          </div>
+          <CardTitle className="text-xl font-bold text-slate-900">
+            {isForgot ? 'Recuperar Senha' : isNuvvo ? 'Painel Nuvvo' : 'Login Administrativo'}
+          </CardTitle>
+          <CardDescription className="text-xs text-slate-500">
             {isForgot
               ? 'Informe seu e-mail para receber uma senha temporária.'
-              : 'Acesse o painel para gerenciar a plataforma.'}
+              : isNuvvo
+                ? 'Acesse com suas credenciais para gerenciar sua plataforma.'
+                : 'Acesse o painel para gerenciar a plataforma.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

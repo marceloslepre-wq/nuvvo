@@ -10,6 +10,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useVisitTracking } from '@/hooks/use-visit-tracking'
 import { useTenant } from '@/contexts/tenant-context'
 import TenantNotFound from '@/pages/TenantNotFound'
+import AdminLogin from '@/pages/admin/Login'
+import { isNuvvoOfficialHost } from '@/types/tenant'
 
 export default function Layout() {
   const { currentTenant, loading: tenantLoading } = useTenant()
@@ -99,6 +101,13 @@ export default function Layout() {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
+  }
+
+  // Se o host acessado for nuvvo.sholver.com.br (domínio oficial da plataforma),
+  // a rota pública deve exibir diretamente a tela de login do painel administrativo
+  // (Nuvvo como plataforma), e não o vitrine de um tenant nem "empresa não encontrada".
+  if (isNuvvoOfficialHost()) {
+    return <AdminLogin />
   }
 
   if (!currentTenant) {
