@@ -8,6 +8,7 @@ export interface Plan {
   is_free?: boolean
   unit_limit?: number
   user_limit?: number
+  product_limit?: number
   features?: string[] | any
   status: 'active' | 'inactive'
   is_master_exclusive?: boolean
@@ -79,6 +80,7 @@ export interface Tenant {
   effective_value?: number
   effective_unit_limit?: number
   effective_user_limit?: number
+  effective_product_limit?: number
   document_cnpj?: string
   whatsapp_status?: WhatsAppStatus
   is_origin?: boolean

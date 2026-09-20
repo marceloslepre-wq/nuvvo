@@ -43,7 +43,7 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
   const [planStatus, setPlanStatus] = useState<PlanStatus>('trial')
   const [trialDays, setTrialDays] = useState(15)
   const [effectiveValue, setEffectiveValue] = useState<number>(0)
-  const [effectiveUserLimit, setEffectiveUserLimit] = useState<number>(200)
+  const [effectiveProductLimit, setEffectiveProductLimit] = useState<number>(200)
 
   const handleNameChange = (val: string) => {
     setName(val)
@@ -61,7 +61,7 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
     const sel = plans.find((p) => p.id === pId)
     if (sel) {
       setEffectiveValue(sel.price ?? 0)
-      setEffectiveUserLimit(sel.user_limit ?? 200)
+      setEffectiveProductLimit(sel.product_limit ?? sel.user_limit ?? 200)
     }
   }
 
@@ -87,7 +87,8 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
         expiration_date: expiration.toISOString(),
         effective_value: Number(effectiveValue),
         effective_unit_limit: 0,
-        effective_user_limit: Number(effectiveUserLimit),
+        effective_user_limit: Number(effectiveProductLimit),
+        effective_product_limit: Number(effectiveProductLimit),
         status: 'active',
         whatsapp_status: 'disconnected',
       })
@@ -223,11 +224,11 @@ export const NewLicenseModal: React.FC<NewLicenseModalProps> = ({
               />
             </div>
             <div>
-              <label className="font-medium text-gray-700">Lim. Usuários</label>
+              <label className="font-medium text-gray-700">Lim. Produtos</label>
               <Input
                 type="number"
-                value={effectiveUserLimit}
-                onChange={(e) => setEffectiveUserLimit(Number(e.target.value))}
+                value={effectiveProductLimit}
+                onChange={(e) => setEffectiveProductLimit(Number(e.target.value))}
                 className="mt-1"
               />
             </div>

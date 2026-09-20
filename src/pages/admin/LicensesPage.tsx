@@ -47,8 +47,8 @@ export default function LicensesPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
-  // Métricas de uso real da instância
-  const [userCount, setUserCount] = useState<number>(0)
+  // Métricas de uso real da instância (Produtos cadastrados)
+  const [productCount, setProductCount] = useState<number>(0)
 
   // Modais
   const [pixModalOpen, setPixModalOpen] = useState(false)
@@ -80,18 +80,18 @@ export default function LicensesPage() {
       }
 
       const isOrigin = activeAdminTenant?.is_origin
-      const userFilter = isOrigin
+      const prodFilter = isOrigin
         ? `tenant = '${tenantId}' || tenant = '' || tenant = null`
         : `tenant = '${tenantId}'`
 
-      const [tData, pData, rData, usersList] = await Promise.all([
+      const [tData, pData, rData, productsList] = await Promise.all([
         getTenantById(tenantId).catch(() => activeAdminTenant),
         getPlans().catch(() => [] as Plan[]),
         getRenewalsByTenant(tenantId).catch(() => [] as LicenseRenewal[]),
         pb
-          .collection('users')
+          .collection('products')
           .getFullList({
-            filter: userFilter,
+            filter: prodFilter,
           })
           .catch(() => []),
       ])
@@ -99,7 +99,7 @@ export default function LicensesPage() {
       if (tData) setTenant(tData)
       setPlans(pData)
       setRenewals(rData)
-      setUserCount(usersList.length)
+      setProductCount(productsList.length)
 
       if (isManualRefresh) {
         await refreshTenants()
@@ -215,13 +215,18 @@ export default function LicensesPage() {
     return list
   }, [currentPlan])
 
-  // Limites e uso
-  const userLimit = tenant?.effective_user_limit ?? currentPlan?.user_limit ?? 2000
-  const isUserUnlimited = userLimit >= 99999
-  const userRemaining = Math.max(0, userLimit - userCount)
-  const userPercent = isUserUnlimited
+  // Limites e uso de Produtos
+  const productLimit =
+    tenant?.effective_product_limit ??
+    tenant?.effective_user_limit ??
+    currentPlan?.product_limit ??
+    currentPlan?.user_limit ??
+    2000
+  const isProductUnlimited = productLimit >= 99999
+  const productRemaining = Math.max(0, productLimit - productCount)
+  const productPercent = isProductUnlimited
     ? 0
-    : Math.min(100, Math.round((userCount / (userLimit || 1)) * 100))
+    : Math.min(100, Math.round((productCount / (productLimit || 1)) * 100))
 
   // Status Badge
   const renderStatusBadge = () => {
@@ -472,38 +477,40 @@ export default function LicensesPage() {
         <div className="lg:col-span-4 bg-white border border-gray-200 rounded-2xl p-6 shadow-xs space-y-5">
           <div>
             <div className="flex items-center gap-2 text-gray-900 font-bold text-base">
-              <Users className="w-4 h-4 text-indigo-600" />
-              <h3>Uso Atual vs. Limite</h3>
+              <Building className="w-4 h-4 text-indigo-600" />
+              <h3>Produtos Cadastrados vs. Limite</h3>
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Capacidade utilizada pelo condomínio em relação ao plano contratado.
+              Quantidade de produtos cadastrados em relação ao limite do plano contratado.
             </p>
           </div>
 
-          {/* Limite de Usuários */}
+          {/* Limite de Produtos */}
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 text-gray-700 font-semibold">
-                <Users className="w-3.5 h-3.5 text-gray-400" />
-                <span>Usuários Cadastrados</span>
+                <Building className="w-3.5 h-3.5 text-gray-400" />
+                <span>Produtos Cadastrados</span>
               </div>
               <span className="font-bold text-gray-900 font-mono">
-                {userCount} / {isUserUnlimited ? 'Ilimitado' : userLimit}
+                {productCount} / {isProductUnlimited ? 'Ilimitado' : productLimit}
               </span>
             </div>
 
             <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
               <div
                 className="bg-indigo-600 h-2 rounded-full"
-                style={{ width: `${userPercent}%` }}
+                style={{ width: `${productPercent}%` }}
               />
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-gray-400 font-medium">
               <span>
-                {isUserUnlimited ? 'Capacidade ilimitada' : `${userRemaining} vagas restantes`}
+                {isProductUnlimited
+                  ? 'Capacidade ilimitada'
+                  : `${productRemaining} produtos restantes`}
               </span>
-              <span>{isUserUnlimited ? '0%' : `${userPercent}% ocupado`}</span>
+              <span>{isProductUnlimited ? '0%' : `${productPercent}% ocupado`}</span>
             </div>
           </div>
 
@@ -511,11 +518,11 @@ export default function LicensesPage() {
           <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3.5 text-xs text-blue-900 space-y-1">
             <div className="flex items-center gap-1.5 font-bold text-blue-950">
               <Info className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>Precisa de mais capacidade?</span>
+              <span>Precisa de mais produtos?</span>
             </div>
             <p className="text-[11px] text-blue-800 leading-relaxed">
-              Precisa cadastrar novos usuários? Você pode mudar para um plano superior a qualquer
-              momento.
+              Deseja cadastrar mais produtos na sua loja? Você pode fazer upgrade para um plano
+              superior a qualquer momento.
             </p>
           </div>
 

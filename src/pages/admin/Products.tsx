@@ -160,6 +160,31 @@ export default function AdminProducts() {
     loadData()
   })
 
+  const isLimitReached = () => {
+    if (!activeAdminTenant) return false
+    if (activeAdminTenant.is_origin) return false
+
+    const limit =
+      activeAdminTenant.effective_product_limit ?? activeAdminTenant.effective_user_limit ?? 200
+
+    if (limit >= 99999) return false
+    return products.length >= limit
+  }
+
+  const handleCreateNew = () => {
+    if (isLimitReached()) {
+      const limit =
+        activeAdminTenant?.effective_product_limit ?? activeAdminTenant?.effective_user_limit ?? 200
+      toast({
+        title: 'Limite do plano atingido',
+        description: `Você atingiu o limite do seu plano (${limit} produtos). Faça upgrade para cadastrar mais produtos.`,
+        variant: 'destructive',
+      })
+      return
+    }
+    handleEdit({})
+  }
+
   const handleEdit = async (p: any) => {
     setFormData({
       id: p.id || '',
@@ -302,6 +327,16 @@ export default function AdminProducts() {
 
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.id && isLimitReached()) {
+      const limit =
+        activeAdminTenant?.effective_product_limit ?? activeAdminTenant?.effective_user_limit ?? 200
+      toast({
+        title: 'Limite do plano atingido',
+        description: `Você atingiu o limite do seu plano (${limit} produtos). Faça upgrade para cadastrar mais produtos.`,
+        variant: 'destructive',
+      })
+      return
+    }
     setLoading(true)
     setFieldErrors({})
     try {
@@ -480,8 +515,21 @@ export default function AdminProducts() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold text-gray-900">Produtos</h1>
-        <Button onClick={() => handleEdit({})}>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Produtos</h1>
+          {activeAdminTenant && !activeAdminTenant.is_origin && (
+            <p className="text-xs text-gray-500 mt-1">
+              {products.length} de{' '}
+              {(activeAdminTenant.effective_product_limit ??
+                activeAdminTenant.effective_user_limit ??
+                200) >= 99999
+                ? 'ilimitados'
+                : `${activeAdminTenant.effective_product_limit ?? activeAdminTenant.effective_user_limit ?? 200}`}{' '}
+              produtos cadastrados
+            </p>
+          )}
+        </div>
+        <Button onClick={handleCreateNew}>
           <Plus className="h-4 w-4 mr-2" /> Novo Produto
         </Button>
       </div>

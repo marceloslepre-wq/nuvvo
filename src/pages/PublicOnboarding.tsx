@@ -329,7 +329,10 @@ export default function PublicOnboarding() {
                         <span className="text-[10px] text-slate-500 font-normal">/mês</span>
                       </div>
                       <div className="text-[10px] text-slate-400 mt-1">
-                        Até {p.user_limit} usuários
+                        {(p.product_limit ?? p.user_limit) &&
+                        (p.product_limit ?? p.user_limit ?? 0) < 99999
+                          ? `Até ${p.product_limit ?? p.user_limit} produtos`
+                          : 'Produtos ilimitados'}
                       </div>
                     </div>
                   )

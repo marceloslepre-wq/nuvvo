@@ -52,7 +52,7 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
   const [whatsAppStatus, setWhatsAppStatus] = useState<WhatsAppStatus>('disconnected')
   const [expirationDate, setExpirationDate] = useState('')
   const [effectiveValue, setEffectiveValue] = useState<number>(0)
-  const [effectiveUserLimit, setEffectiveUserLimit] = useState<number>(200)
+  const [effectiveProductLimit, setEffectiveProductLimit] = useState<number>(200)
 
   React.useEffect(() => {
     if (tenant && open) {
@@ -65,7 +65,7 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
       setPlanStatus(tenant.plan_status || 'active')
       setWhatsAppStatus(tenant.whatsapp_status || 'disconnected')
       setEffectiveValue(tenant.effective_value ?? 0)
-      setEffectiveUserLimit(tenant.effective_user_limit ?? 200)
+      setEffectiveProductLimit(tenant.effective_product_limit ?? tenant.effective_user_limit ?? 200)
 
       if (tenant.expiration_date) {
         // Formato para input type="date" YYYY-MM-DD
@@ -84,7 +84,7 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
     const sel = plans.find((p) => p.id === newPlanId)
     if (sel) {
       setEffectiveValue(sel.price ?? 0)
-      setEffectiveUserLimit(sel.user_limit ?? 200)
+      setEffectiveProductLimit(sel.product_limit ?? sel.user_limit ?? 200)
     }
   }
 
@@ -97,7 +97,8 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
 
       if (type === 'limits') {
         payload.effective_unit_limit = 0
-        payload.effective_user_limit = Number(effectiveUserLimit)
+        payload.effective_product_limit = Number(effectiveProductLimit)
+        payload.effective_user_limit = Number(effectiveProductLimit)
         payload.effective_value = Number(effectiveValue)
       } else if (type === 'expiration') {
         if (expirationDate) {
@@ -107,7 +108,8 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
         payload.plan = planId
         payload.effective_value = Number(effectiveValue)
         payload.effective_unit_limit = 0
-        payload.effective_user_limit = Number(effectiveUserLimit)
+        payload.effective_product_limit = Number(effectiveProductLimit)
+        payload.effective_user_limit = Number(effectiveProductLimit)
       } else if (type === 'status') {
         payload.plan_status = planStatus
       } else if (type === 'general') {
@@ -144,7 +146,7 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
       case 'limits':
         return {
           title: 'Editar Limites Efetivos desta Licença',
-          desc: 'Ajuste o limite de usuários simultâneos e valor mensal específico para este cliente.',
+          desc: 'Ajuste o limite de produtos cadastrados e valor mensal específico para este cliente.',
         }
       case 'expiration':
         return {
@@ -190,17 +192,17 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
           {type === 'limits' && (
             <div className="space-y-3 text-xs">
               <div>
-                <label className="font-medium text-gray-700">Limite de Usuários Cadastrados</label>
+                <label className="font-medium text-gray-700">Limite de Produtos Cadastrados</label>
                 <Input
                   type="number"
                   min="1"
-                  value={effectiveUserLimit}
-                  onChange={(e) => setEffectiveUserLimit(Number(e.target.value))}
+                  value={effectiveProductLimit}
+                  onChange={(e) => setEffectiveProductLimit(Number(e.target.value))}
                   required
                   className="mt-1"
                 />
                 <p className="text-[11px] text-gray-500 mt-1">
-                  Ex: 200, 500, 1000, ou 999999 para ilimitado
+                  Ex: 200, 600, 1200, 2000, ou 999999 para ilimitado
                 </p>
               </div>
 
@@ -314,11 +316,11 @@ export const EditLicenseModal: React.FC<EditLicenseModalProps> = ({
               </div>
 
               <div>
-                <label className="font-medium text-gray-700">Limite de Usuários</label>
+                <label className="font-medium text-gray-700">Limite de Produtos Cadastrados</label>
                 <Input
                   type="number"
-                  value={effectiveUserLimit}
-                  onChange={(e) => setEffectiveUserLimit(Number(e.target.value))}
+                  value={effectiveProductLimit}
+                  onChange={(e) => setEffectiveProductLimit(Number(e.target.value))}
                   className="mt-1"
                 />
               </div>

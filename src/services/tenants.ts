@@ -250,5 +250,6 @@ export const changeTenantPlan = async (
     effective_value: newPlan.price,
     effective_unit_limit: 0,
     effective_user_limit: newPlan.user_limit,
+    effective_product_limit: newPlan.product_limit ?? newPlan.user_limit ?? 200,
   })
 }

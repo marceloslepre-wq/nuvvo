@@ -602,11 +602,12 @@ export default function MasterDashboard() {
                           {/* Limites Efetivos */}
                           <TableCell className="text-gray-600 text-[11px]">
                             <div>
-                              Usuários:{' '}
+                              Produtos:{' '}
                               <strong>
-                                {t.effective_user_limit && t.effective_user_limit > 50000
+                                {(t.effective_product_limit ?? t.effective_user_limit) &&
+                                (t.effective_product_limit ?? t.effective_user_limit ?? 0) > 50000
                                   ? 'Ilimitado'
-                                  : t.effective_user_limit || 200}
+                                  : (t.effective_product_limit ?? t.effective_user_limit ?? 200)}
                               </strong>
                             </div>
                           </TableCell>
@@ -860,11 +861,12 @@ export default function MasterDashboard() {
                         </div>
 
                         <div className="flex items-center justify-between text-gray-600 pt-1">
-                          <span>Limite de Usuários:</span>
+                          <span>Limite de Produtos:</span>
                           <strong className="text-gray-900">
-                            {plan.user_limit && plan.user_limit > 50000
+                            {(plan.product_limit ?? plan.user_limit) &&
+                            (plan.product_limit ?? plan.user_limit ?? 0) > 50000
                               ? 'Ilimitado'
-                              : `${plan.user_limit || 200} usuários`}
+                              : `${plan.product_limit ?? plan.user_limit ?? 200} produtos`}
                           </strong>
                         </div>
                       </div>

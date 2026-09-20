@@ -38,7 +38,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState<number>(0)
   const [isFree, setIsFree] = useState(false)
-  const [userLimit, setUserLimit] = useState<number>(200)
+  const [productLimit, setProductLimit] = useState<number>(200)
   const [status, setStatus] = useState<'active' | 'inactive'>('active')
   const [isMasterExclusive, setIsMasterExclusive] = useState(false)
   const [order, setOrder] = useState<number>(1)
@@ -51,7 +51,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
       setDescription(plan.description || '')
       setPrice(plan.price ?? 0)
       setIsFree(Boolean(plan.is_free))
-      setUserLimit(plan.user_limit ?? 200)
+      setProductLimit(plan.product_limit ?? plan.user_limit ?? 200)
       setStatus(plan.status || 'active')
       setIsMasterExclusive(Boolean(plan.is_master_exclusive))
       setOrder(plan.order ?? 1)
@@ -62,7 +62,7 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
       setDescription('')
       setPrice(199.9)
       setIsFree(false)
-      setUserLimit(200)
+      setProductLimit(200)
       setStatus('active')
       setIsMasterExclusive(false)
       setOrder(10)
@@ -95,7 +95,8 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
         price: isFree ? 0 : Number(price),
         is_free: isFree,
         unit_limit: 0,
-        user_limit: Number(userLimit),
+        user_limit: Number(productLimit),
+        product_limit: Number(productLimit),
         status,
         is_master_exclusive: isMasterExclusive,
         order: Number(order),
@@ -209,15 +210,19 @@ export const PlanFormModal: React.FC<PlanFormModalProps> = ({ plan, open, onClos
           </div>
 
           <div>
-            <label className="font-medium text-gray-700">Limite de Usuários</label>
+            <label className="font-medium text-gray-700">Limite de Produtos Cadastrados</label>
             <Input
               type="number"
               min="1"
-              value={userLimit}
-              onChange={(e) => setUserLimit(Number(e.target.value))}
+              value={productLimit}
+              onChange={(e) => setProductLimit(Number(e.target.value))}
               required
               className="mt-1"
             />
+            <p className="text-[11px] text-gray-500 mt-1">
+              Quantidade máxima de produtos que o cliente pode cadastrar neste plano (ex: 200, 600,
+              1200, 2000, ou 999999 para ilimitado).
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
