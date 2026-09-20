@@ -192,14 +192,25 @@ export default function MasterDashboard() {
     })
   }, [tenants, search, statusFilter])
 
-  // Ação de Impersonação (Entrar no painel do cliente como se fosse ele)
+  // Ação de Impersonação (Entrar no painel do cliente como suporte)
   const handleImpersonate = (tenant: Tenant) => {
+    // Validação estrita: apenas o Master tem esse recurso
+    if (user?.role !== 'master' && user?.email !== 'marceloslepre@gmail.com') {
+      toast({
+        title: 'Acesso negado',
+        description: 'Apenas o Administrador Master pode impersonar clientes.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setSelectedAdminTenantId(tenant.id)
     localStorage.setItem('admin_selected_tenant_id', tenant.id)
     localStorage.setItem('master_impersonating_from', 'true')
+    localStorage.setItem('master_impersonating_tenant_name', tenant.name || '')
     toast({
-      title: `Acessando instância: ${tenant.name}`,
-      description: 'Você está no painel gerencial desta locadora.',
+      title: `Acessando painel da empresa ${tenant.name}...`,
+      description: 'Você está no painel gerencial desta empresa em modo suporte.',
     })
     navigate('/admin/dashboard')
   }
@@ -684,6 +695,18 @@ export default function MasterDashboard() {
                           {/* Ações */}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {/* Botão Acessar Painel destacado e visível (estilo Ponto Digital: contorno/roxo claro com seta de saída) */}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleImpersonate(t)}
+                                className="h-7 text-[11px] px-2.5 text-indigo-700 border-indigo-300 bg-indigo-50/40 hover:bg-indigo-100 hover:text-indigo-900 font-medium gap-1 shadow-none transition-colors"
+                                title={`Acessar painel gerencial de ${t.name}`}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Acessar Painel</span>
+                              </Button>
+
                               {/* Botão de Renovação Rápida +30d */}
                               <Button
                                 size="sm"
@@ -696,7 +719,7 @@ export default function MasterDashboard() {
                                 +30d
                               </Button>
 
-                              {/* Menu ⋮ com todas as ações exigidas */}
+                              {/* Menu ⋮ com as demais ações (opção duplicada de impersonar removida) */}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -707,17 +730,6 @@ export default function MasterDashboard() {
                                   <DropdownMenuLabel className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">
                                     PODERES DA LICENÇA
                                   </DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-
-                                  {/* Impersonar / Entrar no painel do cliente */}
-                                  <DropdownMenuItem
-                                    onClick={() => handleImpersonate(t)}
-                                    className="gap-2 font-semibold text-indigo-600 focus:text-indigo-700 focus:bg-indigo-50 cursor-pointer"
-                                  >
-                                    <UserCheck className="w-4 h-4" />
-                                    Acessar Painel (Impersonar)
-                                  </DropdownMenuItem>
-
                                   <DropdownMenuSeparator />
 
                                   {/* Histórico de Renovações */}
