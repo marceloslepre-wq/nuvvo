@@ -103,16 +103,31 @@ export default function AdminProducts() {
           .getFullList({ filter: prodFilter, sort: '-created', expand: 'variations' }),
         pb
           .collection('categories')
-          .getFullList({ filter: tenantFilter, sort: 'order' })
-          .catch(() => []),
+          .getFullList({ filter: tenantFilter, sort: 'order,name' })
+          .catch(async () => {
+            return pb
+              .collection('categories')
+              .getFullList({ filter: tenantFilter, sort: 'name' })
+              .catch(() => [])
+          }),
         pb
           .collection('rental_periods')
-          .getFullList({ filter: tenantFilter, sort: 'order' })
-          .catch(() => []),
+          .getFullList({ filter: tenantFilter, sort: 'order,days' })
+          .catch(async () => {
+            return pb
+              .collection('rental_periods')
+              .getFullList({ filter: tenantFilter, sort: 'name' })
+              .catch(() => [])
+          }),
         pb
           .collection('variations')
-          .getFullList({ filter: tenantFilter, sort: 'order' })
-          .catch(() => []),
+          .getFullList({ filter: tenantFilter, sort: 'order,name' })
+          .catch(async () => {
+            return pb
+              .collection('variations')
+              .getFullList({ filter: tenantFilter, sort: 'name' })
+              .catch(() => [])
+          }),
         pb.collection('product_variant_details').getFullList(),
         pb.collection('product_rental_prices').getFullList(),
         pb

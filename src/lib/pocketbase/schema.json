@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-21T15:03:18.393Z",
+  "generatedAt": "2026-09-21T15:53:25.698Z",
   "collections": [
     {
       "name": "users",
@@ -224,6 +224,12 @@
           "required": false,
           "system": false,
           "collectionRef": "tenants"
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -272,6 +278,12 @@
           "required": false,
           "system": false,
           "collectionRef": "tenants"
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX `idx_variations_category` ON `variations` (category)"]
@@ -319,6 +331,12 @@
           "required": false,
           "system": false,
           "collectionRef": "tenants"
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []

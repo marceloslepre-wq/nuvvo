@@ -37,12 +37,22 @@ export default function Index() {
       const [cats, rPeriods, rPrices, locs, settings] = await Promise.all([
         pb
           .collection('categories')
-          .getFullList({ filter: tenantFilter, sort: 'order' })
-          .catch(() => []),
+          .getFullList({ filter: tenantFilter, sort: 'order,name' })
+          .catch(async () => {
+            return pb
+              .collection('categories')
+              .getFullList({ filter: tenantFilter, sort: 'name' })
+              .catch(() => [])
+          }),
         pb
           .collection('rental_periods')
-          .getFullList({ filter: tenantFilter, sort: 'order' })
-          .catch(() => []),
+          .getFullList({ filter: tenantFilter, sort: 'order,days' })
+          .catch(async () => {
+            return pb
+              .collection('rental_periods')
+              .getFullList({ filter: tenantFilter, sort: 'name' })
+              .catch(() => [])
+          }),
         pb
           .collection('product_rental_prices')
           .getFullList()

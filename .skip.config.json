@@ -32,10 +32,10 @@
     "README.md"
   ],
   "deployment": {
-    "lastDevBuildRef": "b20dada",
-    "lastProdBuildRef": "b20dada",
-    "publishedAt": "2026-09-20T16:04:06.605Z",
-    "lastPublishedRef": "b20dada"
+    "lastDevBuildRef": "7284f24",
+    "lastProdBuildRef": "7284f24",
+    "publishedAt": "2026-09-21T15:11:29.920Z",
+    "lastPublishedRef": "7284f24"
   },
   "migrations": {
     "applied": [

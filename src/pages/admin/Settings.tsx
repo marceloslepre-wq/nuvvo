@@ -78,32 +78,59 @@ export default function AdminSettings() {
       pb
         .collection('categories')
         .getFullList({
-          sort: 'order',
+          sort: 'order,name',
           filter: catalogFilter,
         })
-        .catch((err) => {
-          console.error('Erro ao carregar categorias:', err)
-          return []
+        .catch(async () => {
+          // Fallback seguro de ordenação por nome caso ocorra erro
+          return pb
+            .collection('categories')
+            .getFullList({
+              sort: 'name',
+              filter: catalogFilter,
+            })
+            .catch((err) => {
+              console.error('Erro ao carregar categorias:', err)
+              return []
+            })
         }),
       pb
         .collection('variations')
         .getFullList({
-          sort: 'order',
+          sort: 'order,name',
           filter: catalogFilter,
         })
-        .catch((err) => {
-          console.error('Erro ao carregar variações:', err)
-          return []
+        .catch(async () => {
+          // Fallback seguro de ordenação por nome caso ocorra erro
+          return pb
+            .collection('variations')
+            .getFullList({
+              sort: 'name',
+              filter: catalogFilter,
+            })
+            .catch((err) => {
+              console.error('Erro ao carregar variações:', err)
+              return []
+            })
         }),
       pb
         .collection('rental_periods')
         .getFullList({
-          sort: 'order',
+          sort: 'order,days',
           filter: catalogFilter,
         })
-        .catch((err) => {
-          console.error('Erro ao carregar prazos de locação:', err)
-          return []
+        .catch(async () => {
+          // Fallback seguro de ordenação por days/name caso ocorra erro
+          return pb
+            .collection('rental_periods')
+            .getFullList({
+              sort: 'name',
+              filter: catalogFilter,
+            })
+            .catch((err) => {
+              console.error('Erro ao carregar prazos de locação:', err)
+              return []
+            })
         }),
     ])
     setUsers(u)

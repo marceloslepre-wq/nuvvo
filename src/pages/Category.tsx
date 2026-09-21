@@ -36,8 +36,13 @@ export default function CategoryPage() {
             .catch(() => []),
           pb
             .collection('rental_periods')
-            .getFullList({ filter: tenantFilter, sort: 'order' })
-            .catch(() => []),
+            .getFullList({ filter: tenantFilter, sort: 'order,days' })
+            .catch(async () => {
+              return pb
+                .collection('rental_periods')
+                .getFullList({ filter: tenantFilter, sort: 'name' })
+                .catch(() => [])
+            }),
         ])
         setRentalPrices(rPrices)
         setRentalPeriods(rPeriods)
