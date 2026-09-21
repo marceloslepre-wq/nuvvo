@@ -34,12 +34,20 @@ const App = () => (
             <Toaster />
             <Sonner />
             <Routes>
+              {/* Rotas padrão públicas (por subdomínio dedicado ou raiz) */}
               <Route element={<Layout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/categoria/:id" element={<CategoryPage />} />
                 <Route path="/produto/:id" element={<ProductDetail />} />
                 <Route path="/pagina/:slug" element={<ContentPage />} />
                 <Route path="/nossas-lojas" element={<StoresPage />} />
+
+                {/* OPÇÃO C PROVISÓRIA — URLs por caminho no domínio oficial (ex: nuvvo.sholver.com.br/:companySlug) */}
+                <Route path="/:companySlug" element={<Index />} />
+                <Route path="/:companySlug/categoria/:id" element={<CategoryPage />} />
+                <Route path="/:companySlug/produto/:id" element={<ProductDetail />} />
+                <Route path="/:companySlug/pagina/:slug" element={<ContentPage />} />
+                <Route path="/:companySlug/nossas-lojas" element={<StoresPage />} />
               </Route>
 
               <Route path="/cadastro" element={<PublicOnboarding />} />

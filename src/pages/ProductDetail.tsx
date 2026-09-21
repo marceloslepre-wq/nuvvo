@@ -21,7 +21,7 @@ import { getYouTubeEmbedUrl } from '@/lib/youtube'
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
-  const { currentTenant } = useTenant()
+  const { currentTenant, tenantBasePath } = useTenant()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -127,7 +127,7 @@ export default function ProductDetail() {
       <div className="container mx-auto py-20 text-center animate-fade-in">
         <h2 className="text-2xl font-bold mb-4 text-secondary">Produto não encontrado</h2>
         <Button asChild>
-          <Link to="/">Voltar para a Home</Link>
+          <Link to={tenantBasePath || '/'}>Voltar para a Home</Link>
         </Button>
       </div>
     )
@@ -242,11 +242,14 @@ export default function ProductDetail() {
     <div className="bg-white min-h-screen py-8">
       <div className="container mx-auto px-4">
         <nav className="flex items-center text-sm text-gray-500 mb-8 animate-fade-in">
-          <Link to="/" className="hover:text-primary transition-colors">
+          <Link to={tenantBasePath || '/'} className="hover:text-primary transition-colors">
             Home
           </Link>
           <ChevronRight className="w-4 h-4 mx-2" />
-          <Link to="/#destaques" className="hover:text-primary transition-colors">
+          <Link
+            to={`${tenantBasePath || ''}/#destaques`}
+            className="hover:text-primary transition-colors"
+          >
             Produtos
           </Link>
           <ChevronRight className="w-4 h-4 mx-2" />

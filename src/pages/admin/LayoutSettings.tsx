@@ -387,20 +387,22 @@ export default function AdminLayoutSettings() {
             </div>
 
             <div className="space-y-2">
-              <Label>Subdomínio automático (*.sholver.com.br)</Label>
-              <div className="flex items-center">
-                <Input
+              <Label>Subdomínio / Slug da Empresa</Label>
+              <div className="flex items-center rounded-md border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-primary">
+                <span className="bg-gray-100 border-r border-gray-300 text-gray-600 font-mono px-3 h-10 flex items-center text-xs font-medium shrink-0 select-none">
+                  nuvvo.sholver.com.br/
+                </span>
+                <input
+                  type="text"
                   value={tenantSubdomain}
                   onChange={(e) => setTenantSubdomain(e.target.value)}
                   placeholder="aluguelhospitalhome"
-                  className="rounded-r-none font-mono"
+                  className="w-full bg-white text-gray-900 placeholder:text-gray-400 h-10 px-3 text-xs font-mono outline-none"
                 />
-                <span className="inline-flex items-center px-3 h-10 border border-l-0 rounded-r-md bg-gray-50 text-gray-500 text-sm">
-                  .sholver.com.br
-                </span>
               </div>
               <p className="text-xs text-gray-500">
-                Acesso direto pelo subdomínio (ex:{' '}
+                Acesso provisório por caminho:{' '}
+                <code>nuvvo.sholver.com.br/{tenantSubdomain || 'empresa'}</code> (e por subdomínio{' '}
                 <code>{tenantSubdomain || 'empresa'}.sholver.com.br</code>)
               </p>
             </div>

@@ -221,15 +221,23 @@ export default function AdminLayout() {
                     className="truncate max-w-[170px]"
                     title={
                       activeAdminTenant.custom_domain ||
-                      `${activeAdminTenant.subdomain}.sholver.com.br`
+                      (activeAdminTenant.is_origin
+                        ? `${activeAdminTenant.subdomain}.sholver.com.br`
+                        : `nuvvo.sholver.com.br/${activeAdminTenant.slug || activeAdminTenant.subdomain}`)
                     }
                   >
-                    {activeAdminTenant.subdomain
+                    {activeAdminTenant.is_origin
                       ? `${activeAdminTenant.subdomain}.sholver.com.br`
-                      : activeAdminTenant.slug}
+                      : `nuvvo.sholver.com.br/${activeAdminTenant.slug || activeAdminTenant.subdomain}`}
                   </span>
                   <a
-                    href={`https://${activeAdminTenant.subdomain ? `${activeAdminTenant.subdomain}.sholver.com.br` : window.location.host}`}
+                    href={
+                      activeAdminTenant.custom_domain
+                        ? `https://${activeAdminTenant.custom_domain}`
+                        : activeAdminTenant.is_origin
+                          ? `https://${activeAdminTenant.subdomain}.sholver.com.br`
+                          : `https://nuvvo.sholver.com.br/${activeAdminTenant.slug || activeAdminTenant.subdomain}`
+                    }
                     target="_blank"
                     rel="noreferrer"
                     className="text-primary hover:underline inline-flex items-center gap-0.5"

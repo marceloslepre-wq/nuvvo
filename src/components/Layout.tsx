@@ -14,7 +14,7 @@ import AdminLogin from '@/pages/admin/Login'
 import { isNuvvoOfficialHost } from '@/types/tenant'
 
 export default function Layout() {
-  const { currentTenant, loading: tenantLoading } = useTenant()
+  const { currentTenant, loading: tenantLoading, tenantBasePath } = useTenant()
   const { count } = useCart()
   const { pathname, hash } = useLocation()
   useVisitTracking()
@@ -103,13 +103,18 @@ export default function Layout() {
     )
   }
 
-  // Se o host acessado for nuvvo.sholver.com.br (domínio oficial da plataforma),
-  // a rota pública deve exibir diretamente a tela de login do painel administrativo
+  // Se o host acessado for nuvvo.sholver.com.br (domínio oficial da plataforma)
+  // e NÃO estiver acessando uma empresa por caminho (/empresa),
+  // a rota pública raiz deve exibir diretamente a tela de login do painel administrativo
   // (Nuvvo como plataforma), e não o vitrine de um tenant nem "empresa não encontrada".
-  if (isNuvvoOfficialHost()) {
+  const isDirectNuvvoRoot = isNuvvoOfficialHost() && (pathname === '/' || pathname === '')
+
+  if (isDirectNuvvoRoot) {
     return <AdminLogin />
   }
 
+  // Se o usuário navegou em nuvvo.sholver.com.br por um caminho que não casou com nenhum tenant
+  // (ex: /slug-inexistente), exibe TenantNotFound
   if (!currentTenant) {
     return <TenantNotFound />
   }
@@ -127,7 +132,7 @@ export default function Layout() {
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center shrink-0 mr-2">
+            <Link to={tenantBasePath || '/'} className="flex items-center shrink-0 mr-2">
               {logoUrl ? (
                 <img src={logoUrl} alt={brandName} className="h-8 md:h-10 object-contain" />
               ) : (
@@ -136,25 +141,25 @@ export default function Layout() {
             </Link>
             <nav className="hidden md:flex gap-6">
               <Link
-                to="/"
+                to={tenantBasePath || '/'}
                 className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
               >
                 Home
               </Link>
               <Link
-                to="/#destaques"
+                to={`${tenantBasePath || ''}/#destaques`}
                 className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
               >
                 Produtos
               </Link>
               <Link
-                to="/#contato"
+                to={`${tenantBasePath || ''}/#contato`}
                 className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
               >
                 Contato
               </Link>
               <Link
-                to="/nossas-lojas"
+                to={`${tenantBasePath || ''}/nossas-lojas`}
                 className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
               >
                 Nossas Lojas
@@ -199,7 +204,7 @@ export default function Layout() {
                 <nav className="flex flex-col gap-4 mt-8">
                   <SheetClose asChild>
                     <Link
-                      to="/"
+                      to={tenantBasePath || '/'}
                       className="text-lg font-medium hover:text-primary transition-colors"
                     >
                       Home
@@ -207,7 +212,7 @@ export default function Layout() {
                   </SheetClose>
                   <SheetClose asChild>
                     <Link
-                      to="/#destaques"
+                      to={`${tenantBasePath || ''}/#destaques`}
                       className="text-lg font-medium hover:text-primary transition-colors"
                     >
                       Produtos
@@ -215,7 +220,7 @@ export default function Layout() {
                   </SheetClose>
                   <SheetClose asChild>
                     <Link
-                      to="/#contato"
+                      to={`${tenantBasePath || ''}/#contato`}
                       className="text-lg font-medium hover:text-primary transition-colors"
                     >
                       Contato
@@ -223,7 +228,7 @@ export default function Layout() {
                   </SheetClose>
                   <SheetClose asChild>
                     <Link
-                      to="/nossas-lojas"
+                      to={`${tenantBasePath || ''}/nossas-lojas`}
                       className="text-lg font-medium hover:text-primary transition-colors"
                     >
                       Nossas Lojas
@@ -253,33 +258,34 @@ export default function Layout() {
           <div>
             <h3 className="font-semibold text-lg mb-4 text-white">Contato</h3>
             <ul className="space-y-3 text-sm text-gray-400">
-              {settings?.phone && (
+              {(settings?.phone || currentTenant.phone) && (
                 <li>
                   Telefone:{' '}
                   <a
-                    href={getWaLink(settings.phone)}
+                    href={getWaLink(settings?.phone || currentTenant.phone || '')}
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-primary transition-colors"
                   >
-                    {formatPhone(settings.phone)}
+                    {formatPhone(settings?.phone || currentTenant.phone || '')}
                   </a>
                 </li>
               )}
-              {settings?.email && (
+              {(settings?.email || currentTenant.email) && (
                 <li>
                   E-mail:{' '}
                   <a
-                    href={`mailto:${settings.email}`}
+                    href={`mailto:${settings?.email || currentTenant.email}`}
                     className="hover:text-primary transition-colors"
                   >
-                    {settings.email}
+                    {settings?.email || currentTenant.email}
                   </a>
                 </li>
               )}
-              {!settings?.phone && !settings?.email && (
-                <li>Informações de contato indisponíveis.</li>
-              )}
+              {!settings?.phone &&
+                !currentTenant.phone &&
+                !settings?.email &&
+                !currentTenant.email && <li>Informações de contato indisponíveis.</li>}
             </ul>
             <div className="flex gap-4 mt-6">
               <Button
@@ -332,22 +338,34 @@ export default function Layout() {
             <h3 className="font-semibold text-lg mb-4 text-white">Links Rápidos</h3>
             <ul className="space-y-3 text-sm text-gray-400">
               <li>
-                <Link to="/pagina/sobre-nos" className="hover:text-primary transition-colors">
+                <Link
+                  to={`${tenantBasePath || ''}/pagina/sobre-nos`}
+                  className="hover:text-primary transition-colors"
+                >
                   Sobre Nós
                 </Link>
               </li>
               <li>
-                <Link to="/pagina/termos" className="hover:text-primary transition-colors">
+                <Link
+                  to={`${tenantBasePath || ''}/pagina/termos`}
+                  className="hover:text-primary transition-colors"
+                >
                   Termos de Serviço
                 </Link>
               </li>
               <li>
-                <Link to="/pagina/privacidade" className="hover:text-primary transition-colors">
+                <Link
+                  to={`${tenantBasePath || ''}/pagina/privacidade`}
+                  className="hover:text-primary transition-colors"
+                >
                   Política de Privacidade
                 </Link>
               </li>
               <li>
-                <Link to="/pagina/trocas" className="hover:text-primary transition-colors">
+                <Link
+                  to={`${tenantBasePath || ''}/pagina/trocas`}
+                  className="hover:text-primary transition-colors"
+                >
                   Trocas e Devoluções
                 </Link>
               </li>

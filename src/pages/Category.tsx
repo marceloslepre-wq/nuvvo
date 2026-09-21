@@ -9,7 +9,7 @@ import pb from '@/lib/pocketbase/client'
 
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>()
-  const { currentTenant } = useTenant()
+  const { currentTenant, tenantBasePath } = useTenant()
   const { selectedCityId } = useSelectedCity()
   const [products, setProducts] = useState<Product[]>([])
   const [category, setCategory] = useState<any>(null)
@@ -79,7 +79,7 @@ export default function CategoryPage() {
       <div className="container mx-auto py-20 text-center animate-fade-in">
         <h2 className="text-2xl font-bold mb-4 text-secondary">Categoria não encontrada</h2>
         <Button asChild>
-          <Link to="/">Voltar para a Home</Link>
+          <Link to={tenantBasePath || '/'}>Voltar para a Home</Link>
         </Button>
       </div>
     )
@@ -89,7 +89,7 @@ export default function CategoryPage() {
     <div className="bg-gray-50 min-h-screen py-8">
       <div className="container mx-auto px-4">
         <nav className="flex items-center text-sm text-gray-500 mb-8 animate-fade-in">
-          <Link to="/" className="hover:text-primary transition-colors">
+          <Link to={tenantBasePath || '/'} className="hover:text-primary transition-colors">
             Home
           </Link>
           <ChevronRight className="w-4 h-4 mx-2" />
@@ -119,7 +119,7 @@ export default function CategoryPage() {
                   className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 group"
                 >
                   <Link
-                    to={`/produto/${product.id}`}
+                    to={`${tenantBasePath || ''}/produto/${product.id}`}
                     className="block overflow-hidden rounded-xl mb-4 bg-gray-100 relative"
                   >
                     <div className="aspect-square relative overflow-hidden">
@@ -147,7 +147,7 @@ export default function CategoryPage() {
                     </div>
                   </Link>
                   <div className="space-y-2">
-                    <Link to={`/produto/${product.id}`}>
+                    <Link to={`${tenantBasePath || ''}/produto/${product.id}`}>
                       <h3 className="font-semibold text-lg text-secondary line-clamp-1 group-hover:text-primary transition-colors">
                         {product.name}
                       </h3>
@@ -182,7 +182,7 @@ export default function CategoryPage() {
                         className="w-full bg-primary hover:bg-primary/90 text-white transition-colors"
                         asChild
                       >
-                        <Link to={`/produto/${product.id}`}>Saiba Mais</Link>
+                        <Link to={`${tenantBasePath || ''}/produto/${product.id}`}>Saiba Mais</Link>
                       </Button>
                     </div>
                   </div>

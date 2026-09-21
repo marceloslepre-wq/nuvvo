@@ -93,6 +93,23 @@ export interface Tenant {
 export const NUVVO_OFFICIAL_URL = 'https://nuvvo.sholver.com.br'
 
 /**
+ * Segmentos de primeiro nível reservados no roteamento da plataforma Nuvvo.
+ * Nunca devem ser interpretados como slug de empresa no domínio oficial.
+ */
+export const RESERVED_PATH_PREFIXES = [
+  'cadastro',
+  'admin',
+  'master',
+  'categoria',
+  'produto',
+  'pagina',
+  'nossas-lojas',
+  'backend',
+  'api',
+  '_',
+] as const
+
+/**
  * Normaliza um hostname removendo porta e convertendo para minúsculas.
  */
 export function normalizeHost(rawHost: string): string {
@@ -172,6 +189,30 @@ export function matchesHost(tenant: Tenant, host: string): boolean {
   }
 
   return false
+}
+
+/**
+ * Retorna a URL pública recomendada para o tenant.
+ * - Se for origin (Hospital Home), utiliza seu subdomínio dedicado ou custom domain
+ * - Se estiver no domínio oficial da Nuvvo ou se for nova empresa sem wildcard CNAME ativo,
+ *   a URL por path provisória https://nuvvo.sholver.com.br/:slug é fornecida como opção C,
+ *   mas caso tenha subdomínio/custom_domain configurado, também é utilizável.
+ */
+export function getTenantPublicUrl(tenant: Tenant): string {
+  // Se for hospital home ou tiver custom_domain que não seja nuvvo
+  if (tenant.custom_domain && !tenant.custom_domain.includes('nuvvo.sholver.com.br')) {
+    return `https://${tenant.custom_domain}`
+  }
+  // Se for o tenant de origem (Hospital Home), subdomínio direto
+  if (tenant.is_origin && tenant.subdomain) {
+    return `https://${tenant.subdomain}.sholver.com.br`
+  }
+  // Para tenants novos em nuvvo.sholver.com.br provisoriamente Opção C
+  const slug = tenant.slug || tenant.subdomain
+  if (slug) {
+    return `${NUVVO_OFFICIAL_URL}/${slug}`
+  }
+  return NUVVO_OFFICIAL_URL
 }
 
 /**

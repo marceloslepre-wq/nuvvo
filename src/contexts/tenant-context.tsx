@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react'
-import { Tenant } from '@/types/tenant'
+import { Tenant, RESERVED_PATH_PREFIXES, isNuvvoOfficialHost } from '@/types/tenant'
 import { getTenants, resolveTenantByHost } from '@/services/tenants'
 import { useLocation } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
@@ -12,6 +12,15 @@ interface TenantContextValue {
   setSelectedAdminTenantId: (id: string | null) => void
   activeAdminTenant: Tenant | null
   refreshTenants: () => Promise<void>
+  /**
+   * Prefixo de base para links quando acessado via path em nuvvo.sholver.com.br/:slug
+   * Ex: '/testelandpage' ou vazio '' para subdomínios normais (Hospital Home etc)
+   */
+  tenantBasePath: string
+  /**
+   * Slug resolvido a partir do primeiro segmento de path, se houver
+   */
+  pathTenantSlug: string | null
 }
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined)
@@ -37,30 +46,60 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }
 
-  // Resolução inicial do tenant pelo host
+  // Detecta se a rota atual possui um primeiro segmento correspondente a um slug de tenant
+  // Ex: nuvvo.sholver.com.br/testelandpage ou /testelandpage em localhost
+  const pathSegment = useMemo(() => {
+    const rawFirst = location.pathname.split('/').filter(Boolean)[0] || ''
+    const lower = rawFirst.toLowerCase()
+    if (!lower || RESERVED_PATH_PREFIXES.includes(lower as any)) {
+      return null
+    }
+    return lower
+  }, [location.pathname])
+
+  // Resolução inicial e re-avaliação do tenant pelo host e/ou pelo primeiro segmento de path
   useEffect(() => {
     let mounted = true
     const resolve = async () => {
       setLoading(true)
       try {
         const host = typeof window !== 'undefined' ? window.location.host : ''
-        const [tenant, list] = await Promise.all([
+        const [hostTenant, list] = await Promise.all([
           resolveTenantByHost(host),
-          getTenants().catch(() => [] as Tenant[]),
+          allTenants.length > 0
+            ? Promise.resolve(allTenants)
+            : getTenants().catch(() => [] as Tenant[]),
         ])
 
-        if (mounted) {
-          setCurrentTenant(tenant)
-          setAllTenants(list)
+        if (!mounted) return
 
-          // Se não há admin tenant selecionado, adota o tenant resolvido ou o primeiro
-          if (!selectedAdminTenantId && tenant) {
-            setSelectedAdminTenantIdState(tenant.id)
-            localStorage.setItem(ADMIN_TENANT_KEY, tenant.id)
-          } else if (!selectedAdminTenantId && list.length > 0) {
-            setSelectedAdminTenantIdState(list[0].id)
-            localStorage.setItem(ADMIN_TENANT_KEY, list[0].id)
+        setAllTenants(list)
+
+        // Se houver um primeiro segmento de caminho (ex: /testelandpage)
+        // e ele corresponder ao slug de um tenant cadastrado:
+        let matchedTenant: Tenant | null = null
+        if (pathSegment) {
+          const bySlug = list.find(
+            (t) =>
+              (t.slug && t.slug.toLowerCase() === pathSegment) ||
+              (t.subdomain && t.subdomain.toLowerCase() === pathSegment),
+          )
+          if (bySlug) {
+            matchedTenant = bySlug
           }
+        }
+
+        // Se não casou por path, usa o tenant resolvido pelo host
+        const finalTenant = matchedTenant || hostTenant
+        setCurrentTenant(finalTenant)
+
+        // Se não há admin tenant selecionado, adota o tenant resolvido ou o primeiro
+        if (!selectedAdminTenantId && finalTenant) {
+          setSelectedAdminTenantIdState(finalTenant.id)
+          localStorage.setItem(ADMIN_TENANT_KEY, finalTenant.id)
+        } else if (!selectedAdminTenantId && list.length > 0) {
+          setSelectedAdminTenantIdState(list[0].id)
+          localStorage.setItem(ADMIN_TENANT_KEY, list[0].id)
         }
       } catch (err) {
         console.error('Erro ao resolver tenant:', err)
@@ -73,7 +112,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       mounted = false
     }
-  }, [])
+  }, [pathSegment])
 
   // Atualizar documento title / branding se tenant tiver nome
   useEffect(() => {
@@ -124,6 +163,17 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return currentTenant || allTenants[0] || null
   }, [selectedAdminTenantId, allTenants, currentTenant])
 
+  // Determina se o tenant está sendo acessado por caminho (nuvvo.sholver.com.br/empresa)
+  const isPathRouted = useMemo(() => {
+    if (!pathSegment || !currentTenant) return false
+    return (
+      (currentTenant.slug && currentTenant.slug.toLowerCase() === pathSegment) ||
+      (currentTenant.subdomain && currentTenant.subdomain.toLowerCase() === pathSegment)
+    )
+  }, [pathSegment, currentTenant])
+
+  const tenantBasePath = isPathRouted && pathSegment ? `/${pathSegment}` : ''
+
   return (
     <TenantContext.Provider
       value={{
@@ -134,6 +184,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setSelectedAdminTenantId,
         activeAdminTenant,
         refreshTenants,
+        tenantBasePath,
+        pathTenantSlug: isPathRouted ? pathSegment : null,
       }}
     >
       {children}

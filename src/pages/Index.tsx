@@ -19,7 +19,7 @@ import { MapPin } from 'lucide-react'
 
 export default function Index() {
   const navigate = useNavigate()
-  const { currentTenant } = useTenant()
+  const { currentTenant, tenantBasePath } = useTenant()
   const { selectedCityId, setSelectedCityId } = useSelectedCity()
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<any[]>([])
@@ -179,7 +179,7 @@ export default function Index() {
               {categories.map((c) => (
                 <div
                   key={c.id}
-                  onClick={() => navigate(`/categoria/${c.id}`)}
+                  onClick={() => navigate(`${tenantBasePath || ''}/categoria/${c.id}`)}
                   className="whitespace-nowrap px-6 py-2 bg-gray-100 rounded-full font-medium text-gray-700 hover:bg-primary hover:text-white transition-colors cursor-pointer"
                 >
                   {c.name}
@@ -217,7 +217,7 @@ export default function Index() {
                     className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col"
                   >
                     <Link
-                      to={`/produto/${product.id}`}
+                      to={`${tenantBasePath || ''}/produto/${product.id}`}
                       className="block overflow-hidden rounded-xl mb-4 bg-gray-100"
                     >
                       <div className="aspect-square relative overflow-hidden">
@@ -247,7 +247,7 @@ export default function Index() {
                       </div>
                     </Link>
                     <div className="space-y-2 flex-1 flex flex-col">
-                      <Link to={`/produto/${product.id}`}>
+                      <Link to={`${tenantBasePath || ''}/produto/${product.id}`}>
                         <h3 className="font-semibold text-lg text-secondary line-clamp-1 group-hover:text-primary transition-colors">
                           {product.name}
                         </h3>
@@ -284,7 +284,9 @@ export default function Index() {
                           className="w-full bg-primary hover:bg-primary/90 text-white transition-colors"
                           asChild
                         >
-                          <Link to={`/produto/${product.id}`}>Saiba Mais</Link>
+                          <Link to={`${tenantBasePath || ''}/produto/${product.id}`}>
+                            Saiba Mais
+                          </Link>
                         </Button>
                       </div>
                     </div>
