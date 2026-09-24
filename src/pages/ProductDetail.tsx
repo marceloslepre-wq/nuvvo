@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/WhatsAppIcon'
+import { trackWhatsAppConversion, buildWhatsAppLink } from '@/lib/whatsapp'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -209,16 +210,9 @@ export default function ProductDetail() {
   const handleRentClick = () => {
     if (!canRent) return
 
-    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
-      window.gtag('event', 'conversion', {
-        send_to: 'AW-403144958/CLIQUE_WHATSAPP',
-        value: 1.0,
-        currency: 'BRL',
-      })
-    }
+    trackWhatsAppConversion('product_rent_click')
 
-    const phoneRaw = siteSettings?.phone || ''
-    const phone = phoneRaw.replace(/\D/g, '')
+    const phoneRaw = siteSettings?.phone || currentTenant?.phone || ''
 
     const productRef = currentVariantDetail?.reference_code || product.reference || ''
     const periodName = selectedPeriodObj?.name || ''
@@ -231,9 +225,10 @@ export default function ProductDetail() {
     text += `Link da página: ${pageUrl}\n`
     if (mainImageUrl) text += `Link da imagem: ${mainImageUrl}`
 
-    const encodedText = encodeURIComponent(text.trim())
-    const waUrl = `https://wa.me/${phone}?text=${encodedText}`
-    window.open(waUrl, '_blank')
+    const waUrl = buildWhatsAppLink(phoneRaw, text)
+    if (waUrl) {
+      window.open(waUrl, '_blank', 'noopener,noreferrer')
+    }
   }
 
   const embedUrl = product.external_link ? getYouTubeEmbedUrl(product.external_link) : null

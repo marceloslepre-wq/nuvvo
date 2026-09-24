@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { ShoppingCart, Search, Menu, Facebook, Twitter, Instagram, Mail } from 'lucide-react'
+import { ShoppingCart, Search, Menu, Facebook, Twitter, Instagram, Mail, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,13 @@ import { useTenant } from '@/contexts/tenant-context'
 import TenantNotFound from '@/pages/TenantNotFound'
 import AdminLogin from '@/pages/admin/Login'
 import { isNuvvoOfficialHost } from '@/types/tenant'
+import { WhatsAppFloatingButton } from '@/components/WhatsAppFloatingButton'
+import {
+  formatPhoneNumber,
+  buildWhatsAppLink,
+  openWhatsApp,
+  trackWhatsAppConversion,
+} from '@/lib/whatsapp'
 
 export default function Layout() {
   const { currentTenant, loading: tenantLoading, tenantBasePath } = useTenant()
@@ -65,22 +72,7 @@ export default function Layout() {
     loadLocations()
   })
 
-  const formatPhone = (phone: string) => {
-    const digits = phone.replace(/\D/g, '')
-    if (digits.length === 11) {
-      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
-    }
-    if (digits.length === 10) {
-      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
-    }
-    return phone
-  }
-
-  const getWaLink = (phone: string) => {
-    const digits = phone.replace(/\D/g, '')
-    if (digits.startsWith('55')) return `https://wa.me/${digits}`
-    return `https://wa.me/55${digits}`
-  }
+  const contactPhone = settings?.phone || currentTenant?.phone || ''
 
   useEffect(() => {
     if (hash) {
@@ -174,6 +166,47 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Bloco Central de Atendimento e botão WhatsApp do Cabeçalho */}
+            {contactPhone ? (
+              <div className="hidden lg:flex items-center gap-4">
+                <a
+                  href={buildWhatsAppLink(contactPhone)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    openWhatsApp(contactPhone, undefined, 'header_phone_block')
+                  }}
+                  className="flex flex-col items-end text-right group cursor-pointer transition-colors"
+                  title="Falar com a Central de Atendimento no WhatsApp"
+                >
+                  <span className="text-[11px] font-medium text-gray-500 leading-tight">
+                    Central de Atendimento
+                  </span>
+                  <span className="flex items-center gap-1.5 text-base font-bold text-secondary group-hover:text-primary transition-colors">
+                    <Phone className="w-3.5 h-3.5 text-secondary group-hover:text-primary transition-colors" />
+                    {formatPhoneNumber(contactPhone)}
+                  </span>
+                </a>
+
+                <Button
+                  onClick={() => openWhatsApp(contactPhone, undefined, 'header_whatsapp_btn')}
+                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-medium text-sm px-4 h-9 shadow-sm rounded-md transition-colors"
+                >
+                  Fale no WhatsApp
+                </Button>
+              </div>
+            ) : null}
+
+            {/* Em telas menores (mobile/tablet), botão compacto Fale no WhatsApp */}
+            {contactPhone ? (
+              <Button
+                onClick={() => openWhatsApp(contactPhone, undefined, 'header_mobile_btn')}
+                size="sm"
+                className="lg:hidden bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-medium text-xs px-2.5 h-8 shadow-sm rounded-md transition-colors"
+              >
+                Fale no WhatsApp
+              </Button>
+            ) : null}
+
             <Button
               variant="ghost"
               size="icon"
@@ -242,6 +275,29 @@ export default function Layout() {
                       Painel Administrativo
                     </Link>
                   </SheetClose>
+
+                  {contactPhone && (
+                    <div className="pt-4 mt-2 border-t border-gray-100 flex flex-col gap-2">
+                      <span className="text-xs text-gray-500">Central de Atendimento</span>
+                      <a
+                        href={buildWhatsAppLink(contactPhone)}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          openWhatsApp(contactPhone, undefined, 'drawer_phone')
+                        }}
+                        className="flex items-center gap-2 text-base font-bold text-secondary hover:text-primary transition-colors"
+                      >
+                        <Phone className="w-4 h-4 text-primary" />
+                        {formatPhoneNumber(contactPhone)}
+                      </a>
+                      <Button
+                        onClick={() => openWhatsApp(contactPhone, undefined, 'drawer_whatsapp_btn')}
+                        className="mt-2 w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
+                      >
+                        Fale no WhatsApp
+                      </Button>
+                    </div>
+                  )}
                 </nav>
               </SheetContent>
             </Sheet>
@@ -253,21 +309,27 @@ export default function Layout() {
         <Outlet />
       </main>
 
+      {/* Botão flutuante do WhatsApp em todas as páginas públicas */}
+      <WhatsAppFloatingButton phone={contactPhone} />
       <footer className="bg-secondary text-white py-12 mt-auto" id="contato">
         <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="font-semibold text-lg mb-4 text-white">Contato</h3>
             <ul className="space-y-3 text-sm text-gray-400">
-              {(settings?.phone || currentTenant.phone) && (
+              {contactPhone && (
                 <li>
                   Telefone:{' '}
                   <a
-                    href={getWaLink(settings?.phone || currentTenant.phone || '')}
+                    href={buildWhatsAppLink(contactPhone)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      openWhatsApp(contactPhone, undefined, 'footer_phone')
+                    }}
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-primary transition-colors"
                   >
-                    {formatPhone(settings?.phone || currentTenant.phone || '')}
+                    {formatPhoneNumber(contactPhone)}
                   </a>
                 </li>
               )}
@@ -282,10 +344,9 @@ export default function Layout() {
                   </a>
                 </li>
               )}
-              {!settings?.phone &&
-                !currentTenant.phone &&
-                !settings?.email &&
-                !currentTenant.email && <li>Informações de contato indisponíveis.</li>}
+              {!contactPhone && !settings?.email && !currentTenant.email && (
+                <li>Informações de contato indisponíveis.</li>
+              )}
             </ul>
             <div className="flex gap-4 mt-6">
               <Button
