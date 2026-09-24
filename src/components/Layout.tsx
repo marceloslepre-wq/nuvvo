@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { ShoppingCart, Search, Menu, Facebook, Twitter, Instagram, Mail, Phone } from 'lucide-react'
+import { Menu, Facebook, Twitter, Instagram, Mail, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'
-import { Badge } from '@/components/ui/badge'
-import { useCart } from '@/contexts/cart-context'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useVisitTracking } from '@/hooks/use-visit-tracking'
 import { useTenant } from '@/contexts/tenant-context'
@@ -22,7 +20,6 @@ import {
 
 export default function Layout() {
   const { currentTenant, loading: tenantLoading, tenantBasePath } = useTenant()
-  const { count } = useCart()
   const { pathname, hash } = useLocation()
   useVisitTracking()
   const [locations, setLocations] = useState<any[]>([])
@@ -168,68 +165,53 @@ export default function Layout() {
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Bloco Central de Atendimento e botão WhatsApp do Cabeçalho */}
             {contactPhone ? (
-              <div className="hidden lg:flex items-center gap-4">
+              <div className="flex items-center gap-2.5 sm:gap-4 md:gap-5">
+                {/* Desktop: label discreto + número de telefone em destaque com ícone */}
                 <a
                   href={buildWhatsAppLink(contactPhone)}
                   onClick={(e) => {
                     e.preventDefault()
                     openWhatsApp(contactPhone, undefined, 'header_phone_block')
                   }}
-                  className="flex flex-col items-end text-right group cursor-pointer transition-colors"
+                  className="hidden md:flex flex-col items-end text-right group cursor-pointer transition-colors py-0.5"
                   title="Falar com a Central de Atendimento no WhatsApp"
                 >
-                  <span className="text-[11px] font-medium text-gray-500 leading-tight">
+                  <span className="text-[11px] font-medium tracking-wide uppercase text-gray-400 group-hover:text-gray-600 transition-colors leading-tight">
                     Central de Atendimento
                   </span>
-                  <span className="flex items-center gap-1.5 text-base font-bold text-secondary group-hover:text-primary transition-colors">
-                    <Phone className="w-3.5 h-3.5 text-secondary group-hover:text-primary transition-colors" />
+                  <span className="flex items-center gap-1.5 text-sm sm:text-base font-bold text-gray-800 group-hover:text-[#2563EB] transition-colors mt-0.5">
+                    <span className="w-6 h-6 rounded-full bg-blue-50 text-[#2563EB] flex items-center justify-center group-hover:bg-[#2563EB] group-hover:text-white transition-colors">
+                      <Phone className="w-3.5 h-3.5" />
+                    </span>
                     {formatPhoneNumber(contactPhone)}
                   </span>
                 </a>
 
+                {/* Botão Fale no WhatsApp: versão completa com ícone WhatsApp no desktop, compacta em telas menores */}
                 <Button
                   onClick={() => openWhatsApp(contactPhone, undefined, 'header_whatsapp_btn')}
-                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-medium text-sm px-4 h-9 shadow-sm rounded-md transition-colors"
+                  className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-medium text-xs sm:text-sm px-3 sm:px-4 h-9 shadow-sm hover:shadow rounded-lg transition-all flex items-center gap-2"
                 >
-                  Fale no WhatsApp
+                  <svg
+                    className="w-4 h-4 fill-current shrink-0"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.456 5.711 1.457h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.414z" />
+                  </svg>
+                  <span>Fale no WhatsApp</span>
                 </Button>
               </div>
             ) : null}
 
-            {/* Em telas menores (mobile/tablet), botão compacto Fale no WhatsApp */}
-            {contactPhone ? (
-              <Button
-                onClick={() => openWhatsApp(contactPhone, undefined, 'header_mobile_btn')}
-                size="sm"
-                className="lg:hidden bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-medium text-xs px-2.5 h-8 shadow-sm rounded-md transition-colors"
-              >
-                Fale no WhatsApp
-              </Button>
-            ) : null}
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-gray-600 hover:text-primary hidden sm:flex"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative text-gray-600 hover:text-primary"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {count > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-accent text-white border-none">
-                  {count}
-                </Badge>
-              )}
-            </Button>
-
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden text-gray-600">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden text-gray-600 hover:text-primary"
+                  aria-label="Abrir menu"
+                >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
