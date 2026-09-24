@@ -14,6 +14,10 @@
 export const GOOGLE_ADS_ID = 'AW-403144958'
 
 /**
+ * Validação de rotas e manipulação defensiva do Google Ads
+ */
+
+/**
  * Determina se um dado caminho (pathname) pertence a uma rota administrativa/interna.
  * Exemplos: /admin, /admin/login, /admin/dashboard, /master, etc.
  * Também cobre casos em que a tela de login do painel Nuvvo é renderizada na raiz.
