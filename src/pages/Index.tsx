@@ -207,11 +207,34 @@ export default function Index() {
           </div>
 
           {!selectedCityId ? (
-            <div className="w-full text-center py-20 text-gray-500 col-span-full bg-white rounded-2xl shadow-sm">
-              <MapPin className="h-10 w-10 mx-auto mb-4 text-primary" />
-              <p className="text-lg font-medium">
+            <div className="w-full py-16 px-6 text-center text-gray-500 col-span-full bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
+                <MapPin className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-secondary mb-2">
+                Onde você precisa do equipamento?
+              </h3>
+              <p className="text-base text-gray-600 max-w-md mx-auto mb-6">
                 Selecione uma cidade para ver os produtos disponíveis.
               </p>
+              <div className="w-full max-w-sm">
+                <Select
+                  value={selectedCityId || '_none'}
+                  onValueChange={(v) => setSelectedCityId(v === '_none' ? '' : v)}
+                >
+                  <SelectTrigger className="w-full h-12 text-base shadow-sm border-gray-300">
+                    <SelectValue placeholder="Selecione sua cidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Selecione sua cidade</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
