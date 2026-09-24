@@ -2,23 +2,39 @@
  * Helper para utilitários de contato via WhatsApp e rastreamento de conversão (gtag)
  */
 
+import {
+  ensureGoogleTagLoaded,
+  installDefensiveGoogleAdsErrorHandler,
+  isAdministrativePath,
+} from './gtag'
+
 export const GTAG_WHATSAPP_CONVERSION_ID = 'AW-403144958/CLIQUE_WHATSAPP'
 
 /**
- * Dispara o evento de conversão do Google Ads (gtag) para cliques no WhatsApp
+ * Dispara o evento de conversão do Google Ads (gtag) para cliques no WhatsApp.
+ * Executado exclusivamente nas interações de contato do site público.
  */
 export function trackWhatsAppConversion(label?: string) {
-  if (typeof window !== 'undefined' && typeof (window as any).gtag === 'function') {
-    try {
+  if (typeof window === 'undefined') return
+
+  // Não dispara em rotas administrativas
+  if (isAdministrativePath(window.location.pathname)) return
+
+  try {
+    installDefensiveGoogleAdsErrorHandler()
+    ensureGoogleTagLoaded()
+
+    if (typeof (window as any).gtag === 'function') {
       ;(window as any).gtag('event', 'conversion', {
         send_to: GTAG_WHATSAPP_CONVERSION_ID,
         value: 1.0,
         currency: 'BRL',
         event_label: label,
       })
-    } catch (err) {
-      console.warn('Falha ao disparar conversão gtag:', err)
     }
+  } catch (err) {
+    // Falhas de rastreamento devem ser silenciosas
+    console.warn('Falha ao disparar conversão gtag:', err)
   }
 }
 

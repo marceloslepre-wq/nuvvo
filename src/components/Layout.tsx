@@ -11,6 +11,7 @@ import TenantNotFound from '@/pages/TenantNotFound'
 import AdminLogin from '@/pages/admin/Login'
 import { isNuvvoOfficialHost } from '@/types/tenant'
 import { WhatsAppFloatingButton } from '@/components/WhatsAppFloatingButton'
+import { syncGoogleTagWithRoute } from '@/lib/gtag'
 import { formatPhoneNumber, buildWhatsAppLink, openWhatsApp } from '@/lib/whatsapp'
 
 export default function Layout() {
@@ -82,6 +83,17 @@ export default function Layout() {
     }
   }, [pathname, hash])
 
+  // Se o host acessado for nuvvo.sholver.com.br (domínio oficial da plataforma)
+  // e NÃO estiver acessando uma empresa por caminho (/empresa),
+  // a rota pública raiz deve exibir diretamente a tela de login do painel administrativo
+  // (Nuvvo como plataforma), e não o vitrine de um tenant nem "empresa não encontrada".
+  const isDirectNuvvoRoot = isNuvvoOfficialHost() && (pathname === '/' || pathname === '')
+
+  // Sincroniza o Google Tag apenas para as rotas públicas (não carrega nem dispara se for rota admin ou tela de login direta)
+  useEffect(() => {
+    syncGoogleTagWithRoute(pathname, isDirectNuvvoRoot)
+  }, [pathname, isDirectNuvvoRoot])
+
   if (tenantLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -89,12 +101,6 @@ export default function Layout() {
       </div>
     )
   }
-
-  // Se o host acessado for nuvvo.sholver.com.br (domínio oficial da plataforma)
-  // e NÃO estiver acessando uma empresa por caminho (/empresa),
-  // a rota pública raiz deve exibir diretamente a tela de login do painel administrativo
-  // (Nuvvo como plataforma), e não o vitrine de um tenant nem "empresa não encontrada".
-  const isDirectNuvvoRoot = isNuvvoOfficialHost() && (pathname === '/' || pathname === '')
 
   if (isDirectNuvvoRoot) {
     return <AdminLogin />

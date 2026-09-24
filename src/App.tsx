@@ -1,5 +1,7 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
+import { syncGoogleTagWithRoute, installDefensiveGoogleAdsErrorHandler } from '@/lib/gtag'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
@@ -25,8 +27,20 @@ import PublicOnboarding from './pages/PublicOnboarding'
 import MasterDashboard from './pages/master/MasterDashboard'
 import { MasterRoute } from './components/MasterRoute'
 
+function GoogleTagRouteSynchronizer() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    installDefensiveGoogleAdsErrorHandler()
+    syncGoogleTagWithRoute(pathname)
+  }, [pathname])
+
+  return null
+}
+
 const App = () => (
   <BrowserRouter>
+    <GoogleTagRouteSynchronizer />
     <TenantProvider>
       <AuthProvider>
         <CartProvider>

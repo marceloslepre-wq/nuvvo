@@ -3,15 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Google tag (gtag.js) -->
-    <script async="" src="https://www.googletagmanager.com/gtag/js?id=AW-403144958"></script>
+    <!-- Google tag (gtag.js) stub & defensivo para rotas do site -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag() {
         dataLayer.push(arguments);
       }
-      gtag("js", new Date());
-      gtag("config", "AW-403144958");
+      // Silencia unhandledrejections e erros de rede HTTP 0 do Google Ads/rmkt
+      window.addEventListener('unhandledrejection', function (e) {
+        try {
+          var r = e.reason;
+          var m = typeof r === 'string' ? r : (r && r.message) || '';
+          var s = (r && r.stack) || '';
+          if (m.indexOf('rmkt/collect') !== -1 || m.indexOf('AW-403144958') !== -1 || (m.indexOf('HTTP 0') !== -1 && (s.indexOf('gtag') !== -1 || s.indexOf('googletagmanager') !== -1 || m.indexOf('collect') !== -1))) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        } catch (_) {}
+      });
+      window.addEventListener('error', function (e) {
+        try {
+          var fn = e.filename || '';
+          var m = e.message || '';
+          if (fn.indexOf('googletagmanager.com') !== -1 || fn.indexOf('googleadservices.com') !== -1 || fn.indexOf('rmkt') !== -1 || m.indexOf('rmkt/collect') !== -1) {
+            e.preventDefault();
+            e.stopPropagation();
+            return true;
+          }
+        } catch (_) {}
+      }, true);
     </script>
     <!-- Google Tag Manager -->
     <script>
