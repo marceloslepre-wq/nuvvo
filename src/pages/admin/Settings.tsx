@@ -13,7 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from '@/components/ui/use-toast'
-import { Plus, Trash2, Pencil } from 'lucide-react'
+import { Plus, Trash2, Pencil, Building2, RotateCcw, X } from 'lucide-react'
+import { Label } from '@/components/ui/label'
 import { useRealtime } from '@/hooks/use-realtime'
 import {
   Select,
@@ -30,13 +31,53 @@ import { useTenant } from '@/contexts/tenant-context'
 
 export default function AdminSettings() {
   const { user } = useAuth()
-  const { activeAdminTenant } = useTenant()
+  const { activeAdminTenant, refreshTenants } = useTenant()
   const [users, setUsers] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [variations, setVariations] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
+  const [locations, setLocations] = useState<any[]>([])
   const [editingUser, setEditingUser] = useState<any | null>(null)
   const [roleFilter, setRoleFilter] = useState<string>('all')
+
+  // Estado da aba Empresa
+  // Para novos cadastros ou carregamento de tenant, se o tenant já tiver os dados preenchidos
+  // (ex: no cadastro público original), reflete esses valores; se estiver vazio (como no caso
+  // que o usuário precisa preencher manualmente para Hospital Home), inicia vazio.
+  const [companyName, setCompanyName] = useState('')
+  const [companyCnpj, setCompanyCnpj] = useState('')
+  const [companyEmail, setCompanyEmail] = useState('')
+  const [companyPhone, setCompanyPhone] = useState('')
+  const [savingCompany, setSavingCompany] = useState(false)
+
+  // Estado da aba Locais (transferida de Layout & Empresa)
+  interface EditLocForm {
+    street: string
+    number: string
+    neighborhood: string
+    city: string
+    state: string
+    zip: string
+    hours: string
+    video_url: string
+  }
+  const emptyEditForm: EditLocForm = {
+    street: '',
+    number: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zip: '',
+    hours: '',
+    video_url: '',
+  }
+  const [editingLocation, setEditingLocation] = useState<any | null>(null)
+  const [editForm, setEditForm] = useState<EditLocForm>(emptyEditForm)
+  const [editImageFile, setEditImageFile] = useState<File | null>(null)
+  const [deleteEditImage, setDeleteEditImage] = useState(false)
+  const [editVideoFile, setEditVideoFile] = useState<File | null>(null)
+  const [deleteEditVideo, setDeleteEditVideo] = useState(false)
+  const [savingLocation, setSavingLocation] = useState(false)
 
   const isMaster = user?.role === 'master'
 
@@ -64,7 +105,7 @@ export default function AdminSettings() {
 
     const catalogFilter = targetTenantId ? `tenant = '${targetTenantId}'` : undefined
 
-    const [u, c, v, r] = await Promise.all([
+    const [u, c, v, r, locs] = await Promise.all([
       pb
         .collection('users')
         .getFullList({
@@ -132,15 +173,39 @@ export default function AdminSettings() {
               return []
             })
         }),
+      pb
+        .collection('pickup_locations')
+        .getFullList({
+          filter: catalogFilter,
+        })
+        .catch((err) => {
+          console.error('Erro ao carregar locais:', err)
+          return []
+        }),
     ])
     setUsers(u)
     setCategories(c)
     setVariations(v)
     setRentalPeriods(r)
+    setLocations(locs)
   }
 
   useEffect(() => {
     loadData()
+    // Atualiza os campos da empresa caso o activeAdminTenant mude
+    if (activeAdminTenant) {
+      // Se for tenant novo ou tiver dados cadastrados, reflete as informações fornecidas;
+      // se não houver dados preenchidos, permanece vazio
+      setCompanyName(activeAdminTenant.name || '')
+      setCompanyCnpj(activeAdminTenant.document_cnpj || '')
+      setCompanyEmail(activeAdminTenant.email || '')
+      setCompanyPhone(activeAdminTenant.phone || '')
+    } else {
+      setCompanyName('')
+      setCompanyCnpj('')
+      setCompanyEmail('')
+      setCompanyPhone('')
+    }
   }, [activeAdminTenant?.id, user?.id])
 
   useRealtime('users', () => {
@@ -153,6 +218,9 @@ export default function AdminSettings() {
     loadData()
   })
   useRealtime('rental_periods', () => {
+    loadData()
+  })
+  useRealtime('pickup_locations', () => {
     loadData()
   })
 
@@ -219,6 +287,136 @@ export default function AdminSettings() {
     }
   }
 
+  const handleAddLocation = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    const targetTenantId = activeAdminTenant?.id || user?.tenant || ''
+    if (targetTenantId) {
+      fd.append('tenant', targetTenantId)
+    }
+    try {
+      await pb.collection('pickup_locations').create(fd)
+      loadData()
+      e.currentTarget.reset()
+      toast({ title: 'Local Adicionado' })
+    } catch (err: any) {
+      toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
+    }
+  }
+
+  const openEditLocation = (loc: any) => {
+    setEditingLocation(loc)
+    setEditForm({
+      street: loc.street || '',
+      number: loc.number || '',
+      neighborhood: loc.neighborhood || '',
+      city: loc.city || '',
+      state: loc.state || '',
+      zip: loc.zip || '',
+      hours: loc.hours || '',
+      video_url: loc.video_url || '',
+    })
+    setEditImageFile(null)
+    setDeleteEditImage(false)
+    setEditVideoFile(null)
+    setDeleteEditVideo(false)
+  }
+
+  const closeEditLocation = () => {
+    setEditingLocation(null)
+  }
+
+  const saveEditLocation = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingLocation) return
+    setSavingLocation(true)
+    try {
+      const fd = new FormData()
+      fd.append('street', editForm.street)
+      fd.append('number', editForm.number)
+      fd.append('neighborhood', editForm.neighborhood)
+      fd.append('city', editForm.city)
+      fd.append('state', editForm.state)
+      fd.append('zip', editForm.zip)
+      fd.append('hours', editForm.hours)
+      fd.append('video_url', editForm.video_url)
+      if (editImageFile) {
+        fd.append('image', editImageFile)
+      } else if (deleteEditImage) {
+        fd.append('image', '')
+      }
+      if (editVideoFile) {
+        fd.append('video_file', editVideoFile)
+      } else if (deleteEditVideo) {
+        fd.append('video_file', '')
+      }
+      await pb.collection('pickup_locations').update(editingLocation.id, fd)
+      closeEditLocation()
+      loadData()
+      toast({ title: 'Local Atualizado' })
+    } catch (err: any) {
+      toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
+    }
+    setSavingLocation(false)
+  }
+
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const targetTenantId = activeAdminTenant?.id || user?.tenant || ''
+    if (!targetTenantId) {
+      toast({
+        title: 'Empresa não identificada',
+        description: 'Não foi possível identificar a empresa ativa para salvar os dados.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setSavingCompany(true)
+    try {
+      const payload: Record<string, any> = {
+        name: companyName.trim(),
+        document_cnpj: companyCnpj.trim(),
+        email: companyEmail.trim(),
+        phone: companyPhone.trim(),
+      }
+
+      await pb.collection('tenants').update(targetTenantId, payload)
+      await refreshTenants()
+
+      // Também sincronizar telefone/email em site_settings se existir
+      try {
+        const siteSettingsList = await pb.collection('site_settings').getList(1, 1, {
+          filter: `tenant = '${targetTenantId}'`,
+        })
+        if (siteSettingsList.items.length > 0) {
+          const ssId = siteSettingsList.items[0].id
+          const ssUpdate: Record<string, string> = {}
+          if (companyEmail !== undefined) ssUpdate.email = companyEmail.trim()
+          if (companyPhone !== undefined) ssUpdate.phone = companyPhone.trim()
+          if (Object.keys(ssUpdate).length > 0) {
+            await pb.collection('site_settings').update(ssId, ssUpdate)
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar site_settings:', err)
+      }
+
+      toast({
+        title: 'Dados da Empresa Salvos',
+        description: 'Os dados da sua empresa foram atualizados com sucesso.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao salvar',
+        description: getErrorMessage(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingCompany(false)
+    }
+  }
+
   const handleAddSimple = async (
     e: React.FormEvent<HTMLFormElement>,
     col: string,
@@ -275,7 +473,9 @@ export default function AdminSettings() {
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
           <TabsTrigger value="variations">Variações</TabsTrigger>
-          <TabsTrigger value="rental">Prazos de Locação</TabsTrigger>
+          <TabsTrigger value="rental">Prazos</TabsTrigger>
+          <TabsTrigger value="locations">Locais</TabsTrigger>
+          <TabsTrigger value="company">Empresa</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4 pt-4">
@@ -541,7 +741,374 @@ export default function AdminSettings() {
             </Table>
           </div>
         </TabsContent>
+
+        {/* 3) ABA LOCAIS (transferida de Layout & Empresa) */}
+        <TabsContent value="locations" className="space-y-4 pt-4">
+          <form
+            onSubmit={handleAddLocation}
+            className="grid grid-cols-2 gap-4 bg-white p-4 border rounded-md mb-6 max-w-3xl"
+          >
+            <Input name="street" placeholder="Rua" required className="col-span-2 sm:col-span-1" />
+            <Input name="number" placeholder="Número" required />
+            <Input name="neighborhood" placeholder="Bairro" required />
+            <Input name="city" placeholder="Cidade" required />
+            <Input name="state" placeholder="Estado" required />
+            <Input name="zip" placeholder="CEP" />
+            <Input name="hours" placeholder="Horário de Func." className="col-span-2" />
+            <div className="col-span-2">
+              <Label className="mb-2 block">Imagem do Local</Label>
+              <Input type="file" name="image" accept="image/*" />
+            </div>
+            <div className="col-span-2">
+              <Label className="mb-2 block">Video URL (YouTube/Vimeo)</Label>
+              <Input name="video_url" placeholder="https://www.youtube.com/watch?v=..." />
+            </div>
+            <div className="col-span-2">
+              <Label className="mb-2 block">Upload de Vídeo</Label>
+              <Input type="file" name="video_file" accept="video/*" />
+            </div>
+            <Button
+              type="submit"
+              className="col-span-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" /> Adicionar Local
+            </Button>
+          </form>
+          <div className="bg-white border rounded-md overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead>Cidade/UF</TableHead>
+                  <TableHead>Horário</TableHead>
+                  <TableHead>Imagem</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {locations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-sm text-gray-500 py-6">
+                      Nenhum local cadastrado.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  locations.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell>
+                        {l.street}, {l.number} - {l.neighborhood}
+                      </TableCell>
+                      <TableCell>
+                        {l.city}/{l.state}
+                      </TableCell>
+                      <TableCell>{l.hours}</TableCell>
+                      <TableCell>
+                        {l.image ? (
+                          <img
+                            src={pb.files.getURL(l, l.image)}
+                            alt="Local"
+                            className="h-10 w-16 object-cover rounded"
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-400">Sem imagem</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEditLocation(l)}>
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteRecord('pickup_locations', l.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+
+        {/* 1) NOVA ABA EMPRESA: campos iguais ao PublicOnboarding, nascem vazios e são salváveis */}
+        <TabsContent value="company" className="space-y-4 pt-4 max-w-2xl">
+          <form
+            onSubmit={handleSaveCompany}
+            className="space-y-4 bg-white p-6 border rounded-md shadow-sm"
+          >
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <Building2 className="w-5 h-5 text-indigo-600" />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Dados da Empresa</h2>
+                <p className="text-xs text-gray-500">
+                  Preencha as informações cadastrais da sua empresa.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Razão Social / Nome da Empresa</Label>
+              <Input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Sua Empresa LTDA ou Nome Fantasia"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <Input
+                  value={companyCnpj}
+                  onChange={(e) => setCompanyCnpj(e.target.value)}
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>E-mail Corporativo</Label>
+                <Input
+                  type="email"
+                  value={companyEmail}
+                  onChange={(e) => setCompanyEmail(e.target.value)}
+                  placeholder="gestor@suaempresa.com.br"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>WhatsApp / Telefone</Label>
+              <Input
+                value={companyPhone}
+                onChange={(e) => setCompanyPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+
+            {/* Subdomínio SOMENTE LEITURA conforme especificação */}
+            <div className="space-y-2">
+              <Label>Subdomínio (Somente leitura)</Label>
+              <div className="flex items-center rounded-md border border-gray-200 bg-gray-50 overflow-hidden">
+                <span className="bg-gray-100 border-r border-gray-200 text-gray-500 font-mono px-3 h-10 flex items-center text-xs font-medium shrink-0 select-none">
+                  nuvvo.sholver.com.br/
+                </span>
+                <input
+                  type="text"
+                  readOnly
+                  disabled
+                  value={activeAdminTenant?.subdomain || activeAdminTenant?.slug || ''}
+                  placeholder="subdominio"
+                  className="w-full bg-gray-50 text-gray-600 placeholder:text-gray-400 h-10 px-3 text-xs font-mono outline-none cursor-not-allowed"
+                />
+              </div>
+              <p className="text-[11px] text-gray-400">
+                O subdomínio da empresa é fixo e definido na contratação/onboarding.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                disabled={savingCompany}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {savingCompany ? 'Salvando...' : 'Salvar Dados da Empresa'}
+              </Button>
+            </div>
+          </form>
+        </TabsContent>
       </Tabs>
+
+      {/* Dialog para Editar Local (Locais de Retirada transferido) */}
+      <Dialog open={!!editingLocation} onOpenChange={(open) => !open && closeEditLocation()}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Local</DialogTitle>
+          </DialogHeader>
+          {editingLocation && (
+            <form onSubmit={saveEditLocation} className="grid grid-cols-2 gap-4">
+              <Input
+                placeholder="Rua"
+                value={editForm.street}
+                onChange={(e) => setEditForm({ ...editForm, street: e.target.value })}
+                required
+                className="col-span-2 sm:col-span-1"
+              />
+              <Input
+                placeholder="Número"
+                value={editForm.number}
+                onChange={(e) => setEditForm({ ...editForm, number: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="Bairro"
+                value={editForm.neighborhood}
+                onChange={(e) => setEditForm({ ...editForm, neighborhood: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="Cidade"
+                value={editForm.city}
+                onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="Estado"
+                value={editForm.state}
+                onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                required
+              />
+              <Input
+                placeholder="CEP"
+                value={editForm.zip}
+                onChange={(e) => setEditForm({ ...editForm, zip: e.target.value })}
+              />
+              <Input
+                placeholder="Horário de Func."
+                value={editForm.hours}
+                onChange={(e) => setEditForm({ ...editForm, hours: e.target.value })}
+                className="col-span-2"
+              />
+
+              {/* Imagem do Local */}
+              <div className="col-span-2 space-y-2">
+                <Label>Imagem do Local</Label>
+                {editingLocation.image && !deleteEditImage && !editImageFile && (
+                  <div className="flex items-center gap-3 rounded-md border p-2">
+                    <img
+                      src={pb.files.getURL(editingLocation, editingLocation.image)}
+                      alt="Preview"
+                      className="h-20 w-full max-w-[180px] object-cover rounded"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteEditImage(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Remover
+                    </Button>
+                  </div>
+                )}
+                {deleteEditImage && !editImageFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+                    A imagem será removida ao salvar.
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteEditImage(false)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" /> Desfazer
+                    </Button>
+                  </div>
+                )}
+                {editImageFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-700">
+                    {editImageFile.name} (novo)
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditImageFile(null)}
+                    >
+                      <X className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
+                {!editImageFile && !deleteEditImage && (
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      setEditImageFile(e.target.files?.[0] || null)
+                      setDeleteEditImage(false)
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Video URL */}
+              <div className="col-span-2 space-y-2">
+                <Label>Video URL (YouTube/Vimeo)</Label>
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={editForm.video_url}
+                  onChange={(e) => setEditForm({ ...editForm, video_url: e.target.value })}
+                />
+              </div>
+
+              {/* Upload de Vídeo */}
+              <div className="col-span-2 space-y-2">
+                <Label>Upload de Vídeo</Label>
+                {editingLocation.video_file && !deleteEditVideo && !editVideoFile && (
+                  <div className="flex items-center gap-3 rounded-md border p-2 text-sm text-gray-600">
+                    <span className="truncate max-w-[150px]">{editingLocation.video_file}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteEditVideo(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Remover
+                    </Button>
+                  </div>
+                )}
+                {deleteEditVideo && !editVideoFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-600">
+                    O vídeo será removido ao salvar.
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteEditVideo(false)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" /> Desfazer
+                    </Button>
+                  </div>
+                )}
+                {editVideoFile && (
+                  <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-700">
+                    {editVideoFile.name} (novo)
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditVideoFile(null)}
+                    >
+                      <X className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                )}
+                {!editVideoFile && !deleteEditVideo && (
+                  <Input
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => {
+                      setEditVideoFile(e.target.files?.[0] || null)
+                      setDeleteEditVideo(false)
+                    }}
+                  />
+                )}
+              </div>
+
+              <div className="col-span-2 flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={closeEditLocation}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={savingLocation}>
+                  {savingLocation ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
         <DialogContent>
