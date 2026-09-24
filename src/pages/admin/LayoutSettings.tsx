@@ -31,6 +31,8 @@ export default function AdminLayoutSettings() {
   const [tenantCustomDomain, setTenantCustomDomain] = useState('')
   const [tenantPreviewHost, setTenantPreviewHost] = useState('')
   const [tenantExtraHosts, setTenantExtraHosts] = useState('')
+  const [tenantFacebookUrl, setTenantFacebookUrl] = useState('')
+  const [tenantInstagramUrl, setTenantInstagramUrl] = useState('')
   const [savingTenant, setSavingTenant] = useState(false)
   const [isNewTenantOpen, setIsNewTenantOpen] = useState(false)
 
@@ -75,6 +77,8 @@ export default function AdminLayoutSettings() {
     setTenantCustomDomain(activeAdminTenant.custom_domain || '')
     setTenantPreviewHost(activeAdminTenant.preview_host || '')
     setTenantExtraHosts(activeAdminTenant.extra_hosts || '')
+    setTenantFacebookUrl(activeAdminTenant.facebook_url || '')
+    setTenantInstagramUrl(activeAdminTenant.instagram_url || '')
   }
 
   useEffect(() => {
@@ -134,6 +138,9 @@ export default function AdminLayoutSettings() {
     if (!activeAdminTenant) return
     setSavingTenant(true)
     try {
+      const cleanFb = tenantFacebookUrl.trim()
+      const cleanIg = tenantInstagramUrl.trim()
+
       await pb.collection('tenants').update(activeAdminTenant.id, {
         name: tenantName,
         slug: tenantSlug,
@@ -141,7 +148,22 @@ export default function AdminLayoutSettings() {
         custom_domain: tenantCustomDomain.trim().toLowerCase(),
         preview_host: tenantPreviewHost.trim().toLowerCase(),
         extra_hosts: tenantExtraHosts.trim().toLowerCase(),
+        facebook_url: cleanFb,
+        instagram_url: cleanIg,
       })
+
+      // Sincroniza também com o registro em site_settings do tenant
+      if (settings?.id) {
+        try {
+          await pb.collection('site_settings').update(settings.id, {
+            facebook_url: cleanFb,
+            instagram_url: cleanIg,
+          })
+        } catch {
+          /* ignore */
+        }
+      }
+
       await refreshTenants()
       toast({ title: 'Sucesso', description: 'Dados da empresa/domínio atualizados.' })
     } catch (err: any) {
@@ -175,11 +197,15 @@ export default function AdminLayoutSettings() {
         status: 'active',
         phone: String(fd.get('phone') || '').trim(),
         email: String(fd.get('email') || '').trim(),
+        facebook_url: String(fd.get('facebook_url') || '').trim(),
+        instagram_url: String(fd.get('instagram_url') || '').trim(),
       })
       await pb.collection('site_settings').create({
         tenant: newTenant.id,
         phone: newTenant.phone || '',
         email: newTenant.email || '',
+        facebook_url: newTenant.facebook_url || '',
+        instagram_url: newTenant.instagram_url || '',
       })
       await refreshTenants()
       setSelectedAdminTenantId(newTenant.id)
@@ -308,6 +334,35 @@ export default function AdminLayoutSettings() {
                 placeholder="localhost, 127.0.0.1"
                 className="font-mono text-sm"
               />
+            </div>
+
+            <div className="pt-2 border-t space-y-4">
+              <h3 className="text-sm font-semibold text-gray-800">Redes Sociais da Empresa</h3>
+              <div className="space-y-2">
+                <Label>Link do Facebook</Label>
+                <Input
+                  value={tenantFacebookUrl}
+                  onChange={(e) => setTenantFacebookUrl(e.target.value)}
+                  placeholder="https://facebook.com/minhaempresa"
+                  type="url"
+                />
+                <p className="text-xs text-gray-500">
+                  URL completa da página da empresa no Facebook. Deixe em branco se não possuir.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Link do Instagram</Label>
+                <Input
+                  value={tenantInstagramUrl}
+                  onChange={(e) => setTenantInstagramUrl(e.target.value)}
+                  placeholder="https://instagram.com/minhaempresa"
+                  type="url"
+                />
+                <p className="text-xs text-gray-500">
+                  URL completa do perfil da empresa no Instagram. Deixe em branco se não possuir.
+                </p>
+              </div>
             </div>
 
             <Button type="submit" disabled={savingTenant}>
@@ -501,6 +556,16 @@ export default function AdminLayoutSettings() {
               <div className="space-y-2">
                 <Label>E-mail</Label>
                 <Input name="email" type="email" placeholder="contato@empresa.com" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label>Link do Facebook</Label>
+                <Input name="facebook_url" type="url" placeholder="https://facebook.com/..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Link do Instagram</Label>
+                <Input name="instagram_url" type="url" placeholder="https://instagram.com/..." />
               </div>
             </div>
             <Button type="submit" className="w-full">

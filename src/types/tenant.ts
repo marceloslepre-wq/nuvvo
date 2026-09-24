@@ -65,6 +65,8 @@ export interface Tenant {
   privacy?: string
   returns?: string
   primary_color?: string
+  facebook_url?: string
+  instagram_url?: string
   created?: string
   updated?: string
 

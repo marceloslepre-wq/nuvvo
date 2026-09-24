@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24T13:06:28.558Z",
+  "generatedAt": "2026-09-24T21:05:40.576Z",
   "collections": [
     {
       "name": "users",
@@ -515,6 +515,18 @@
           "required": false,
           "system": false,
           "collectionRef": "tenants"
+        },
+        {
+          "name": "facebook_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "instagram_url",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -1032,6 +1044,18 @@
         {
           "name": "effective_product_limit",
           "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "facebook_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "instagram_url",
+          "type": "text",
           "required": false,
           "system": false
         }
