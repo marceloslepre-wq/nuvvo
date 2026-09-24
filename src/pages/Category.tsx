@@ -2,19 +2,28 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronRight, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { getFileUrl, Product } from '@/services/products'
 import { useSelectedCity } from '@/hooks/use-selected-city'
+import { useRealtime } from '@/hooks/use-realtime'
 import { useTenant } from '@/contexts/tenant-context'
 import pb from '@/lib/pocketbase/client'
 
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>()
   const { currentTenant, tenantBasePath } = useTenant()
-  const { selectedCityId } = useSelectedCity()
+  const { selectedCityId, setSelectedCityId } = useSelectedCity()
   const [products, setProducts] = useState<Product[]>([])
   const [category, setCategory] = useState<any>(null)
   const [rentalPrices, setRentalPrices] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
+  const [locations, setLocations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -29,7 +38,7 @@ export default function CategoryPage() {
         setCategory(cat)
 
         const tenantFilter = currentTenant ? `tenant = '${currentTenant.id}'` : ''
-        const [rPrices, rPeriods] = await Promise.all([
+        const [rPrices, rPeriods, locs] = await Promise.all([
           pb
             .collection('product_rental_prices')
             .getFullList()
@@ -43,9 +52,14 @@ export default function CategoryPage() {
                 .getFullList({ filter: tenantFilter, sort: 'name' })
                 .catch(() => [])
             }),
+          pb
+            .collection('pickup_locations')
+            .getFullList({ filter: tenantFilter })
+            .catch(() => []),
         ])
         setRentalPrices(rPrices)
         setRentalPeriods(rPeriods)
+        setLocations(locs)
 
         if (!selectedCityId || !currentTenant) {
           setProducts([])
@@ -65,6 +79,37 @@ export default function CategoryPage() {
     }
     if (id && currentTenant) loadCategory()
   }, [id, selectedCityId, currentTenant?.id])
+
+  useRealtime('products', () => {
+    if (id && currentTenant) {
+      pb.collection('categories')
+        .getOne(id)
+        .then((cat) => {
+          if (currentTenant && cat.tenant && cat.tenant !== currentTenant.id) return
+          if (!selectedCityId) {
+            setProducts([])
+            return
+          }
+          pb.collection('products')
+            .getFullList({
+              filter: `status='active' && tenant='${currentTenant.id}' && category='${id}' && available_locations~'${selectedCityId}'`,
+              sort: 'order',
+            })
+            .then((prods) => setProducts(prods as Product[]))
+            .catch(() => {})
+        })
+        .catch(() => {})
+    }
+  })
+
+  useRealtime('pickup_locations', () => {
+    if (currentTenant) {
+      pb.collection('pickup_locations')
+        .getFullList({ filter: `tenant = '${currentTenant.id}'` })
+        .then(setLocations)
+        .catch(() => {})
+    }
+  })
 
   const stripHtml = (html: string) => {
     if (!html) return ''
@@ -104,11 +149,34 @@ export default function CategoryPage() {
         <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-8">{category.name}</h1>
 
         {!selectedCityId ? (
-          <div className="w-full text-center py-20 text-gray-500 bg-white rounded-2xl shadow-sm">
-            <MapPin className="h-10 w-10 mx-auto mb-4 text-primary" />
-            <p className="text-lg font-medium">
+          <div className="w-full py-16 px-6 text-center text-gray-500 col-span-full bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
+              <MapPin className="h-8 w-8" />
+            </div>
+            <h3 className="text-xl font-semibold text-secondary mb-2">
+              Onde você precisa do equipamento?
+            </h3>
+            <p className="text-base text-gray-600 max-w-md mx-auto mb-6">
               Selecione uma cidade para ver os produtos disponíveis.
             </p>
+            <div className="w-full max-w-sm">
+              <Select
+                value={selectedCityId || '_none'}
+                onValueChange={(v) => setSelectedCityId(v === '_none' ? '' : v)}
+              >
+                <SelectTrigger className="w-full h-12 text-base shadow-sm border-gray-300">
+                  <SelectValue placeholder="Selecione sua cidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Selecione sua cidade</SelectItem>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
