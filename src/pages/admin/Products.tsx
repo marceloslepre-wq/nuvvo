@@ -286,14 +286,36 @@ export default function AdminProducts() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   const handleAddMedia = async () => {
-    if (!newMediaVariation || !newMediaFile || newMediaVariation === '_empty') return
+    const isValidVariation =
+      Boolean(newMediaVariation) &&
+      newMediaVariation !== '_empty' &&
+      availableVariationsForMedia.some((v) => v.id === newMediaVariation)
+
+    if (!isValidVariation) {
+      toast({
+        title: 'Selecione uma variação',
+        description: 'É necessário selecionar uma variação válida antes de adicionar a mídia.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!newMediaFile) {
+      toast({
+        title: 'Arquivo obrigatório',
+        description: 'Selecione um arquivo de imagem ou vídeo.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
     try {
       const variationId = newMediaVariation
       if (formData.id) {
         const form = new FormData()
         form.append('product', formData.id)
-        if (variationId) form.append('variation', variationId)
+        form.append('variation', variationId)
         form.append('file', newMediaFile)
 
         await pb.collection('product_media').create(form)
@@ -377,9 +399,10 @@ export default function AdminProducts() {
 
         // Process any pending media added while editing
         for (const pm of pendingMedia) {
+          if (!pm.variationId || pm.variationId === '_empty') continue
           const pmForm = new FormData()
           pmForm.append('product', formData.id)
-          if (pm.variationId) pmForm.append('variation', pm.variationId)
+          pmForm.append('variation', pm.variationId)
           pmForm.append('file', pm.file)
           await pb.collection('product_media').create(pmForm)
         }
@@ -440,12 +463,31 @@ export default function AdminProducts() {
         const newProd = await pb.collection('products').create(form)
         savedProductId = newProd.id
         for (const pm of pendingMedia) {
+          if (!pm.variationId || pm.variationId === '_empty') continue
           const pmForm = new FormData()
           pmForm.append('product', newProd.id)
-          if (pm.variationId) pmForm.append('variation', pm.variationId)
+          pmForm.append('variation', pm.variationId)
           pmForm.append('file', pm.file)
           await pb.collection('product_media').create(pmForm)
         }
+      }
+
+      // Se houver arquivo pendente em newMediaFile com variação válida selecionada em newMediaVariation
+      // e o usuário clicou direto em "Salvar Produto" sem ter clicado em "+ Adicionar Mídia"
+      const isUnaddedMediaValid =
+        Boolean(newMediaFile) &&
+        Boolean(newMediaVariation) &&
+        newMediaVariation !== '_empty' &&
+        availableVariationsForMedia.some((v) => v.id === newMediaVariation)
+
+      if (isUnaddedMediaValid && newMediaFile && savedProductId) {
+        const directMediaForm = new FormData()
+        directMediaForm.append('product', savedProductId)
+        directMediaForm.append('variation', newMediaVariation)
+        directMediaForm.append('file', newMediaFile)
+        await pb.collection('product_media').create(directMediaForm)
+        setNewMediaFile(null)
+        setNewMediaVariation('')
       }
 
       for (const file of extraImageFiles) {
@@ -1128,7 +1170,11 @@ export default function AdminProducts() {
                   type="button"
                   onClick={handleAddMedia}
                   disabled={
-                    loading || !newMediaVariation || !newMediaFile || newMediaVariation === '_empty'
+                    loading ||
+                    !newMediaVariation ||
+                    !newMediaFile ||
+                    newMediaVariation === '_empty' ||
+                    !availableVariationsForMedia.some((v) => v.id === newMediaVariation)
                   }
                   className="col-span-2"
                 >
