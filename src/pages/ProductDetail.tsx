@@ -101,19 +101,21 @@ export default function ProductDetail() {
     loadProduct()
   }, [id, currentTenant?.id])
 
-  const selectedMediaRecord = selectedVariation
-    ? productMedia.find((m) => m.variation === selectedVariation && m.file)
-    : null
+  const selectedMediaRecords = selectedVariation
+    ? productMedia.filter((m) => m.variation === selectedVariation && m.file)
+    : []
+  const hasVariationMedia = selectedMediaRecords.length > 0
+  const primaryVariationMedia = hasVariationMedia ? selectedMediaRecords[0] : null
 
   useEffect(() => {
     setMainViewerItem(null)
-    if (selectedMediaRecord) {
-      const isVideo = selectedMediaRecord.file.match(/\.(mp4|webm|ogg)$/i)
+    if (primaryVariationMedia) {
+      const isVideo = primaryVariationMedia.file.match(/\.(mp4|webm|ogg)$/i)
       setActiveMedia(isVideo ? 'video' : 'image')
-    } else if (selectedVariation) {
+    } else {
       setActiveMedia('image')
     }
-  }, [selectedVariation, selectedMediaRecord])
+  }, [selectedVariation, primaryVariationMedia])
 
   if (loading) {
     return (
@@ -168,12 +170,12 @@ export default function ProductDetail() {
   let imageUrl = product.image ? getFileUrl(product, product.image) : ''
   let videoUrl = product.video ? getFileUrl(product, product.video) : ''
 
-  if (selectedMediaRecord) {
-    const isVideo = selectedMediaRecord.file.match(/\.(mp4|webm|ogg)$/i)
+  if (primaryVariationMedia) {
+    const isVideo = primaryVariationMedia.file.match(/\.(mp4|webm|ogg)$/i)
     if (isVideo) {
-      videoUrl = pb.files.getURL(selectedMediaRecord, selectedMediaRecord.file)
+      videoUrl = pb.files.getURL(primaryVariationMedia, primaryVariationMedia.file)
     } else {
-      imageUrl = pb.files.getURL(selectedMediaRecord, selectedMediaRecord.file)
+      imageUrl = pb.files.getURL(primaryVariationMedia, primaryVariationMedia.file)
     }
   }
 
@@ -188,24 +190,33 @@ export default function ProductDetail() {
   }
 
   const galleryItems: { type: 'image' | 'video'; url: string; id: string }[] = []
-  if (product.image)
-    galleryItems.push({ type: 'image', url: getFileUrl(product, product.image), id: 'main-img' })
-  if (product.video)
-    galleryItems.push({ type: 'video', url: getFileUrl(product, product.video), id: 'main-vid' })
 
-  const relevantMedia = productMedia.filter(
-    (m) => !selectedVariation || !m.variation || m.variation === selectedVariation,
-  )
-  relevantMedia.forEach((m) => {
-    if (m.file) {
+  if (hasVariationMedia) {
+    selectedMediaRecords.forEach((m) => {
       const isVideo = m.file.match(/\.(mp4|webm|ogg)$/i)
       galleryItems.push({
         type: isVideo ? 'video' : 'image',
         url: pb.files.getURL(m, m.file),
         id: m.id,
       })
+    })
+  } else {
+    if (product.image) {
+      galleryItems.push({ type: 'image', url: getFileUrl(product, product.image), id: 'main-img' })
     }
-  })
+    if (product.video) {
+      galleryItems.push({ type: 'video', url: getFileUrl(product, product.video), id: 'main-vid' })
+    }
+    const generalMedia = productMedia.filter((m) => !m.variation && m.file)
+    generalMedia.forEach((m) => {
+      const isVideo = m.file.match(/\.(mp4|webm|ogg)$/i)
+      galleryItems.push({
+        type: isVideo ? 'video' : 'image',
+        url: pb.files.getURL(m, m.file),
+        id: m.id,
+      })
+    })
+  }
 
   const handleRentClick = () => {
     if (!canRent) return
@@ -217,9 +228,11 @@ export default function ProductDetail() {
     const productRef = currentVariantDetail?.reference_code || product.reference || ''
     const periodName = selectedPeriodObj?.name || ''
     const pageUrl = window.location.href
-    const mainImageUrl = product.image ? getFileUrl(product, product.image) : ''
+    const mainImageUrl = imageUrl || (product.image ? getFileUrl(product, product.image) : '')
+    const variationName = availableVariations.find((v: any) => v.id === selectedVariation)?.name
 
     let text = `Olá! Gostaria de solicitar a locação do seguinte equipamento:\nProduto: ${product.name}\n`
+    if (variationName) text += `Variação: ${variationName}\n`
     if (productRef) text += `Referência: ${productRef}\n`
     if (periodName) text += `Período: ${periodName}\n`
     text += `Link da página: ${pageUrl}\n`

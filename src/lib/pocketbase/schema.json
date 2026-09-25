@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-24T21:16:18.344Z",
+  "generatedAt": "2026-09-25T21:19:52.399Z",
   "collections": [
     {
       "name": "users",
@@ -611,7 +611,10 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": []
+      "indexes": [
+        "CREATE INDEX `idx_pm_product` ON `product_media` (product)",
+        "CREATE INDEX `idx_pm_variation` ON `product_media` (variation)"
+      ]
     },
     {
       "name": "product_variant_details",

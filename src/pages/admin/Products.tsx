@@ -48,7 +48,7 @@ export default function AdminProducts() {
   const [variantDetails, setVariantDetails] = useState<Record<string, string>>({})
   const [rentalPrices, setRentalPrices] = useState<Record<string, number>>({})
 
-  const [newMediaVariation, setNewMediaVariation] = useState('geral')
+  const [newMediaVariation, setNewMediaVariation] = useState('')
   const [newMediaFile, setNewMediaFile] = useState<File | null>(null)
 
   const [pendingMedia, setPendingMedia] = useState<
@@ -374,6 +374,15 @@ export default function AdminProducts() {
           rental_period: formData.rental_period || [],
           available_locations: formData.available_locations || [],
         })
+
+        // Process any pending media added while editing
+        for (const pm of pendingMedia) {
+          const pmForm = new FormData()
+          pmForm.append('product', formData.id)
+          if (pm.variationId) pmForm.append('variation', pm.variationId)
+          pmForm.append('file', pm.file)
+          await pb.collection('product_media').create(pmForm)
+        }
 
         // Step 2: If there are file changes, send a separate FormData PATCH with ONLY file fields.
         // PocketBase keeps all omitted fields as-is when updating via FormData.
@@ -1137,7 +1146,20 @@ export default function AdminProducts() {
                         key={pm.id}
                         className="flex items-center justify-between p-2 border rounded text-sm"
                       >
-                        <span className="font-medium">{pm.expand?.variation?.name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {pm.file && pm.file.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                            <img
+                              src={pb.files.getURL(pm, pm.file)}
+                              alt={pm.expand?.variation?.name || 'Variação'}
+                              className="w-8 h-8 rounded object-cover flex-shrink-0 border"
+                            />
+                          ) : null}
+                          <span className="font-medium truncate">
+                            {pm.expand?.variation?.name ||
+                              variations.find((v) => v.id === pm.variation)?.name ||
+                              'Variação'}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <span className="text-gray-500 truncate max-w-[150px]">
                             {pm.file ? pm.file : 'Sem arquivo'}
@@ -1145,6 +1167,7 @@ export default function AdminProducts() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            type="button"
                             onClick={() => handleDeleteMedia(pm.id)}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
@@ -1167,6 +1190,7 @@ export default function AdminProducts() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            type="button"
                             onClick={() => handleDeletePendingMedia(pm.tempId)}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
