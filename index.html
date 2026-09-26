@@ -10,28 +10,44 @@
         dataLayer.push(arguments);
       }
       // Silencia unhandledrejections e erros de rede HTTP 0 do Google Ads/rmkt
-      window.addEventListener('unhandledrejection', function (e) {
+      window.addEventListener("unhandledrejection", function (e) {
         try {
           var r = e.reason;
-          var m = typeof r === 'string' ? r : (r && r.message) || '';
-          var s = (r && r.stack) || '';
-          if (m.indexOf('rmkt/collect') !== -1 || m.indexOf('AW-403144958') !== -1 || (m.indexOf('HTTP 0') !== -1 && (s.indexOf('gtag') !== -1 || s.indexOf('googletagmanager') !== -1 || m.indexOf('collect') !== -1))) {
+          var m = typeof r === "string" ? r : (r && r.message) || "";
+          var s = (r && r.stack) || "";
+          if (
+            m.indexOf("rmkt/collect") !== -1 ||
+            m.indexOf("AW-403144958") !== -1 ||
+            (m.indexOf("HTTP 0") !== -1 &&
+              (s.indexOf("gtag") !== -1 ||
+                s.indexOf("googletagmanager") !== -1 ||
+                m.indexOf("collect") !== -1))
+          ) {
             e.preventDefault();
             e.stopPropagation();
           }
         } catch (_) {}
       });
-      window.addEventListener('error', function (e) {
-        try {
-          var fn = e.filename || '';
-          var m = e.message || '';
-          if (fn.indexOf('googletagmanager.com') !== -1 || fn.indexOf('googleadservices.com') !== -1 || fn.indexOf('rmkt') !== -1 || m.indexOf('rmkt/collect') !== -1) {
-            e.preventDefault();
-            e.stopPropagation();
-            return true;
-          }
-        } catch (_) {}
-      }, true);
+      window.addEventListener(
+        "error",
+        function (e) {
+          try {
+            var fn = e.filename || "";
+            var m = e.message || "";
+            if (
+              fn.indexOf("googletagmanager.com") !== -1 ||
+              fn.indexOf("googleadservices.com") !== -1 ||
+              fn.indexOf("rmkt") !== -1 ||
+              m.indexOf("rmkt/collect") !== -1
+            ) {
+              e.preventDefault();
+              e.stopPropagation();
+              return true;
+            }
+          } catch (_) {}
+        },
+        true,
+      );
     </script>
     <!-- Google Tag Manager -->
     <script>
