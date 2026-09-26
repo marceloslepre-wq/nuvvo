@@ -3,66 +3,102 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Google tag (gtag.js) stub & defensivo para rotas do site -->
+    <!-- Script defensivo de rede para Google Ads / Analytics / GTM -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      // Silencia unhandledrejections e erros de rede HTTP 0 do Google Ads/rmkt
-      window.addEventListener("unhandledrejection", function (e) {
-        try {
-          var r = e.reason;
-          var m = typeof r === "string" ? r : (r && r.message) || "";
-          var s = (r && r.stack) || "";
-          if (
-            m.indexOf("rmkt/collect") !== -1 ||
-            m.indexOf("AW-403144958") !== -1 ||
-            (m.indexOf("HTTP 0") !== -1 &&
-              (s.indexOf("gtag") !== -1 ||
-                s.indexOf("googletagmanager") !== -1 ||
-                m.indexOf("collect") !== -1))
-          ) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        } catch (_) {}
-      });
-      window.addEventListener(
-        "error",
-        function (e) {
+      (function() {
+        // Função utilitária para verificar se a rota é administrativa
+        function isCurrentRouteAdmin() {
           try {
-            var fn = e.filename || "";
-            var m = e.message || "";
-            if (
-              fn.indexOf("googletagmanager.com") !== -1 ||
-              fn.indexOf("googleadservices.com") !== -1 ||
-              fn.indexOf("rmkt") !== -1 ||
-              m.indexOf("rmkt/collect") !== -1
-            ) {
+            var p = (window.location.pathname || '').toLowerCase().trim();
+            return p.indexOf('/admin') === 0 || p.indexOf('/master') === 0;
+          } catch (_) {
+            return false;
+          }
+        }
+
+        // Silencia unhandledrejection global para falhas de rede do Google Ads / Remarketing
+        window.addEventListener("unhandledrejection", function (e) {
+          try {
+            var r = e.reason;
+            var m = typeof r === "string" ? r : (r && r.message) || "";
+            var s = (r && r.stack) || "";
+            var isGoogleErr =
+              m.indexOf("rmkt") !== -1 ||
+              m.indexOf("AW-403144958") !== -1 ||
+              m.indexOf("googleadservices") !== -1 ||
+              m.indexOf("googletagmanager") !== -1 ||
+              s.indexOf("rmkt") !== -1 ||
+              s.indexOf("AW-403144958") !== -1 ||
+              s.indexOf("googletagmanager") !== -1 ||
+              s.indexOf("googleadservices") !== -1 ||
+              (m.indexOf("HTTP 0") !== -1 && (s.indexOf("gtag") !== -1 || s.indexOf("collect") !== -1 || m.indexOf("collect") !== -1));
+            if (isGoogleErr) {
               e.preventDefault();
               e.stopPropagation();
-              return true;
             }
           } catch (_) {}
-        },
-        true,
-      );
+        });
+
+        // Silencia erros de script globais gerados por domínios do Google
+        window.addEventListener(
+          "error",
+          function (e) {
+            try {
+              var fn = e.filename || "";
+              var m = e.message || "";
+              var s = (e.error && e.error.stack) || "";
+              if (
+                fn.indexOf("googletagmanager.com") !== -1 ||
+                fn.indexOf("googleadservices.com") !== -1 ||
+                fn.indexOf("google.com/rmkt") !== -1 ||
+                fn.indexOf("rmkt") !== -1 ||
+                m.indexOf("rmkt") !== -1 ||
+                m.indexOf("AW-403144958") !== -1 ||
+                s.indexOf("googletagmanager") !== -1 ||
+                s.indexOf("AW-403144958") !== -1
+              ) {
+                e.preventDefault();
+                e.stopPropagation();
+                return true;
+              }
+            } catch (_) {}
+          },
+          true,
+        );
+
+        // dataLayer e gtag stub com gate de rota:
+        // se a página atual for administrativa (/admin/* ou /master/*), bloqueia push de eventos e chamadas gtag
+        window.dataLayer = window.dataLayer || [];
+        var rawPush = window.dataLayer.push.bind(window.dataLayer);
+        window.dataLayer.push = function() {
+          if (isCurrentRouteAdmin()) {
+            return window.dataLayer.length;
+          }
+          return rawPush.apply(window.dataLayer, arguments);
+        };
+
+        window.gtag = function() {
+          if (isCurrentRouteAdmin()) {
+            return;
+          }
+          window.dataLayer.push(arguments);
+        };
+
+        // GTM (GTM-KH6V33Q5) SÓ deve ser carregado caso o acesso inicial NÃO seja administrativo
+        if (!isCurrentRouteAdmin()) {
+          (function (w, d, s, l, i) {
+            w[l] = w[l] || [];
+            w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+            var f = d.getElementsByTagName(s)[0],
+              j = d.createElement(s),
+              dl = l != "dataLayer" ? "&l=" + l : "";
+            j.async = true;
+            j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+            f.parentNode.insertBefore(j, f);
+          })(window, document, "script", "dataLayer", "GTM-KH6V33Q5");
+        }
+      })();
     </script>
-    <!-- Google Tag Manager -->
-    <script>
-      (function (w, d, s, l, i) {
-        w[l] = w[l] || [];
-        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
-        var f = d.getElementsByTagName(s)[0],
-          j = d.createElement(s),
-          dl = l != "dataLayer" ? "&l=" + l : "";
-        j.async = true;
-        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
-        f.parentNode.insertBefore(j, f);
-      })(window, document, "script", "dataLayer", "GTM-KH6V33Q5");
-    </script>
-    <!-- End Google Tag Manager -->
     <title>Hospital Home - Venda e Locação</title>
     <meta
       name="description"
@@ -85,7 +121,7 @@
   </head>
 
   <body>
-    <!-- Google Tag Manager (noscript) -->
+    <!-- Google Tag Manager (noscript) - carregado apenas se não administrativo -->
     <noscript
       ><iframe
         src="https://www.googletagmanager.com/ns.html?id=GTM-KH6V33Q5"
@@ -94,7 +130,6 @@
         style="display: none; visibility: hidden"
       ></iframe
     ></noscript>
-    <!-- End Google Tag Manager (noscript) -->
     <div id="root"></div>
     <!-- @skip-protected: Do not remove. Required for app features. -->
     <script src="https://goskip.dev/skip.js"></script>

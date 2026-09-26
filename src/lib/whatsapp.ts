@@ -25,12 +25,16 @@ export function trackWhatsAppConversion(label?: string) {
     ensureGoogleTagLoaded()
 
     if (typeof (window as any).gtag === 'function') {
-      ;(window as any).gtag('event', 'conversion', {
-        send_to: GTAG_WHATSAPP_CONVERSION_ID,
-        value: 1.0,
-        currency: 'BRL',
-        event_label: label,
-      })
+      try {
+        ;(window as any).gtag('event', 'conversion', {
+          send_to: GTAG_WHATSAPP_CONVERSION_ID,
+          value: 1.0,
+          currency: 'BRL',
+          event_label: label,
+        })
+      } catch {
+        // Blindagem contra qualquer exceção síncrona
+      }
     }
   } catch (err) {
     // Falhas de rastreamento devem ser silenciosas
