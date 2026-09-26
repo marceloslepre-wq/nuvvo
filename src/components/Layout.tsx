@@ -28,15 +28,9 @@ export default function Layout() {
       .getFirstListItem(filter)
       .then(setSettings)
       .catch(() => {
-        // Fallback caso ainda não tenha site_settings específico
-        setSettings({
-          phone: currentTenant.phone,
-          email: currentTenant.email,
-          about_us: currentTenant.about_us,
-          terms: currentTenant.terms,
-          privacy: currentTenant.privacy,
-          returns: currentTenant.returns,
-        })
+        // Se o tenant atual ainda não tiver site_settings, mantém vazio/null
+        // NUNCA buscar ou herdar de outro tenant
+        setSettings(null)
       })
   }
 
@@ -65,9 +59,10 @@ export default function Layout() {
     loadLocations()
   })
 
-  const contactPhone = settings?.phone || currentTenant?.phone || ''
-  const facebookUrl = (currentTenant?.facebook_url || settings?.facebook_url || '').trim()
-  const instagramUrl = (currentTenant?.instagram_url || settings?.instagram_url || '').trim()
+  const contactPhone = settings?.phone?.trim() || currentTenant?.phone?.trim() || ''
+  const contactEmail = settings?.email?.trim() || currentTenant?.email?.trim() || ''
+  const facebookUrl = settings?.facebook_url?.trim() || currentTenant?.facebook_url?.trim() || ''
+  const instagramUrl = settings?.instagram_url?.trim() || currentTenant?.instagram_url?.trim() || ''
   const hasSocialLinks = Boolean(facebookUrl || instagramUrl)
 
   useEffect(() => {
@@ -114,8 +109,8 @@ export default function Layout() {
 
   const logoUrl = settings?.logo
     ? pb.files.getURL(settings, settings.logo)
-    : currentTenant.logo
-      ? pb.files.getURL(currentTenant as any, currentTenant.logo)
+    : (currentTenant as any).logo
+      ? pb.files.getURL(currentTenant as any, (currentTenant as any).logo)
       : null
 
   const brandName = currentTenant.name || 'Plataforma'
@@ -474,20 +469,18 @@ export default function Layout() {
                   </a>
                 </li>
               )}
-              {(settings?.email || currentTenant.email) && (
+              {contactEmail && (
                 <li>
                   E-mail:{' '}
                   <a
-                    href={`mailto:${settings?.email || currentTenant.email}`}
+                    href={`mailto:${contactEmail}`}
                     className="hover:text-primary transition-colors"
                   >
-                    {settings?.email || currentTenant.email}
+                    {contactEmail}
                   </a>
                 </li>
               )}
-              {!contactPhone && !settings?.email && !currentTenant.email && (
-                <li>Informações de contato indisponíveis.</li>
-              )}
+              {!contactPhone && !contactEmail && <li>Informações de contato indisponíveis.</li>}
             </ul>
           </div>
           <div>

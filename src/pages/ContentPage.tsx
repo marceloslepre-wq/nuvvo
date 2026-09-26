@@ -27,10 +27,14 @@ export default function ContentPage() {
     pb.collection('site_settings')
       .getFirstListItem(`tenant = '${currentTenant.id}'`)
       .then((settings) => {
-        setContent(settings[pageInfo.field] || (currentTenant as any)[pageInfo.field] || '')
+        const val = settings?.[pageInfo.field] || (currentTenant as any)?.[pageInfo.field] || ''
+        setContent(val)
       })
       .catch(() => {
-        setContent((currentTenant as any)[pageInfo.field] || '')
+        // Se não encontrar site_settings do tenant atual, busca no próprio tenant ou vazio
+        // NUNCA busca global ou herda de outro tenant
+        const val = (currentTenant as any)?.[pageInfo.field] || ''
+        setContent(val)
       })
       .finally(() => {
         setLoading(false)

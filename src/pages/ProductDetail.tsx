@@ -81,12 +81,13 @@ export default function ProductDetail() {
         try {
           const settings = await pb
             .collection('site_settings')
-            .getFirstListItem(`tenant='${currentTenant.id}'`)
+            .getFirstListItem(`tenant = '${currentTenant.id}'`)
           setSiteSettings(settings)
         } catch (e) {
+          // Se o tenant atual não possuir site_settings, usa dados do próprio tenant ou null
           setSiteSettings({
-            phone: currentTenant.phone,
-            email: currentTenant.email,
+            phone: currentTenant.phone || '',
+            email: currentTenant.email || '',
           })
         }
         setSelectedVariation(null)
@@ -223,7 +224,7 @@ export default function ProductDetail() {
 
     trackWhatsAppConversion('product_rent_click')
 
-    const phoneRaw = siteSettings?.phone || currentTenant?.phone || ''
+    const phoneRaw = siteSettings?.phone?.trim() || currentTenant?.phone?.trim() || ''
 
     const productRef = currentVariantDetail?.reference_code || product.reference || ''
     const periodName = selectedPeriodObj?.name || ''

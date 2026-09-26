@@ -28,9 +28,29 @@ export const updateTenant = async (id: string, data: Partial<Tenant>): Promise<T
 }
 
 export const createTenant = async (data: Partial<Tenant>): Promise<Tenant> => {
-  return pb.collection<Tenant>('tenants').create(data, {
+  const newTenant = await pb.collection<Tenant>('tenants').create(data, {
     expand: 'plan',
   })
+
+  // Cria automaticamente site_settings vinculado ao novo tenant
+  // com phone/email do cadastro da licença e todos os demais campos vazios
+  try {
+    await pb.collection('site_settings').create({
+      tenant: newTenant.id,
+      phone: (newTenant.phone || '').trim(),
+      email: (newTenant.email || '').trim(),
+      facebook_url: (newTenant.facebook_url || '').trim(),
+      instagram_url: (newTenant.instagram_url || '').trim(),
+      about_us: '',
+      terms: '',
+      privacy: '',
+      returns: '',
+    })
+  } catch (err) {
+    console.warn('Erro ao auto-criar site_settings para o tenant:', err)
+  }
+
+  return newTenant
 }
 
 export const deleteTenant = async (id: string): Promise<boolean> => {

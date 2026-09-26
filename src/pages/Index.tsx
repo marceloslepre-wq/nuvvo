@@ -71,15 +71,14 @@ export default function Index() {
       setRentalPrices(rPrices)
       setLocations(locs)
 
-      const heroFile = settings?.hero_media || currentTenant.hero_media
       if (settings?.hero_media) {
         const url = pb.files.getURL(settings, settings.hero_media)
         setHeroMedia((prev) => {
           if (prev !== url) setImageLoaded(false)
           return url
         })
-      } else if (currentTenant.hero_media) {
-        const url = pb.files.getURL(currentTenant as any, currentTenant.hero_media)
+      } else if ((currentTenant as any).hero_media) {
+        const url = pb.files.getURL(currentTenant as any, (currentTenant as any).hero_media)
         setHeroMedia((prev) => {
           if (prev !== url) setImageLoaded(false)
           return url
