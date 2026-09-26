@@ -239,14 +239,20 @@ export default function AdminSettings() {
     if (!confirm('Excluir?')) return
     try {
       await pb.collection(col).delete(id)
-      loadData()
-      toast({ title: 'Excluído' })
     } catch (err: any) {
       toast({
         title: 'Erro ao excluir',
         description: err.message,
         variant: 'destructive',
       })
+      return
+    }
+
+    toast({ title: 'Excluído' })
+    try {
+      loadData()
+    } catch {
+      // Ignora falha de refresh silenciosamente
     }
   }
 
@@ -270,9 +276,6 @@ export default function AdminSettings() {
         tenant: targetTenantId || null,
         emailVisibility: true,
       })
-      loadData()
-      form.reset()
-      toast({ title: 'Usuário Adicionado' })
     } catch (err: any) {
       const fieldErrors = extractFieldErrors(err)
       if (fieldErrors.email && err?.response?.data?.email?.code === 'validation_not_unique') {
@@ -284,23 +287,48 @@ export default function AdminSettings() {
         return
       }
       toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
+      return
+    }
+
+    toast({ title: 'Usuário Adicionado' })
+    try {
+      form?.reset?.()
+    } catch {
+      // Ignora falha secundária no reset
+    }
+    try {
+      loadData()
+    } catch {
+      // Ignora falha de refresh silenciosamente
     }
   }
 
   const handleAddLocation = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const fd = new FormData(form)
     const targetTenantId = activeAdminTenant?.id || user?.tenant || ''
     if (targetTenantId) {
       fd.append('tenant', targetTenantId)
     }
     try {
       await pb.collection('pickup_locations').create(fd)
-      loadData()
-      e.currentTarget.reset()
-      toast({ title: 'Local Adicionado' })
     } catch (err: any) {
       toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
+      return
+    }
+
+    // Sucesso garantido: registrar notificação e atualizar dados/formulário sem quebrar o fluxo
+    toast({ title: 'Local Adicionado' })
+    try {
+      form?.reset?.()
+    } catch {
+      // Ignora falha secundária no reset
+    }
+    try {
+      loadData()
+    } catch {
+      // Ignora falha de refresh silenciosamente
     }
   }
 
@@ -351,11 +379,18 @@ export default function AdminSettings() {
         fd.append('video_file', '')
       }
       await pb.collection('pickup_locations').update(editingLocation.id, fd)
-      closeEditLocation()
-      loadData()
-      toast({ title: 'Local Atualizado' })
     } catch (err: any) {
       toast({ title: 'Erro', description: getErrorMessage(err), variant: 'destructive' })
+      setSavingLocation(false)
+      return
+    }
+
+    toast({ title: 'Local Atualizado' })
+    closeEditLocation()
+    try {
+      loadData()
+    } catch {
+      // Ignora falha de refresh silenciosamente
     }
     setSavingLocation(false)
   }
@@ -433,9 +468,6 @@ export default function AdminSettings() {
     }
     try {
       await pb.collection(col).create(data)
-      loadData()
-      form.reset()
-      toast({ title: 'Adicionado' })
     } catch (err: any) {
       const errObj = err.response?.data
       let errMsg = err.message
@@ -447,6 +479,19 @@ export default function AdminSettings() {
             .join(' ') || errMsg
       }
       toast({ title: 'Erro', description: errMsg, variant: 'destructive' })
+      return
+    }
+
+    toast({ title: 'Adicionado' })
+    try {
+      form?.reset?.()
+    } catch {
+      // Ignora falha secundária no reset
+    }
+    try {
+      loadData()
+    } catch {
+      // Ignora falha de refresh silenciosamente
     }
   }
 
@@ -1131,16 +1176,26 @@ export default function AdminSettings() {
                     }),
                     headers: { 'Content-Type': 'application/json' },
                   })
-                  loadData()
-                  setEditingUser(null)
-                  form.reset()
-                  toast({ title: 'Usuário Atualizado' })
                 } catch (err: any) {
                   toast({
                     title: 'Erro',
                     description: getErrorMessage(err),
                     variant: 'destructive',
                   })
+                  return
+                }
+
+                toast({ title: 'Usuário Atualizado' })
+                setEditingUser(null)
+                try {
+                  form?.reset?.()
+                } catch {
+                  // Ignora falha secundária no reset
+                }
+                try {
+                  loadData()
+                } catch {
+                  // Ignora falha de refresh silenciosamente
                 }
               }}
               className="space-y-4"
