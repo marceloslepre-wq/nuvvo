@@ -71,8 +71,14 @@ export default function StoresPage() {
               ))}
             </div>
           ) : locations.length === 0 ? (
-            <div className="text-center py-16 text-gray-500">
-              Nenhuma loja disponível no momento.
+            <div className="text-center py-16 px-4 max-w-md mx-auto">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-400">
+                <Store className="h-8 w-8" />
+              </div>
+              <h2 className="text-xl font-semibold text-secondary mb-2">Nenhuma loja cadastrada</h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Nenhum ponto de retirada cadastrado no momento para esta empresa.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

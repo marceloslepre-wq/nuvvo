@@ -88,7 +88,15 @@ export default function Index() {
         setImageLoaded(true)
       }
 
-      if (selectedCityId) {
+      if (locs.length === 0) {
+        // Se a empresa não tem locais de retirada cadastrados,
+        // exibe direto todos os produtos ativos do tenant, sem exigir seleção de cidade
+        const data = await pb.collection('products').getFullList({
+          filter: `status='active' && tenant='${currentTenant.id}'`,
+          sort: 'order',
+        })
+        setProducts(data as Product[])
+      } else if (selectedCityId) {
         const data = await pb.collection('products').getFullList({
           filter: `status='active' && tenant='${currentTenant.id}' && available_locations~'${selectedCityId}'`,
           sort: 'order',
@@ -154,32 +162,34 @@ export default function Index() {
         )}
       </section>
 
-      <section className="py-6 bg-white border-b">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xl mx-auto">
-            <div className="flex items-center gap-2 text-secondary font-medium">
-              <MapPin className="h-5 w-5 text-primary" />
-              <span className="whitespace-nowrap">Sua cidade:</span>
+      {locations.length > 0 && (
+        <section className="py-6 bg-white border-b">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xl mx-auto">
+              <div className="flex items-center gap-2 text-secondary font-medium">
+                <MapPin className="h-5 w-5 text-primary" />
+                <span className="whitespace-nowrap">Sua cidade:</span>
+              </div>
+              <Select
+                value={selectedCityId || '_none'}
+                onValueChange={(v) => setSelectedCityId(v === '_none' ? '' : v)}
+              >
+                <SelectTrigger className="w-full sm:w-80">
+                  <SelectValue placeholder="Selecione sua cidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Selecione sua cidade</SelectItem>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select
-              value={selectedCityId || '_none'}
-              onValueChange={(v) => setSelectedCityId(v === '_none' ? '' : v)}
-            >
-              <SelectTrigger className="w-full sm:w-80">
-                <SelectValue placeholder="Selecione sua cidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">Selecione sua cidade</SelectItem>
-                {locations.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.id}>
-                    {loc.city}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {categories.length > 0 && (
         <section className="py-8 bg-white border-b">
@@ -205,7 +215,7 @@ export default function Index() {
             <h2 className="text-3xl font-bold text-secondary mb-2">Todos os Produtos</h2>
           </div>
 
-          {!selectedCityId ? (
+          {locations.length > 0 && !selectedCityId ? (
             <div className="w-full py-16 px-6 text-center text-gray-500 col-span-full bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
                 <MapPin className="h-8 w-8" />
@@ -328,7 +338,9 @@ export default function Index() {
 
               {products.length === 0 && (
                 <div className="w-full text-center py-10 text-gray-500 col-span-full bg-white rounded-2xl shadow-sm">
-                  Nenhum produto disponível para esta cidade no momento.
+                  {locations.length > 0
+                    ? 'Nenhum produto disponível para esta cidade no momento.'
+                    : 'Nenhum produto cadastrado no momento.'}
                 </div>
               )}
             </div>

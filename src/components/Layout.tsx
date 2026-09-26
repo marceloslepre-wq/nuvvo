@@ -146,12 +146,14 @@ export default function Layout() {
               >
                 Contato
               </Link>
-              <Link
-                to={`${tenantBasePath || ''}/nossas-lojas`}
-                className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
-              >
-                Nossas Lojas
-              </Link>
+              {locations.length > 0 && (
+                <Link
+                  to={`${tenantBasePath || ''}/nossas-lojas`}
+                  className="text-sm font-medium text-gray-600 hover:text-primary transition-colors"
+                >
+                  Nossas Lojas
+                </Link>
+              )}
               <Link
                 to="/admin"
                 className="text-sm font-medium text-primary hover:text-primary/80 transition-colors bg-primary/10 px-3 py-1 rounded-md"
@@ -358,14 +360,16 @@ export default function Layout() {
                       Contato
                     </Link>
                   </SheetClose>
-                  <SheetClose asChild>
-                    <Link
-                      to={`${tenantBasePath || ''}/nossas-lojas`}
-                      className="text-lg font-medium hover:text-primary transition-colors"
-                    >
-                      Nossas Lojas
-                    </Link>
-                  </SheetClose>
+                  {locations.length > 0 && (
+                    <SheetClose asChild>
+                      <Link
+                        to={`${tenantBasePath || ''}/nossas-lojas`}
+                        className="text-lg font-medium hover:text-primary transition-colors"
+                      >
+                        Nossas Lojas
+                      </Link>
+                    </SheetClose>
+                  )}
                   <SheetClose asChild>
                     <Link
                       to="/admin"
