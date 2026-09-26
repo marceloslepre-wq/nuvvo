@@ -337,7 +337,44 @@ export default function Index() {
                           }
 
                           // Produto de VENDA / SERVIÇO:
-                          // 1. Preço direto do produto
+                          // 1. Preços nas variações (campo numérico price ou texto em reference_code)
+                          const pvds = variantDetails.filter((vd) => vd.product === product.id)
+                          const numericPrices: number[] = []
+                          for (const vd of pvds) {
+                            if (vd.price !== undefined && vd.price !== null && vd.price > 0) {
+                              numericPrices.push(Number(vd.price))
+                            } else if (vd.reference_code) {
+                              const cleaned = String(vd.reference_code)
+                                .replace(/[^0-9,.-]/g, '')
+                                .trim()
+                              if (cleaned) {
+                                let n = NaN
+                                if (cleaned.includes(',')) {
+                                  n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
+                                } else {
+                                  n = parseFloat(cleaned)
+                                }
+                                if (!isNaN(n) && n > 0) numericPrices.push(n)
+                              }
+                            }
+                          }
+
+                          if (numericPrices.length > 0) {
+                            const minVarPrice = Math.min(...numericPrices)
+                            return (
+                              <>
+                                <span className="text-xs font-normal text-gray-500 mr-1">
+                                  A partir de
+                                </span>
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                }).format(minVarPrice)}
+                              </>
+                            )
+                          }
+
+                          // 2. Preço único direto do produto
                           if (
                             product.price !== undefined &&
                             product.price !== null &&
@@ -347,32 +384,6 @@ export default function Index() {
                               style: 'currency',
                               currency: 'BRL',
                             }).format(product.price)
-                          }
-
-                          // 2. Preços definidos nas referências por variação
-                          const pvds = variantDetails.filter(
-                            (vd) => vd.product === product.id && vd.reference_code,
-                          )
-                          const numericPrices: number[] = []
-                          for (const vd of pvds) {
-                            const cleaned = String(vd.reference_code || '')
-                              .replace(/[^0-9,.-]/g, '')
-                              .trim()
-                            if (!cleaned) continue
-                            let n = NaN
-                            if (cleaned.includes(',')) {
-                              n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
-                            } else {
-                              n = parseFloat(cleaned)
-                            }
-                            if (!isNaN(n) && n > 0) numericPrices.push(n)
-                          }
-                          if (numericPrices.length > 0) {
-                            const minVarPrice = Math.min(...numericPrices)
-                            return new Intl.NumberFormat('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            }).format(minVarPrice)
                           }
 
                           return 'Sob consulta'

@@ -157,9 +157,10 @@ export default function ProductDetail() {
   // Cálculo do preço:
   // Se for locação: usa tabela de preços por prazo
   // Se for venda/serviço:
-  //   1) Se houver variação selecionada e tiver preço no reference_code, usa ele.
-  //   2) Senão se o produto tiver price base > 0, usa ele.
-  //   3) Senão pega o menor preço numérico entre as variações cadastradas.
+  //   1) Se houver variação selecionada com preço próprio (campo price ou reference_code), usa ele.
+  //   2) Se houver variação selecionada sem preço próprio, cai para o preço base do produto ou 0.
+  //   3) Sem variação selecionada: se houver variações com preço, exibe o menor ("a partir de");
+  //      senão se tiver preço base > 0, usa ele; senão 0 ("Sob consulta").
   const parseNumericPrice = (str: string | undefined | null) => {
     if (!str) return null
     const cleaned = String(str)
@@ -175,7 +176,17 @@ export default function ProductDetail() {
     return !isNaN(n) && n > 0 ? n : null
   }
 
+  const getVariantPrice = (vd: any) => {
+    if (!vd) return null
+    if (vd.price !== undefined && vd.price !== null && vd.price > 0) {
+      return Number(vd.price)
+    }
+    return parseNumericPrice(vd.reference_code)
+  }
+
   let displayPrice = 0
+  let isFromPrice = false
+
   if (isRentalMode) {
     displayPrice = currentPriceRecord
       ? currentPriceRecord.price
@@ -184,17 +195,26 @@ export default function ProductDetail() {
         : 0
   } else {
     // Venda / Serviço
-    const selectedVarPrice = parseNumericPrice(currentVariantDetail?.reference_code)
-    if (selectedVarPrice !== null) {
-      displayPrice = selectedVarPrice
-    } else if (product.price !== undefined && product.price !== null && product.price > 0) {
-      displayPrice = product.price
+    if (selectedVariation) {
+      const varPrice = getVariantPrice(currentVariantDetail)
+      if (varPrice !== null) {
+        displayPrice = varPrice
+      } else if (product.price !== undefined && product.price !== null && product.price > 0) {
+        displayPrice = product.price
+      } else {
+        displayPrice = 0
+      }
     } else {
+      // Nenhuma variação selecionada
       const allVarPrices = productVariantDetails
-        .map((vd) => parseNumericPrice(vd.reference_code))
+        .map((vd) => getVariantPrice(vd))
         .filter((n): n is number => n !== null)
+
       if (allVarPrices.length > 0) {
         displayPrice = Math.min(...allVarPrices)
+        isFromPrice = true
+      } else if (product.price !== undefined && product.price !== null && product.price > 0) {
+        displayPrice = product.price
       } else {
         displayPrice = 0
       }
@@ -281,10 +301,13 @@ export default function ProductDetail() {
       if (productRef) text += `Referência: ${productRef}\n`
       if (periodName) text += `Período: ${periodName}\n`
     } else {
-      text = `Olá! Gostaria de mais informações sobre:\nProduto/Serviço: ${product.name}\n`
+      text = `Olá! Gostaria de solicitar o seguinte serviço/produto:\nProduto/Serviço: ${product.name}\n`
       if (variationName) text += `Opção/Variação: ${variationName}\n`
-      if (productRef) text += `Detalhes/Valor: ${productRef}\n`
-      if (displayPrice > 0) {
+      if (productRef) text += `Referência: ${productRef}\n`
+      const chosenVarPrice = getVariantPrice(currentVariantDetail)
+      if (chosenVarPrice !== null) {
+        text += `Valor da Variação: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(chosenVarPrice)}\n`
+      } else if (displayPrice > 0) {
         text += `Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(displayPrice)}\n`
       }
     }
@@ -409,11 +432,18 @@ export default function ProductDetail() {
             <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-2">{product.name}</h1>
 
             <div className="text-4xl font-bold text-primary mb-6">
-              {displayPrice > 0
-                ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              {displayPrice > 0 ? (
+                <>
+                  {!isRentalMode && isFromPrice && (
+                    <span className="text-sm font-normal text-gray-500 mr-2">A partir de</span>
+                  )}
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
                     displayPrice,
-                  )
-                : 'Sob consulta'}
+                  )}
+                </>
+              ) : (
+                'Sob consulta'
+              )}
               {displayPrice > 0 && isRentalMode && selectedPeriodObj && (
                 <span className="text-sm text-gray-500 font-normal block mt-1">
                   / {selectedPeriodObj.name}
@@ -473,10 +503,9 @@ export default function ProductDetail() {
               {(() => {
                 const refVal = currentVariantDetail?.reference_code || product.reference
                 if (!refVal) return null
-                const label = isRentalMode ? 'Referência' : 'Opção / Preço'
                 return (
                   <p className="text-sm text-gray-500 mt-4 font-medium tracking-wide">
-                    {label}: {refVal}
+                    Referência: {refVal}
                   </p>
                 )
               })()}

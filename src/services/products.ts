@@ -1,6 +1,13 @@
 import pb from '@/lib/pocketbase/client'
 import type { RecordModel } from 'pocketbase'
 
+export interface ProductVariantDetail extends RecordModel {
+  product: string
+  variation: string
+  reference_code?: string
+  price?: number
+}
+
 export interface Product extends RecordModel {
   name: string
   description: string

@@ -46,6 +46,7 @@ export default function AdminProducts() {
   const [pickupLocations, setPickupLocations] = useState<any[]>([])
 
   const [variantDetails, setVariantDetails] = useState<Record<string, string>>({})
+  const [variantPrices, setVariantPrices] = useState<Record<string, number | ''>>({})
   const [rentalPrices, setRentalPrices] = useState<Record<string, number>>({})
 
   const [newMediaVariation, setNewMediaVariation] = useState('')
@@ -243,10 +244,14 @@ export default function AdminProducts() {
           .collection('product_variant_details')
           .getFullList({ filter: `product='${p.id}'` })
         const vDetails: Record<string, string> = {}
+        const vPrices: Record<string, number | ''> = {}
         pvd.forEach((vd) => {
           vDetails[vd.variation] = vd.reference_code
+          vPrices[vd.variation] =
+            vd.price !== undefined && vd.price !== null && vd.price !== '' ? Number(vd.price) : ''
         })
         setVariantDetails(vDetails)
+        setVariantPrices(vPrices)
 
         const prp = await pb
           .collection('product_rental_prices')
@@ -259,11 +264,13 @@ export default function AdminProducts() {
       } catch {
         setProductMedia([])
         setVariantDetails({})
+        setVariantPrices({})
         setRentalPrices({})
       }
     } else {
       setProductMedia([])
       setVariantDetails({})
+      setVariantPrices({})
       setRentalPrices({})
     }
 
@@ -529,14 +536,24 @@ export default function AdminProducts() {
         .catch(() => [])
       const existingMap = new Map<string, any>(existingPvd.map((vd: any) => [vd.variation, vd]))
 
+      const isRentalSave = formData.rental_period && formData.rental_period.length > 0
       for (const vId of formData.variations) {
         const refCode = variantDetails[vId] || ''
+        const rawVarPrice = variantPrices[vId]
+        const varPrice =
+          !isRentalSave && rawVarPrice !== '' && rawVarPrice !== undefined && rawVarPrice !== null
+            ? Number(rawVarPrice)
+            : null
         const existing = existingMap.get(vId)
         if (existing) {
-          if (existing.reference_code !== refCode) {
+          const existingPrice =
+            existing.price !== undefined && existing.price !== null && existing.price !== ''
+              ? Number(existing.price)
+              : null
+          if (existing.reference_code !== refCode || existingPrice !== varPrice) {
             await pb
               .collection('product_variant_details')
-              .update(existing.id, { reference_code: refCode })
+              .update(existing.id, { reference_code: refCode, price: varPrice })
           }
           existingMap.delete(vId)
         } else {
@@ -544,6 +561,7 @@ export default function AdminProducts() {
             product: savedProductId,
             variation: vId,
             reference_code: refCode,
+            price: varPrice,
           })
         }
       }
@@ -713,34 +731,47 @@ export default function AdminProducts() {
                         )
                       }
                       // Venda / Serviço
+                      // Checar preços numéricos das variações
+                      const pvds = pvdList.filter((vd) => vd.product === p.id)
+                      const numericPrices: number[] = []
+                      for (const vd of pvds) {
+                        if (vd.price !== undefined && vd.price !== null && vd.price > 0) {
+                          numericPrices.push(Number(vd.price))
+                        } else if (vd.reference_code) {
+                          // Suporte legado se o preço estiver no código/texto
+                          const cleaned = String(vd.reference_code)
+                            .replace(/[^0-9,.-]/g, '')
+                            .trim()
+                          if (cleaned) {
+                            let n = NaN
+                            if (cleaned.includes(',')) {
+                              n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
+                            } else {
+                              n = parseFloat(cleaned)
+                            }
+                            if (!isNaN(n) && n > 0) numericPrices.push(n)
+                          }
+                        }
+                      }
+                      if (numericPrices.length > 0) {
+                        const minVarPrice = Math.min(...numericPrices)
+                        return (
+                          <span>
+                            <span className="text-xs text-gray-500 mr-1 font-normal">
+                              A partir de
+                            </span>
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(minVarPrice)}
+                          </span>
+                        )
+                      }
                       if (p.price !== undefined && p.price !== null && p.price > 0) {
                         return new Intl.NumberFormat('pt-BR', {
                           style: 'currency',
                           currency: 'BRL',
                         }).format(p.price)
-                      }
-                      // Checar se há preço nas variações
-                      const pvds = pvdList.filter((vd) => vd.product === p.id && vd.reference_code)
-                      const numericPrices: number[] = []
-                      for (const vd of pvds) {
-                        const cleaned = String(vd.reference_code || '')
-                          .replace(/[^0-9,.-]/g, '')
-                          .trim()
-                        if (!cleaned) continue
-                        let n = NaN
-                        if (cleaned.includes(',')) {
-                          n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
-                        } else {
-                          n = parseFloat(cleaned)
-                        }
-                        if (!isNaN(n) && n > 0) numericPrices.push(n)
-                      }
-                      if (numericPrices.length > 0) {
-                        const minVarPrice = Math.min(...numericPrices)
-                        return new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL',
-                        }).format(minVarPrice)
                       }
                       return '-'
                     })()}
@@ -883,20 +914,83 @@ export default function AdminProducts() {
 
               {(formData.variations || []).length > 0 && (
                 <div className="space-y-3 col-span-2 mt-2 p-4 border border-dashed rounded-md bg-gray-50/50">
-                  <Label>Referências por Variação</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <Label>
+                      {formData.rental_period && formData.rental_period.length > 0
+                        ? 'Referências por Variação'
+                        : 'Referências e Preços por Variação'}
+                    </Label>
+                    {(!formData.rental_period || formData.rental_period.length === 0) && (
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
+                        Preço por variação ativado
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
                     {(formData.variations || []).map((vId: string) => {
                       const vName = variations.find((v: any) => v.id === vId)?.name
+                      const isRentalModeCurrent =
+                        formData.rental_period && formData.rental_period.length > 0
+
+                      if (isRentalModeCurrent) {
+                        return (
+                          <div key={vId} className="space-y-1">
+                            <Label className="text-xs text-gray-500">{vName}</Label>
+                            <Input
+                              placeholder="Referência (opcional)"
+                              value={variantDetails[vId] || ''}
+                              onChange={(e) =>
+                                setVariantDetails({ ...variantDetails, [vId]: e.target.value })
+                              }
+                            />
+                          </div>
+                        )
+                      }
+
                       return (
-                        <div key={vId} className="space-y-1">
-                          <Label className="text-xs text-gray-500">{vName}</Label>
-                          <Input
-                            placeholder="Referência (opcional)"
-                            value={variantDetails[vId] || ''}
-                            onChange={(e) =>
-                              setVariantDetails({ ...variantDetails, [vId]: e.target.value })
-                            }
-                          />
+                        <div
+                          key={vId}
+                          className="p-3 bg-white rounded-md border border-gray-200 space-y-2"
+                        >
+                          <Label className="text-xs font-semibold text-gray-700 block">
+                            {vName}
+                          </Label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <span className="text-[11px] text-gray-500">
+                                Referência (opcional)
+                              </span>
+                              <Input
+                                placeholder="Ex: 001"
+                                value={variantDetails[vId] || ''}
+                                onChange={(e) =>
+                                  setVariantDetails({ ...variantDetails, [vId]: e.target.value })
+                                }
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[11px] text-gray-500">
+                                Preço (R$) (opcional)
+                              </span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Ex: 60.00"
+                                value={
+                                  variantPrices[vId] !== undefined && variantPrices[vId] !== null
+                                    ? variantPrices[vId]
+                                    : ''
+                                }
+                                onChange={(e) =>
+                                  setVariantPrices({
+                                    ...variantPrices,
+                                    [vId]: e.target.value === '' ? '' : parseFloat(e.target.value),
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
                         </div>
                       )
                     })}
