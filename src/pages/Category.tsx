@@ -24,6 +24,7 @@ export default function CategoryPage() {
   const [rentalPrices, setRentalPrices] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
   const [locations, setLocations] = useState<any[]>([])
+  const [variantDetails, setVariantDetails] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export default function CategoryPage() {
         setCategory(cat)
 
         const tenantFilter = currentTenant ? `tenant = '${currentTenant.id}'` : ''
-        const [rPrices, rPeriods, locs] = await Promise.all([
+        const [rPrices, rPeriods, locs, vDetails] = await Promise.all([
           pb
             .collection('product_rental_prices')
             .getFullList()
@@ -56,10 +57,15 @@ export default function CategoryPage() {
             .collection('pickup_locations')
             .getFullList({ filter: tenantFilter })
             .catch(() => []),
+          pb
+            .collection('product_variant_details')
+            .getFullList()
+            .catch(() => []),
         ])
         setRentalPrices(rPrices)
         setRentalPeriods(rPeriods)
         setLocations(locs)
+        setVariantDetails(vDetails)
 
         if (!selectedCityId || !currentTenant) {
           setProducts([])
@@ -79,6 +85,20 @@ export default function CategoryPage() {
     }
     if (id && currentTenant) loadCategory()
   }, [id, selectedCityId, currentTenant?.id])
+
+  useRealtime('product_rental_prices', () => {
+    pb.collection('product_rental_prices')
+      .getFullList()
+      .then(setRentalPrices)
+      .catch(() => {})
+  })
+
+  useRealtime('product_variant_details', () => {
+    pb.collection('product_variant_details')
+      .getFullList()
+      .then(setVariantDetails)
+      .catch(() => {})
+  })
 
   useRealtime('products', () => {
     if (id && currentTenant) {
@@ -230,23 +250,73 @@ export default function CategoryPage() {
                     </p>
                     <div className="text-xl font-bold text-secondary pt-2">
                       {(() => {
-                        const prices = rentalPrices.filter((prp) => prp.product === product.id)
-                        if (prices.length === 0) return 'Sob consulta'
-                        const minPrice = Math.min(...prices.map((prp) => prp.price))
-                        const periodId = prices.find((prp) => prp.price === minPrice)?.rental_period
-                        const periodName =
-                          rentalPeriods.find((r) => r.id === periodId)?.name || 'período'
-                        return (
-                          <>
-                            {new Intl.NumberFormat('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            }).format(minPrice)}
-                            <span className="text-sm font-normal text-gray-500 ml-1">
-                              / {periodName}
-                            </span>
-                          </>
+                        const hasRentalPeriods =
+                          Array.isArray(product.rental_period) && product.rental_period.length > 0
+                        if (hasRentalPeriods) {
+                          const prices = rentalPrices.filter((prp) => prp.product === product.id)
+                          if (prices.length === 0) return 'Sob consulta'
+                          const minPrice = Math.min(...prices.map((prp) => prp.price))
+                          const periodId = prices.find(
+                            (prp) => prp.price === minPrice,
+                          )?.rental_period
+                          const periodName =
+                            rentalPeriods.find((r) => r.id === periodId)?.name || 'período'
+                          return (
+                            <>
+                              <span className="text-xs font-normal text-gray-500 mr-1">
+                                A partir de
+                              </span>
+                              {new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              }).format(minPrice)}
+                              <span className="text-sm font-normal text-gray-500 ml-1">
+                                / {periodName}
+                              </span>
+                            </>
+                          )
+                        }
+
+                        // Produto de VENDA / SERVIÇO:
+                        // 1. Preço direto do produto
+                        if (
+                          product.price !== undefined &&
+                          product.price !== null &&
+                          product.price > 0
+                        ) {
+                          return new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(product.price)
+                        }
+
+                        // 2. Preços definidos nas referências por variação
+                        const pvds = variantDetails.filter(
+                          (vd) => vd.product === product.id && vd.reference_code,
                         )
+                        const numericPrices: number[] = []
+                        for (const vd of pvds) {
+                          const cleaned = String(vd.reference_code || '')
+                            .replace(/[^0-9,.-]/g, '')
+                            .trim()
+                          if (!cleaned) continue
+                          let n = NaN
+                          if (cleaned.includes(',')) {
+                            n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
+                          } else {
+                            n = parseFloat(cleaned)
+                          }
+                          if (!isNaN(n) && n > 0) numericPrices.push(n)
+                        }
+                        if (numericPrices.length > 0) {
+                          const minVarPrice = Math.min(...numericPrices)
+                          return new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                          }).format(minVarPrice)
+                        }
+
+                        return 'Sob consulta'
                       })()}
                     </div>
 

@@ -144,6 +144,8 @@ export default function ProductDetail() {
       : [product.expand.rental_period]
     : []
 
+  const isRentalMode = availableRentalPeriods.length > 0
+
   const currentVariantDetail = selectedVariation
     ? productVariantDetails.find((vd) => vd.variation === selectedVariation)
     : null
@@ -152,11 +154,52 @@ export default function ProductDetail() {
     ? rentalPrices.find((rp) => rp.rental_period === selectedRentalPeriod)
     : null
 
-  const displayPrice = currentPriceRecord
-    ? currentPriceRecord.price
-    : rentalPrices.length > 0
-      ? Math.min(...rentalPrices.map((r) => r.price))
-      : 0
+  // Cálculo do preço:
+  // Se for locação: usa tabela de preços por prazo
+  // Se for venda/serviço:
+  //   1) Se houver variação selecionada e tiver preço no reference_code, usa ele.
+  //   2) Senão se o produto tiver price base > 0, usa ele.
+  //   3) Senão pega o menor preço numérico entre as variações cadastradas.
+  const parseNumericPrice = (str: string | undefined | null) => {
+    if (!str) return null
+    const cleaned = String(str)
+      .replace(/[^0-9,.-]/g, '')
+      .trim()
+    if (!cleaned) return null
+    let n = NaN
+    if (cleaned.includes(',')) {
+      n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
+    } else {
+      n = parseFloat(cleaned)
+    }
+    return !isNaN(n) && n > 0 ? n : null
+  }
+
+  let displayPrice = 0
+  if (isRentalMode) {
+    displayPrice = currentPriceRecord
+      ? currentPriceRecord.price
+      : rentalPrices.length > 0
+        ? Math.min(...rentalPrices.map((r) => r.price))
+        : 0
+  } else {
+    // Venda / Serviço
+    const selectedVarPrice = parseNumericPrice(currentVariantDetail?.reference_code)
+    if (selectedVarPrice !== null) {
+      displayPrice = selectedVarPrice
+    } else if (product.price !== undefined && product.price !== null && product.price > 0) {
+      displayPrice = product.price
+    } else {
+      const allVarPrices = productVariantDetails
+        .map((vd) => parseNumericPrice(vd.reference_code))
+        .filter((n): n is number => n !== null)
+      if (allVarPrices.length > 0) {
+        displayPrice = Math.min(...allVarPrices)
+      } else {
+        displayPrice = 0
+      }
+    }
+  }
 
   const selectedPeriodObj = availableRentalPeriods.find(
     (rp: any) =>
@@ -165,8 +208,7 @@ export default function ProductDetail() {
   )
 
   const canRent =
-    (!availableVariations.length || selectedVariation) &&
-    (!availableRentalPeriods.length || selectedRentalPeriod)
+    (!availableVariations.length || selectedVariation) && (!isRentalMode || selectedRentalPeriod)
 
   let imageUrl = product.image ? getFileUrl(product, product.image) : ''
   let videoUrl = product.video ? getFileUrl(product, product.video) : ''
@@ -232,10 +274,20 @@ export default function ProductDetail() {
     const mainImageUrl = imageUrl || (product.image ? getFileUrl(product, product.image) : '')
     const variationName = availableVariations.find((v: any) => v.id === selectedVariation)?.name
 
-    let text = `Olá! Gostaria de solicitar a locação do seguinte equipamento:\nProduto: ${product.name}\n`
-    if (variationName) text += `Variação: ${variationName}\n`
-    if (productRef) text += `Referência: ${productRef}\n`
-    if (periodName) text += `Período: ${periodName}\n`
+    let text = ''
+    if (isRentalMode) {
+      text = `Olá! Gostaria de solicitar a locação do seguinte equipamento:\nProduto: ${product.name}\n`
+      if (variationName) text += `Variação: ${variationName}\n`
+      if (productRef) text += `Referência: ${productRef}\n`
+      if (periodName) text += `Período: ${periodName}\n`
+    } else {
+      text = `Olá! Gostaria de mais informações sobre:\nProduto/Serviço: ${product.name}\n`
+      if (variationName) text += `Opção/Variação: ${variationName}\n`
+      if (productRef) text += `Detalhes/Valor: ${productRef}\n`
+      if (displayPrice > 0) {
+        text += `Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(displayPrice)}\n`
+      }
+    }
     text += `Link da página: ${pageUrl}\n`
     if (mainImageUrl) text += `Link da imagem: ${mainImageUrl}`
 
@@ -362,7 +414,7 @@ export default function ProductDetail() {
                     displayPrice,
                   )
                 : 'Sob consulta'}
-              {displayPrice > 0 && selectedPeriodObj && (
+              {displayPrice > 0 && isRentalMode && selectedPeriodObj && (
                 <span className="text-sm text-gray-500 font-normal block mt-1">
                   / {selectedPeriodObj.name}
                 </span>
@@ -418,11 +470,16 @@ export default function ProductDetail() {
                 className="prose prose-sm max-w-none text-gray-600 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: product.description }}
               />
-              {(currentVariantDetail?.reference_code || product.reference) && (
-                <p className="text-sm text-gray-500 mt-4 font-medium tracking-wide">
-                  Referência: {currentVariantDetail?.reference_code || product.reference}
-                </p>
-              )}
+              {(() => {
+                const refVal = currentVariantDetail?.reference_code || product.reference
+                if (!refVal) return null
+                const label = isRentalMode ? 'Referência' : 'Opção / Preço'
+                return (
+                  <p className="text-sm text-gray-500 mt-4 font-medium tracking-wide">
+                    {label}: {refVal}
+                  </p>
+                )
+              })()}
             </div>
 
             <Separator className="mb-8" />
@@ -435,7 +492,7 @@ export default function ProductDetail() {
                 onClick={handleRentClick}
               >
                 <WhatsAppIcon className="w-5 h-5 mr-2" />
-                Continuar pelo WhatsApp
+                {isRentalMode ? 'Continuar pelo WhatsApp' : 'Solicitar pelo WhatsApp'}
               </Button>
             </div>
           </div>

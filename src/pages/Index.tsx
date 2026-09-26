@@ -26,6 +26,7 @@ export default function Index() {
   const [rentalPrices, setRentalPrices] = useState<any[]>([])
   const [rentalPeriods, setRentalPeriods] = useState<any[]>([])
   const [locations, setLocations] = useState<any[]>([])
+  const [variantDetails, setVariantDetails] = useState<any[]>([])
   const [heroMedia, setHeroMedia] = useState<string>('')
   const [isDataLoading, setIsDataLoading] = useState(true)
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -34,7 +35,7 @@ export default function Index() {
     if (!currentTenant) return
     try {
       const tenantFilter = `tenant = '${currentTenant.id}'`
-      const [cats, rPeriods, rPrices, locs, settings] = await Promise.all([
+      const [cats, rPeriods, rPrices, locs, settings, vDetails] = await Promise.all([
         pb
           .collection('categories')
           .getFullList({ filter: tenantFilter, sort: 'order,name' })
@@ -65,11 +66,16 @@ export default function Index() {
           .collection('site_settings')
           .getFirstListItem(tenantFilter)
           .catch(() => null),
+        pb
+          .collection('product_variant_details')
+          .getFullList()
+          .catch(() => []),
       ])
       setCategories(cats)
       setRentalPeriods(rPeriods)
       setRentalPrices(rPrices)
       setLocations(locs)
+      setVariantDetails(vDetails)
 
       if (settings?.hero_media) {
         const url = pb.files.getURL(settings, settings.hero_media)
@@ -122,6 +128,10 @@ export default function Index() {
   })
 
   useRealtime('product_rental_prices', () => {
+    loadData()
+  })
+
+  useRealtime('product_variant_details', () => {
     loadData()
   })
 
@@ -299,25 +309,73 @@ export default function Index() {
                       </p>
                       <div className="text-xl font-bold text-secondary pt-2">
                         {(() => {
-                          const prices = rentalPrices.filter((prp) => prp.product === product.id)
-                          if (prices.length === 0) return 'Sob consulta'
-                          const minPrice = Math.min(...prices.map((prp) => prp.price))
-                          const periodId = prices.find(
-                            (prp) => prp.price === minPrice,
-                          )?.rental_period
-                          const periodName =
-                            rentalPeriods.find((r) => r.id === periodId)?.name || 'período'
-                          return (
-                            <>
-                              {new Intl.NumberFormat('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                              }).format(minPrice)}
-                              <span className="text-sm font-normal text-gray-500 ml-1">
-                                / {periodName}
-                              </span>
-                            </>
+                          const hasRentalPeriods =
+                            Array.isArray(product.rental_period) && product.rental_period.length > 0
+                          if (hasRentalPeriods) {
+                            const prices = rentalPrices.filter((prp) => prp.product === product.id)
+                            if (prices.length === 0) return 'Sob consulta'
+                            const minPrice = Math.min(...prices.map((prp) => prp.price))
+                            const periodId = prices.find(
+                              (prp) => prp.price === minPrice,
+                            )?.rental_period
+                            const periodName =
+                              rentalPeriods.find((r) => r.id === periodId)?.name || 'período'
+                            return (
+                              <>
+                                <span className="text-xs font-normal text-gray-500 mr-1">
+                                  A partir de
+                                </span>
+                                {new Intl.NumberFormat('pt-BR', {
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                }).format(minPrice)}
+                                <span className="text-sm font-normal text-gray-500 ml-1">
+                                  / {periodName}
+                                </span>
+                              </>
+                            )
+                          }
+
+                          // Produto de VENDA / SERVIÇO:
+                          // 1. Preço direto do produto
+                          if (
+                            product.price !== undefined &&
+                            product.price !== null &&
+                            product.price > 0
+                          ) {
+                            return new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(product.price)
+                          }
+
+                          // 2. Preços definidos nas referências por variação
+                          const pvds = variantDetails.filter(
+                            (vd) => vd.product === product.id && vd.reference_code,
                           )
+                          const numericPrices: number[] = []
+                          for (const vd of pvds) {
+                            const cleaned = String(vd.reference_code || '')
+                              .replace(/[^0-9,.-]/g, '')
+                              .trim()
+                            if (!cleaned) continue
+                            let n = NaN
+                            if (cleaned.includes(',')) {
+                              n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
+                            } else {
+                              n = parseFloat(cleaned)
+                            }
+                            if (!isNaN(n) && n > 0) numericPrices.push(n)
+                          }
+                          if (numericPrices.length > 0) {
+                            const minVarPrice = Math.min(...numericPrices)
+                            return new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(minVarPrice)
+                          }
+
+                          return 'Sob consulta'
                         })()}
                       </div>
 

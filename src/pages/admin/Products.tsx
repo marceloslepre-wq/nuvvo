@@ -214,6 +214,7 @@ export default function AdminProducts() {
         : p.rental_period
           ? [p.rental_period]
           : [],
+      price: p.price !== undefined && p.price !== null ? p.price : '',
       external_link: p.external_link || '',
       order: p.order || 1,
       variations: p.variations || [],
@@ -383,6 +384,15 @@ export default function AdminProducts() {
 
       if (formData.id) {
         // Step 1: Always update metadata via JSON PATCH (more reliable than FormData for text/relation fields)
+        const isRental = formData.rental_period && formData.rental_period.length > 0
+        const parsedPrice =
+          !isRental &&
+          formData.price !== '' &&
+          formData.price !== undefined &&
+          formData.price !== null
+            ? Number(formData.price)
+            : null
+
         await pb.collection('products').update(formData.id, {
           name: String(formData.name ?? ''),
           reference: String(formData.reference ?? ''),
@@ -391,6 +401,7 @@ export default function AdminProducts() {
           status: String(formData.status ?? 'active'),
           category: formData.category || null,
           order: Number(formData.order ?? 1),
+          price: parsedPrice,
           external_link: formData.external_link || null,
           variations: formData.variations || [],
           rental_period: formData.rental_period || [],
@@ -437,6 +448,15 @@ export default function AdminProducts() {
         form.append('external_link', sanitizeVideoUrl(String(formData.external_link ?? '')))
         form.append('order', String(formData.order ?? 1))
         form.append('category', String(formData.category ?? ''))
+        const isRentalCreate = formData.rental_period && formData.rental_period.length > 0
+        if (
+          !isRentalCreate &&
+          formData.price !== '' &&
+          formData.price !== undefined &&
+          formData.price !== null
+        ) {
+          form.append('price', String(formData.price))
+        }
         if (formData.variations && formData.variations.length > 0) {
           formData.variations.forEach((vId: string) => form.append('variations', vId))
         } else {
@@ -619,9 +639,8 @@ export default function AdminProducts() {
               <TableHead className="w-20">Miniatura</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Link</TableHead>
-              <TableHead>A partir de</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead>Preço / A partir de</TableHead>
+              <TableHead>Status</TableHead> <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -678,13 +697,52 @@ export default function AdminProducts() {
                   </TableCell>
                   <TableCell>
                     {(() => {
-                      const prices = prpList.filter((prp) => prp.product === p.id)
-                      if (prices.length === 0) return '-'
-                      const minPrice = Math.min(...prices.map((prp) => prp.price))
-                      return new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(minPrice)
+                      const hasRentalPeriods =
+                        Array.isArray(p.rental_period) && p.rental_period.length > 0
+                      if (hasRentalPeriods) {
+                        const prices = prpList.filter((prp) => prp.product === p.id)
+                        if (prices.length === 0) return '-'
+                        const minPrice = Math.min(...prices.map((prp) => prp.price))
+                        return (
+                          <span>
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: 'BRL',
+                            }).format(minPrice)}
+                          </span>
+                        )
+                      }
+                      // Venda / Serviço
+                      if (p.price !== undefined && p.price !== null && p.price > 0) {
+                        return new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        }).format(p.price)
+                      }
+                      // Checar se há preço nas variações
+                      const pvds = pvdList.filter((vd) => vd.product === p.id && vd.reference_code)
+                      const numericPrices: number[] = []
+                      for (const vd of pvds) {
+                        const cleaned = String(vd.reference_code || '')
+                          .replace(/[^0-9,.-]/g, '')
+                          .trim()
+                        if (!cleaned) continue
+                        let n = NaN
+                        if (cleaned.includes(',')) {
+                          n = parseFloat(cleaned.replace(/\./g, '').replace(',', '.'))
+                        } else {
+                          n = parseFloat(cleaned)
+                        }
+                        if (!isNaN(n) && n > 0) numericPrices.push(n)
+                      }
+                      if (numericPrices.length > 0) {
+                        const minVarPrice = Math.min(...numericPrices)
+                        return new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        }).format(minVarPrice)
+                      }
+                      return '-'
                     })()}
                   </TableCell>
                   <TableCell>{p.status === 'active' ? 'Ativo' : 'Suspenso'}</TableCell>
@@ -847,7 +905,19 @@ export default function AdminProducts() {
               )}
 
               <div className="space-y-2 col-span-2">
-                <Label>Prazos de Locação</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Prazos de Locação</Label>
+                  {formData.rental_period.length === 0 && (
+                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium">
+                      Modo: Venda / Serviço
+                    </span>
+                  )}
+                  {formData.rental_period.length > 0 && (
+                    <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+                      Modo: Locação
+                    </span>
+                  )}
+                </div>
                 <ToggleGroup
                   type="multiple"
                   value={formData.rental_period}
@@ -860,9 +930,13 @@ export default function AdminProducts() {
                     </ToggleGroupItem>
                   ))}
                 </ToggleGroup>
+                <p className="text-xs text-gray-400">
+                  Deixe vazio para produtos de <strong>venda ou serviços</strong> (preço simples/por
+                  variação). Marque os prazos para equipamentos de <strong>locação</strong>.
+                </p>
               </div>
 
-              {formData.rental_period.length > 0 && (
+              {formData.rental_period.length > 0 ? (
                 <div className="space-y-3 col-span-2 mt-2 p-4 border border-dashed rounded-md bg-gray-50/50">
                   <Label>Preços por Prazo de Locação</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -889,6 +963,27 @@ export default function AdminProducts() {
                       )
                     })}
                   </div>
+                </div>
+              ) : (
+                <div className="space-y-2 col-span-2 p-4 border border-dashed rounded-md bg-blue-50/30">
+                  <Label>Preço de Venda / Serviço (R$)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Ex: 100.00 (opcional se houver preços nas variações acima)"
+                    value={formData.price !== undefined ? formData.price : ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        price: e.target.value === '' ? '' : parseFloat(e.target.value),
+                      })
+                    }
+                  />
+                  <p className="text-xs text-gray-500">
+                    Defina o preço base aqui ou informe valores individuais no campo acima{' '}
+                    <strong>Referências por Variação</strong> (ex: "R$ 100,00").
+                  </p>
                 </div>
               )}
 
