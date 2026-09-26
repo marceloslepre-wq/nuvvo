@@ -25,13 +25,30 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useTenant } from '@/contexts/tenant-context'
 
 export default function AdminSettings() {
   const { user } = useAuth()
   const { activeAdminTenant, refreshTenants } = useTenant()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const validTabs = ['users', 'categories', 'variations', 'rental', 'locations', 'company']
+  const currentTab =
+    searchParams.get('tab') && validTabs.includes(searchParams.get('tab')!)
+      ? searchParams.get('tab')!
+      : 'users'
+
+  const handleTabChange = (val: string) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('tab', val)
+        return next
+      },
+      { replace: true },
+    )
+  }
   const [users, setUsers] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
   const [variations, setVariations] = useState<any[]>([])
@@ -183,11 +200,11 @@ export default function AdminSettings() {
           return []
         }),
     ])
-    setUsers(u)
-    setCategories(c)
-    setVariations(v)
-    setRentalPeriods(r)
-    setLocations(locs)
+    setUsers(Array.isArray(u) ? u : [])
+    setCategories(Array.isArray(c) ? c : [])
+    setVariations(Array.isArray(v) ? v : [])
+    setRentalPeriods(Array.isArray(r) ? r : [])
+    setLocations(Array.isArray(locs) ? locs : [])
   }
 
   useEffect(() => {
@@ -196,10 +213,10 @@ export default function AdminSettings() {
     if (activeAdminTenant) {
       // Se for tenant novo ou tiver dados cadastrados, reflete as informações fornecidas;
       // se não houver dados preenchidos, permanece vazio
-      setCompanyName(activeAdminTenant.name || '')
-      setCompanyCnpj(activeAdminTenant.document_cnpj || '')
-      setCompanyEmail(activeAdminTenant.email || '')
-      setCompanyPhone(activeAdminTenant.phone || '')
+      setCompanyName(String(activeAdminTenant.name || ''))
+      setCompanyCnpj(String(activeAdminTenant.document_cnpj || ''))
+      setCompanyEmail(String(activeAdminTenant.email || ''))
+      setCompanyPhone(String(activeAdminTenant.phone || ''))
     } else {
       setCompanyName('')
       setCompanyCnpj('')
@@ -333,16 +350,17 @@ export default function AdminSettings() {
   }
 
   const openEditLocation = (loc: any) => {
+    if (!loc) return
     setEditingLocation(loc)
     setEditForm({
-      street: loc.street || '',
-      number: loc.number || '',
-      neighborhood: loc.neighborhood || '',
-      city: loc.city || '',
-      state: loc.state || '',
-      zip: loc.zip || '',
-      hours: loc.hours || '',
-      video_url: loc.video_url || '',
+      street: String(loc.street || ''),
+      number: String(loc.number || ''),
+      neighborhood: String(loc.neighborhood || ''),
+      city: String(loc.city || ''),
+      state: String(loc.state || ''),
+      zip: String(loc.zip || ''),
+      hours: String(loc.hours || ''),
+      video_url: String(loc.video_url || ''),
     })
     setEditImageFile(null)
     setDeleteEditImage(false)
@@ -513,8 +531,8 @@ export default function AdminSettings() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Configurações Globais</h1>
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="flex flex-wrap h-auto">
+      <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
           <TabsTrigger value="variations">Variações</TabsTrigger>
@@ -831,49 +849,66 @@ export default function AdminSettings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {locations.length === 0 ? (
+                {!locations || locations.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-sm text-gray-500 py-6">
                       Nenhum local cadastrado.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  locations.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell>
-                        {l.street}, {l.number} - {l.neighborhood}
-                      </TableCell>
-                      <TableCell>
-                        {l.city}/{l.state}
-                      </TableCell>
-                      <TableCell>{l.hours}</TableCell>
-                      <TableCell>
-                        {l.image ? (
-                          <img
-                            src={pb.files.getURL(l, l.image)}
-                            alt="Local"
-                            className="h-10 w-16 object-cover rounded"
-                          />
-                        ) : (
-                          <span className="text-xs text-gray-400">Sem imagem</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditLocation(l)}>
-                            <Pencil className="h-4 w-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteRecord('pickup_locations', l.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  locations.map((l) => {
+                    if (!l) return null
+                    const addressParts = [
+                      l.street,
+                      l.number ? `, ${l.number}` : '',
+                      l.neighborhood ? ` - ${l.neighborhood}` : '',
+                    ]
+                      .filter(Boolean)
+                      .join('')
+
+                    return (
+                      <TableRow key={l.id}>
+                        <TableCell className="font-medium text-gray-900">
+                          {addressParts || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {l.city ? `${l.city}${l.state ? `/${l.state}` : ''}` : '-'}
+                        </TableCell>
+                        <TableCell>{l.hours || '-'}</TableCell>
+                        <TableCell>
+                          {l.image ? (
+                            <img
+                              src={pb.files.getURL(l, l.image)}
+                              alt="Local"
+                              className="h-10 w-16 object-cover rounded"
+                            />
+                          ) : (
+                            <span className="text-xs text-gray-400">Sem imagem</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditLocation(l)}
+                              title="Editar local"
+                            >
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteRecord('pickup_locations', l.id)}
+                              title="Excluir local"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>

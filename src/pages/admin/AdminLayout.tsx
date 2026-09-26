@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useTenant } from '@/contexts/tenant-context'
 import { isTenantBlocked } from '@/types/tenant'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { TenantBlockedScreen } from '@/pages/TenantBlockedScreen'
 import {
   LayoutDashboard,
@@ -377,7 +378,9 @@ export default function AdminLayout() {
                 </Button>
               </div>
             )}
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </main>
         </div>
       </div>

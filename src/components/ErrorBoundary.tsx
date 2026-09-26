@@ -26,8 +26,17 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback || (
-          <div className="p-4 text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg flex items-center justify-center">
-            Não foi possível carregar a mídia.
+          <div className="p-6 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg flex flex-col items-center justify-center gap-3 my-4">
+            <p className="font-medium">Ocorreu uma falha ao renderizar esta seção.</p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false })
+                window.location.reload()
+              }}
+              className="px-4 py-1.5 bg-primary text-white rounded text-xs font-semibold hover:opacity-90"
+            >
+              Recarregar página
+            </button>
           </div>
         )
       )
