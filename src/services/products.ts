@@ -32,9 +32,9 @@ export const getActiveProducts = async (
   if (!tenantId) return []
   let filter = `status='active' && tenant='${tenantId}'`
   if (locationId) {
-    filter += ` && available_locations~'${locationId}'`
+    filter += ` && (available_locations:length = 0 || available_locations = null || available_locations~'${locationId}')`
   } else {
-    filter += ` && available_locations='__none__'`
+    filter += ` && (available_locations:length = 0 || available_locations = null)`
   }
   return pb.collection<Product>('products').getFullList({
     filter,

@@ -104,7 +104,7 @@ export default function Index() {
         setProducts(data as Product[])
       } else if (selectedCityId) {
         const data = await pb.collection('products').getFullList({
-          filter: `status='active' && tenant='${currentTenant.id}' && available_locations~'${selectedCityId}'`,
+          filter: `status='active' && tenant='${currentTenant.id}' && (available_locations:length = 0 || available_locations = null || available_locations~'${selectedCityId}')`,
           sort: 'order',
         })
         setProducts(data as Product[])

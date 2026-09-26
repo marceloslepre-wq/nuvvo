@@ -881,7 +881,10 @@ export default function AdminProducts() {
               </div>
 
               <div className="space-y-2 col-span-2">
-                <Label>Cidades Disponíveis</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Cidades Disponíveis</Label>
+                  <span className="text-xs text-gray-400">Opcional</span>
+                </div>
                 <ToggleGroup
                   type="multiple"
                   value={formData.available_locations}
@@ -899,6 +902,9 @@ export default function AdminProducts() {
                     </p>
                   )}
                 </ToggleGroup>
+                <p className="text-xs text-gray-400">
+                  Sem locais vinculados, o produto aparece em todas as cidades.
+                </p>
               </div>
 
               {(formData.variations || []).length === 0 && (

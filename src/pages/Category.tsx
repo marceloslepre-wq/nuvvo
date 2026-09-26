@@ -67,16 +67,21 @@ export default function CategoryPage() {
         setLocations(locs)
         setVariantDetails(vDetails)
 
-        if (!selectedCityId || !currentTenant) {
+        if (locs.length === 0) {
+          const prods = await pb.collection('products').getFullList({
+            filter: `status='active' && tenant='${currentTenant.id}' && category='${id}'`,
+            sort: 'order',
+          })
+          setProducts(prods as Product[])
+        } else if (selectedCityId) {
+          const prods = await pb.collection('products').getFullList({
+            filter: `status='active' && tenant='${currentTenant.id}' && category='${id}' && (available_locations:length = 0 || available_locations = null || available_locations~'${selectedCityId}')`,
+            sort: 'order',
+          })
+          setProducts(prods as Product[])
+        } else {
           setProducts([])
-          return
         }
-
-        const prods = await pb.collection('products').getFullList({
-          filter: `status='active' && tenant='${currentTenant.id}' && category='${id}' && available_locations~'${selectedCityId}'`,
-          sort: 'order',
-        })
-        setProducts(prods as Product[])
       } catch (error) {
         console.error(error)
       } finally {
@@ -106,17 +111,25 @@ export default function CategoryPage() {
         .getOne(id)
         .then((cat) => {
           if (currentTenant && cat.tenant && cat.tenant !== currentTenant.id) return
-          if (!selectedCityId) {
+          if (locations.length === 0) {
+            pb.collection('products')
+              .getFullList({
+                filter: `status='active' && tenant='${currentTenant.id}' && category='${id}'`,
+                sort: 'order',
+              })
+              .then((prods) => setProducts(prods as Product[]))
+              .catch(() => {})
+          } else if (selectedCityId) {
+            pb.collection('products')
+              .getFullList({
+                filter: `status='active' && tenant='${currentTenant.id}' && category='${id}' && (available_locations:length = 0 || available_locations = null || available_locations~'${selectedCityId}')`,
+                sort: 'order',
+              })
+              .then((prods) => setProducts(prods as Product[]))
+              .catch(() => {})
+          } else {
             setProducts([])
-            return
           }
-          pb.collection('products')
-            .getFullList({
-              filter: `status='active' && tenant='${currentTenant.id}' && category='${id}' && available_locations~'${selectedCityId}'`,
-              sort: 'order',
-            })
-            .then((prods) => setProducts(prods as Product[]))
-            .catch(() => {})
         })
         .catch(() => {})
     }
@@ -168,7 +181,34 @@ export default function CategoryPage() {
 
         <h1 className="text-3xl md:text-4xl font-bold text-secondary mb-8">{category.name}</h1>
 
-        {!selectedCityId ? (
+        {locations.length > 0 && (
+          <section className="mb-8 bg-white p-4 rounded-xl border border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xl mx-auto">
+              <div className="flex items-center gap-2 text-secondary font-medium">
+                <MapPin className="h-5 w-5 text-primary" />
+                <span className="whitespace-nowrap">Sua cidade:</span>
+              </div>
+              <Select
+                value={selectedCityId || '_none'}
+                onValueChange={(v) => setSelectedCityId(v === '_none' ? '' : v)}
+              >
+                <SelectTrigger className="w-full sm:w-80">
+                  <SelectValue placeholder="Selecione sua cidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Selecione sua cidade</SelectItem>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </section>
+        )}
+
+        {locations.length > 0 && !selectedCityId ? (
           <div className="w-full py-16 px-6 text-center text-gray-500 col-span-full bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
               <MapPin className="h-8 w-8" />
