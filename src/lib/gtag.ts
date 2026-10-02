@@ -256,50 +256,12 @@ export function removeGoogleTagFromDom(): void {
 }
 
 /**
- * Inicializa a Google Tag dinamicamente apenas quando a rota for pública.
+ * Mantida como no-op para compatibilidade de chamadas legadas.
+ * Não injeta mais o script do Google Ads nem chama gtag('config').
+ * Todas as tags são gerenciadas exclusivamente pelo GTM (GTM-KH6V33Q5).
  */
 export function ensureGoogleTagLoaded(): void {
-  if (typeof window === 'undefined') return
-
-  // Gate absoluto: se estiver em rota administrativa, NUNCA carregar o script
-  if (isAdministrativePath(window.location.pathname)) {
-    return
-  }
-
-  // Garante dataLayer e gtag function básicos protegidos
-  gateDataLayerAndGtag()
-
-  // Instala proteção defensiva antes de qualquer requisição do gtag
-  installDefensiveGoogleAdsErrorHandler()
-
-  if (gtagScriptLoaded) return
-
-  const existingScript = document.querySelector(
-    `script[src*="googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}"]`,
-  )
-  if (existingScript) {
-    gtagScriptLoaded = true
-    return
-  }
-
-  // Cria e injeta a tag do Google dinamicamente
-  const script = document.createElement('script')
-  script.async = true
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ADS_ID}`
-  script.onerror = () => {
-    // Falhas de download do script (ex: adblocker) não devem lançar erro
-  }
-
-  const firstScript = document.getElementsByTagName('script')[0]
-  if (firstScript && firstScript.parentNode) {
-    firstScript.parentNode.insertBefore(script, firstScript)
-  } else {
-    document.head.appendChild(script)
-  }
-
-  gtagScriptLoaded = true
-  ;(window as any).gtag('js', new Date())
-  ;(window as any).gtag('config', GOOGLE_ADS_ID)
+  // no-op intencional: tags centralizadas no GTM via dataLayer
 }
 
 /**
@@ -320,6 +282,5 @@ export function syncGoogleTagWithRoute(pathname: string, isDirectAdminScreen = f
     return
   }
 
-  // Rota pública: garante que o script do gtag está carregado
-  ensureGoogleTagLoaded()
+  // Rota pública: não carrega mais gtag.js direto
 }

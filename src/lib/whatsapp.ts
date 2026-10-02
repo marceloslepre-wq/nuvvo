@@ -1,44 +1,26 @@
 /**
- * Helper para utilitários de contato via WhatsApp e rastreamento de conversão (gtag)
+ * Helper para utilitários de contato via WhatsApp e rastreamento de conversão via GTM dataLayer
  */
 
-import {
-  ensureGoogleTagLoaded,
-  installDefensiveGoogleAdsErrorHandler,
-  isAdministrativePath,
-} from './gtag'
-
-export const GTAG_WHATSAPP_CONVERSION_ID = 'AW-403144958/CLIQUE_WHATSAPP'
+import { isAdministrativePath } from './gtag'
 
 /**
- * Dispara o evento de conversão do Google Ads (gtag) para cliques no WhatsApp.
+ * Dispara o evento 'whatsapp_click' para o dataLayer do GTM.
  * Executado exclusivamente nas interações de contato do site público.
  */
 export function trackWhatsAppConversion(label?: string) {
   if (typeof window === 'undefined') return
-
-  // Não dispara em rotas administrativas
   if (isAdministrativePath(window.location.pathname)) return
-
   try {
-    installDefensiveGoogleAdsErrorHandler()
-    ensureGoogleTagLoaded()
-
-    if (typeof (window as any).gtag === 'function') {
-      try {
-        ;(window as any).gtag('event', 'conversion', {
-          send_to: GTAG_WHATSAPP_CONVERSION_ID,
-          value: 1.0,
-          currency: 'BRL',
-          event_label: label,
-        })
-      } catch {
-        // Blindagem contra qualquer exceção síncrona
-      }
-    }
-  } catch (err) {
-    // Falhas de rastreamento devem ser silenciosas
-    console.warn('Falha ao disparar conversão gtag:', err)
+    const w = window as any
+    w.dataLayer = w.dataLayer || []
+    w.dataLayer.push({
+      event: 'whatsapp_click',
+      whatsapp_origem: label || 'desconhecido',
+      page_path: window.location.pathname,
+    })
+  } catch {
+    // rastreamento nunca deve quebrar o clique
   }
 }
 
