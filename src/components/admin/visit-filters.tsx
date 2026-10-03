@@ -9,9 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Filter } from 'lucide-react'
 import { MODALITY_LABELS } from '@/lib/visit-utils'
 
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
+
 export interface VisitFilterState {
   periodDays: number
   modality: string
+  onlyBrazil: boolean
 }
 
 interface VisitFiltersProps {
@@ -65,6 +69,20 @@ export function VisitFilters({ value, onChange, onApply }: VisitFiltersProps) {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex items-center space-x-2 py-2 md:py-0 md:mb-2">
+        <Checkbox
+          id="onlyBrazil"
+          checked={value.onlyBrazil}
+          onCheckedChange={(checked) => onChange({ ...value, onlyBrazil: checked === true })}
+        />
+        <Label
+          htmlFor="onlyBrazil"
+          className="text-xs font-medium text-gray-700 cursor-pointer select-none"
+        >
+          Somente Brasil
+        </Label>
       </div>
 
       <Button onClick={onApply} className="md:ml-2">

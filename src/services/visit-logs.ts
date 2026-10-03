@@ -24,7 +24,64 @@ export interface TrackPayload {
   tenantId?: string
 }
 
+const BOT_USER_AGENT_REGEX =
+  /bot|crawler|spider|googlebot|adsbot|mediapartners-google|google-inspectiontool|googleother|lighthouse|headlesschrome|facebookexternalhit|bingpreview|slurp/i
+
+export function shouldIgnoreTracking(): boolean {
+  if (typeof window === 'undefined') return false
+
+  // 1. Referrer contém goskip.dev
+  if (
+    typeof document !== 'undefined' &&
+    document.referrer &&
+    document.referrer.includes('goskip.dev')
+  ) {
+    return true
+  }
+
+  // 2. Hostname contém goskip.dev ou é localhost
+  const hostname = window.location.hostname || ''
+  if (hostname.includes('goskip.dev') || hostname === 'localhost' || hostname === '127.0.0.1') {
+    return true
+  }
+
+  // 3. Dentro de iframe (preview do Skip / embed)
+  try {
+    if (window.self !== window.top) {
+      return true
+    }
+  } catch {
+    // Cross-origin iframe security error -> está dentro de iframe
+    return true
+  }
+
+  // 4. Usuário administrador / gestor / master logado
+  if (pb.authStore.isValid) {
+    const role = (pb.authStore.record as any)?.role
+    if (!role || role === 'master' || role === 'gestor' || role === 'admin') {
+      return true
+    }
+  }
+
+  // 5. Robôs e ferramentas automatizadas
+  if (typeof navigator !== 'undefined') {
+    if ((navigator as any).webdriver === true) {
+      return true
+    }
+    const ua = navigator.userAgent || ''
+    if (BOT_USER_AGENT_REGEX.test(ua)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 export const trackVisit = async (payload: TrackPayload): Promise<void> => {
+  if (shouldIgnoreTracking()) {
+    return
+  }
+
   const info = detectVisitInfo()
   const body: Record<string, any> = {
     type: payload.type,
@@ -55,6 +112,7 @@ export interface VisitFilter {
   periodDays: number
   modality: string
   tenantId?: string
+  onlyBrazil?: boolean
 }
 
 export const buildVisitFilter = (filter: VisitFilter): string => {
@@ -70,6 +128,9 @@ export const buildVisitFilter = (filter: VisitFilter): string => {
   }
   if (filter.tenantId && filter.tenantId !== 'all') {
     parts.push(`tenant = '${filter.tenantId}'`)
+  }
+  if (filter.onlyBrazil) {
+    parts.push(`country = 'Brazil'`)
   }
   return parts.length > 0 ? parts.join(' && ') : ''
 }
@@ -104,12 +165,18 @@ export const getTotalVisitCount = async (filter: VisitFilter): Promise<number> =
   return result.totalItems
 }
 
-export const getTodayVisitCount = async (tenantId?: string): Promise<number> => {
+export const getTodayVisitCount = async (
+  tenantId?: string,
+  onlyBrazil = false,
+): Promise<number> => {
   const start = new Date()
   start.setHours(0, 0, 0, 0)
   let filter = `created >= '${formatDateForFilter(start)}'`
   if (tenantId && tenantId !== 'all') {
     filter += ` && tenant = '${tenantId}'`
+  }
+  if (onlyBrazil) {
+    filter += ` && country = 'Brazil'`
   }
   const result = await pb.collection('visit_logs').getList(1, 1, {
     filter,

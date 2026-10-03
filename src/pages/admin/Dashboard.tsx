@@ -20,7 +20,11 @@ import { useTenant } from '@/contexts/tenant-context'
 
 export default function AdminDashboard() {
   const { activeAdminTenant } = useTenant()
-  const [filter, setFilter] = useState<VisitFilterState>({ periodDays: 30, modality: 'all' })
+  const [filter, setFilter] = useState<VisitFilterState>({
+    periodDays: 30,
+    modality: 'all',
+    onlyBrazil: true,
+  })
   const [appliedFilter, setAppliedFilter] = useState<VisitFilterState>(filter)
   const [logs, setLogs] = useState<VisitLog[]>([])
   const [allLogs, setAllLogs] = useState<VisitLog[]>([])
@@ -39,7 +43,7 @@ export default function AdminDashboard() {
         getVisitLogs(tenantFilter),
         getAllVisitLogs(tenantFilter),
         getTotalVisitCount(tenantFilter),
-        getTodayVisitCount(activeAdminTenant?.id),
+        getTodayVisitCount(activeAdminTenant?.id, appliedFilter.onlyBrazil),
       ])
       setLogs(items)
       setAllLogs(periodRecords)
@@ -130,7 +134,7 @@ export default function AdminDashboard() {
         <VisitModalityChart data={modalityData} />
       </div>
 
-      <VisitEventsTable logs={logs} />
+      <VisitEventsTable logs={logs} totalCount={totalCount} />
     </div>
   )
 }

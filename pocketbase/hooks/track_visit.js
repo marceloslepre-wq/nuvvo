@@ -1,6 +1,35 @@
 routerAdd('POST', '/backend/v1/track', (e) => {
   const body = e.requestInfo().body || {}
 
+  // 1. Ignorar visitas internas (referrer goskip.dev)
+  const referrer = typeof body.referrer === 'string' ? body.referrer : ''
+  if (referrer && referrer.includes('goskip.dev')) {
+    return e.json(204, { ok: true, ignored: true })
+  }
+
+  // 2. Ignorar robôs conhecidos (User-Agent header)
+  const userAgent = (e.request.header.get('User-Agent') || '').toLowerCase()
+  const botKeywords = [
+    'bot',
+    'crawler',
+    'spider',
+    'googlebot',
+    'adsbot',
+    'mediapartners-google',
+    'google-inspectiontool',
+    'googleother',
+    'lighthouse',
+    'headlesschrome',
+    'facebookexternalhit',
+    'bingpreview',
+    'slurp',
+  ]
+  for (let i = 0; i < botKeywords.length; i++) {
+    if (userAgent.includes(botKeywords[i])) {
+      return e.json(204, { ok: true, ignored: true })
+    }
+  }
+
   const remoteAddr = e.request.remoteAddr || ''
   let ip = ''
   const xff = e.request.header.get('X-Forwarded-For') || ''

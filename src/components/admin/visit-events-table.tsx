@@ -20,15 +20,19 @@ import {
 
 interface VisitEventsTableProps {
   logs: VisitLog[]
+  totalCount?: number
 }
 
 const PAGE_SIZE = 10
 
-export function VisitEventsTable({ logs }: VisitEventsTableProps) {
+export function VisitEventsTable({ logs, totalCount }: VisitEventsTableProps) {
   const [page, setPage] = useState(1)
 
   const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
+
+  const countDisplay = typeof totalCount === 'number' ? totalCount : logs.length
+  const formattedCount = new Intl.NumberFormat('pt-BR').format(countDisplay)
 
   const pageItems = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE
@@ -39,7 +43,7 @@ export function VisitEventsTable({ logs }: VisitEventsTableProps) {
     <div className="rounded-lg border bg-white">
       <div className="p-4 border-b">
         <h3 className="font-semibold text-gray-900">Log de Eventos</h3>
-        <p className="text-xs text-gray-500 mt-0.5">{logs.length} registros encontrados</p>
+        <p className="text-xs text-gray-500 mt-0.5">{formattedCount} registros encontrados</p>
       </div>
       <div className="overflow-x-auto">
         <Table>
