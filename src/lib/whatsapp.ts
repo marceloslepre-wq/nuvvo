@@ -3,6 +3,7 @@
  */
 
 import { isAdministrativePath } from './gtag'
+import { trackVisit } from '@/services/visit-logs'
 
 /**
  * Dispara o evento 'whatsapp_click' para o dataLayer do GTM.
@@ -21,6 +22,21 @@ export function trackWhatsAppConversion(label?: string) {
     })
   } catch {
     // rastreamento nunca deve quebrar o clique
+  }
+
+  try {
+    const w = window as any
+    const tenantId =
+      w.__NUVVO_CURRENT_TENANT_ID__ || localStorage.getItem('admin_selected_tenant_id') || undefined
+    trackVisit({
+      type: 'click',
+      path: window.location.pathname,
+      tenantId: tenantId || undefined,
+    }).catch(() => {
+      /* silently ignore tracking errors */
+    })
+  } catch {
+    /* silently ignore tracking errors */
   }
 }
 

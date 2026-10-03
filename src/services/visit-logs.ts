@@ -83,6 +83,27 @@ export const getVisitLogs = async (filter: VisitFilter, limit = 1000): Promise<V
   return result.items as unknown as VisitLog[]
 }
 
+export const getAllVisitLogs = async (
+  filter: VisitFilter,
+  fields = 'id,type,modality,session_id,created',
+): Promise<VisitLog[]> => {
+  const f = buildVisitFilter(filter)
+  const result = await pb.collection<VisitLog>('visit_logs').getFullList({
+    filter: f || '',
+    sort: '-created',
+    fields,
+  })
+  return result as unknown as VisitLog[]
+}
+
+export const getTotalVisitCount = async (filter: VisitFilter): Promise<number> => {
+  const f = buildVisitFilter(filter)
+  const result = await pb.collection('visit_logs').getList(1, 1, {
+    filter: f || '',
+  })
+  return result.totalItems
+}
+
 export const getTodayVisitCount = async (tenantId?: string): Promise<number> => {
   const start = new Date()
   start.setHours(0, 0, 0, 0)

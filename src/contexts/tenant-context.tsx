@@ -92,6 +92,9 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Se não casou por path, usa o tenant resolvido pelo host
         const finalTenant = matchedTenant || hostTenant
         setCurrentTenant(finalTenant)
+        if (typeof window !== 'undefined') {
+          ;(window as any).__NUVVO_CURRENT_TENANT_ID__ = finalTenant?.id || null
+        }
 
         // Se não há admin tenant selecionado, adota o tenant resolvido ou o primeiro
         if (!selectedAdminTenantId && finalTenant) {

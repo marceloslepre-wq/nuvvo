@@ -1,5 +1,11 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { getVisitLogs, getTodayVisitCount, type VisitLog } from '@/services/visit-logs'
+import {
+  getVisitLogs,
+  getAllVisitLogs,
+  getTotalVisitCount,
+  getTodayVisitCount,
+  type VisitLog,
+} from '@/services/visit-logs'
 import { formatChartDate } from '@/lib/visit-utils'
 import { VisitFilters, type VisitFilterState } from '@/components/admin/visit-filters'
 import { VisitSummaryCards, type VisitStats } from '@/components/admin/visit-summary-cards'
@@ -17,6 +23,8 @@ export default function AdminDashboard() {
   const [filter, setFilter] = useState<VisitFilterState>({ periodDays: 30, modality: 'all' })
   const [appliedFilter, setAppliedFilter] = useState<VisitFilterState>(filter)
   const [logs, setLogs] = useState<VisitLog[]>([])
+  const [allLogs, setAllLogs] = useState<VisitLog[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -27,14 +35,20 @@ export default function AdminDashboard() {
         ...appliedFilter,
         tenantId: activeAdminTenant?.id,
       }
-      const [items, today] = await Promise.all([
+      const [items, periodRecords, totalItems, today] = await Promise.all([
         getVisitLogs(tenantFilter),
+        getAllVisitLogs(tenantFilter),
+        getTotalVisitCount(tenantFilter),
         getTodayVisitCount(activeAdminTenant?.id),
       ])
       setLogs(items)
+      setAllLogs(periodRecords)
+      setTotalCount(totalItems)
       setTodayCount(today)
     } catch {
       setLogs([])
+      setAllLogs([])
+      setTotalCount(0)
     } finally {
       setLoading(false)
     }
@@ -49,13 +63,14 @@ export default function AdminDashboard() {
   })
 
   const stats: VisitStats = useMemo(() => {
-    const total = logs.length
-    const unique = new Set(logs.map((l) => l.session_id).filter(Boolean)).size
-    const clicks = logs.filter((l) => l.type === 'click').length
-    const pageviews = logs.filter((l) => l.type === 'pageview').length
+    const total = totalCount
+    const sourceForAggregates = allLogs.length > 0 ? allLogs : logs
+    const unique = new Set(sourceForAggregates.map((l) => l.session_id).filter(Boolean)).size
+    const clicks = sourceForAggregates.filter((l) => l.type === 'click').length
+    const pageviews = sourceForAggregates.filter((l) => l.type === 'pageview').length
     const clickRate = pageviews > 0 ? (clicks / pageviews) * 100 : 0
     return { total, today: todayCount, unique, clickRate }
-  }, [logs, todayCount])
+  }, [totalCount, allLogs, logs, todayCount])
 
   const trendData: TrendPoint[] = useMemo(() => {
     const days = appliedFilter.periodDays > 0 ? appliedFilter.periodDays : 30
@@ -67,25 +82,27 @@ export default function AdminDashboard() {
       d.setHours(0, 0, 0, 0)
       map.set(formatChartDate(d), 0)
     }
-    logs.forEach((log) => {
+    const sourceForAggregates = allLogs.length > 0 ? allLogs : logs
+    sourceForAggregates.forEach((log) => {
       const d = new Date(log.created)
       d.setHours(0, 0, 0, 0)
       const key = formatChartDate(d)
       if (map.has(key)) map.set(key, (map.get(key) || 0) + 1)
     })
     return Array.from(map.entries()).map(([date, visits]) => ({ date, visits }))
-  }, [logs, appliedFilter.periodDays])
+  }, [allLogs, logs, appliedFilter.periodDays])
 
   const modalityData: ModalityPoint[] = useMemo(() => {
     const map = new Map<string, number>()
-    logs.forEach((log) => {
+    const sourceForAggregates = allLogs.length > 0 ? allLogs : logs
+    sourceForAggregates.forEach((log) => {
       const m = log.modality || 'unknown'
       map.set(m, (map.get(m) || 0) + 1)
     })
     return Array.from(map.entries())
       .map(([modality, count]) => ({ modality, count }))
       .sort((a, b) => b.count - a.count)
-  }, [logs])
+  }, [allLogs, logs])
 
   const handleApply = () => {
     setAppliedFilter(filter)

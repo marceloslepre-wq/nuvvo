@@ -46,31 +46,122 @@ const SOCIAL = [
   'telegram',
 ]
 
+const SESSION_MODALITY_KEY = 'visit_session_modality'
+const PAID_MEDIUMS = ['cpc', 'paid', 'ppc']
+
 export function detectModality(referrer: string): { modality: string; source: string } {
-  if (!referrer) return { modality: 'direct', source: '' }
+  // 1. Antes de olhar o referrer, verificar parâmetros da URL (se em ambiente de navegador)
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const gclid = params.get('gclid')
+      const gbraid = params.get('gbraid')
+      const wbraid = params.get('wbraid')
+      const fbclid = params.get('fbclid')
+      const utmMedium = (params.get('utm_medium') || '').toLowerCase()
+      const utmSource = params.get('utm_source') || ''
+
+      const isPaidMedium = PAID_MEDIUMS.includes(utmMedium)
+      const hasGooglePaidParam = Boolean(gclid || gbraid || wbraid)
+
+      // gclid, gbraid, wbraid ou utm_medium em (cpc, paid, ppc) -> modality: 'paid', source: 'google' (ou o utm_source, se existir)
+      if (hasGooglePaidParam || isPaidMedium) {
+        // fbclid junto com utm_medium pago -> modality: 'paid', source: 'meta' (ou utm_source)
+        if (fbclid && isPaidMedium) {
+          const result = { modality: 'paid', source: utmSource || 'meta' }
+          saveSessionModality(result)
+          return result
+        }
+
+        const result = {
+          modality: 'paid',
+          source: utmSource || (hasGooglePaidParam ? 'google' : 'google'),
+        }
+        saveSessionModality(result)
+        return result
+      }
+
+      // Só fbclid, sem utm pago, continua social
+      if (fbclid) {
+        const result = { modality: 'social', source: utmSource || 'meta' }
+        saveSessionModality(result)
+        return result
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // 2. Se a sessão já possui uma modalidade/origem gravada (primeira página da sessão), reutilizar
+  // para que as páginas seguintes da mesma visita não virem "Direto"
+  const savedModality = getSessionModality()
+  if (savedModality) {
+    return savedModality
+  }
+
+  // 3. Referrer
+  if (!referrer) {
+    const result = { modality: 'direct', source: '' }
+    saveSessionModality(result)
+    return result
+  }
+
   let host = ''
   try {
     host = new URL(referrer).hostname
   } catch {
-    return { modality: 'direct', source: '' }
+    const result = { modality: 'direct', source: '' }
+    saveSessionModality(result)
+    return result
   }
+
   if (typeof window !== 'undefined' && host === window.location.hostname) {
-    return { modality: 'direct', source: '' }
+    const result = { modality: 'direct', source: '' }
+    saveSessionModality(result)
+    return result
   }
+
   if (SEARCH_ENGINES.some((s) => host.includes(s))) {
-    return { modality: 'organic', source: host }
+    const result = { modality: 'organic', source: host }
+    saveSessionModality(result)
+    return result
   }
+
   if (SOCIAL.some((s) => host.includes(s))) {
-    return { modality: 'social', source: host }
+    const result = { modality: 'social', source: host }
+    saveSessionModality(result)
+    return result
   }
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search)
-    const medium = params.get('utm_medium') || ''
-    if (medium === 'cpc' || medium === 'paid' || medium === 'ppc') {
-      return { modality: 'paid', source: host }
+
+  const result = { modality: 'referral', source: host }
+  saveSessionModality(result)
+  return result
+}
+
+function getSessionModality(): { modality: string; source: string } | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = sessionStorage.getItem(SESSION_MODALITY_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed.modality === 'string') {
+      return { modality: parsed.modality, source: parsed.source || '' }
     }
+  } catch {
+    /* ignore */
   }
-  return { modality: 'referral', source: host }
+  return null
+}
+
+function saveSessionModality(info: { modality: string; source: string }): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (!sessionStorage.getItem(SESSION_MODALITY_KEY)) {
+      sessionStorage.setItem(SESSION_MODALITY_KEY, JSON.stringify(info))
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function getOrCreateSessionId(): string {
