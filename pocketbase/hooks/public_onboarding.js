@@ -145,6 +145,88 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
     return e.badRequestError('Erro ao criar usuário: ' + err.message)
   }
 
+  // 4. Disparo automático de pedido para a plataforma Sholver (fire-and-forget, unidirecional)
+  // Conclusão do cadastro do cliente -> disparo com metodo_pagamento "GRATUITO" e status "trial_ativo"
+  try {
+    const rawApiUrl = ($os.getenv('SHOLVER_API_URL') || '').trim()
+    const webhookSecret = ($os.getenv('NUVVO_WEBHOOK_SECRET') || '').trim()
+    const orderNumber = 'NUVVO-' + tenantRecord.id
+
+    if (!rawApiUrl) {
+      console.log(
+        '[Sholver Webhook] Ignorado no Onboarding: SHOLVER_API_URL não configurada. Pedido:',
+        orderNumber,
+      )
+    } else if (!webhookSecret) {
+      console.log(
+        '[Sholver Webhook] Ignorado no Onboarding: NUVVO_WEBHOOK_SECRET não configurada. Pedido:',
+        orderNumber,
+      )
+    } else {
+      const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
+      const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+      const planName = selectedPlan ? selectedPlan.getString('name') : 'Básico'
+
+      const sholverPayload = {
+        numero_pedido: orderNumber,
+        cliente: {
+          razao_social: name,
+          nome_fantasia: '',
+          email: email,
+          telefone: phone,
+          documento: cnpj,
+        },
+        plano: {
+          nome: planName,
+        },
+        produto: 'Nuvvo',
+        valor: 0.0,
+        metodo_pagamento: 'GRATUITO',
+        status: 'trial_ativo',
+      }
+
+      console.log(
+        '[Sholver Webhook] Enviando pedido de Onboarding para ' +
+          targetUrl +
+          ' | Pedido: ' +
+          orderNumber +
+          ' | Cliente: ' +
+          name,
+      )
+
+      const sholverRes = $http.send({
+        url: targetUrl,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': webhookSecret,
+          'X-Sholver-Secret': webhookSecret,
+        },
+        body: JSON.stringify(sholverPayload),
+        timeout: 10,
+      })
+
+      const isSuccess = sholverRes.statusCode >= 200 && sholverRes.statusCode < 300
+      console.log(
+        '[Sholver Webhook] Resposta Onboarding recebida. HTTP ' +
+          sholverRes.statusCode +
+          ' para pedido ' +
+          orderNumber +
+          ' (Sucesso: ' +
+          isSuccess +
+          ')',
+      )
+    }
+  } catch (sholverErr) {
+    // Fire-and-forget: NUNCA interrompe ou quebra o fluxo de onboarding
+    console.log(
+      '[Sholver Webhook Erro] Falha no disparo de Onboarding (tenant ' +
+        tenantRecord.id +
+        '): ' +
+        (sholverErr ? sholverErr.message : String(sholverErr)),
+    )
+  }
+
   return e.json(200, {
     success: true,
     tenant: {

@@ -154,6 +154,80 @@ routerAdd(
             console.log(
               '[Reconcile Pending] Pagamento aprovado ' + pid + ' renovou tenant ' + t.id + ' +30d',
             )
+
+            // Disparo automático de pedido para Sholver na confirmação de pagamento PIX (Reconcile Endpoint)
+            try {
+              const rawApiUrl = ($os.getenv('SHOLVER_API_URL') || '').trim()
+              const webhookSecret = ($os.getenv('NUVVO_WEBHOOK_SECRET') || '').trim()
+              const orderNumber = 'NUVVO-' + t.id
+
+              if (!rawApiUrl || !webhookSecret) {
+                console.log(
+                  '[Sholver Webhook] Ignorado no Reconcile: credenciais Sholver ausentes. Pedido:',
+                  orderNumber,
+                )
+              } else {
+                const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
+                const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+
+                const sholverPayload = {
+                  numero_pedido: orderNumber,
+                  cliente: {
+                    razao_social: t.getString('name') || '',
+                    nome_fantasia: '',
+                    email: t.getString('email') || '',
+                    telefone: t.getString('phone') || '',
+                    documento: t.getString('document_cnpj') || '',
+                  },
+                  plano: {
+                    nome: pName,
+                  },
+                  produto: 'Nuvvo',
+                  valor: Number(amountPaid),
+                  metodo_pagamento: 'PIX',
+                  status: 'pago',
+                }
+
+                console.log(
+                  '[Sholver Webhook] Enviando confirmação de pagamento Reconcile para ' +
+                    targetUrl +
+                    ' | Pedido: ' +
+                    orderNumber +
+                    ' | Valor: ' +
+                    amountPaid,
+                )
+
+                const sholverRes = $http.send({
+                  url: targetUrl,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': webhookSecret,
+                    'X-Sholver-Secret': webhookSecret,
+                  },
+                  body: JSON.stringify(sholverPayload),
+                  timeout: 10,
+                })
+
+                const isSuccess = sholverRes.statusCode >= 200 && sholverRes.statusCode < 300
+                console.log(
+                  '[Sholver Webhook] Resposta Reconcile recebida. HTTP ' +
+                    sholverRes.statusCode +
+                    ' para pedido ' +
+                    orderNumber +
+                    ' (Sucesso: ' +
+                    isSuccess +
+                    ')',
+                )
+              }
+            } catch (sholverErr) {
+              console.log(
+                '[Sholver Webhook Erro] Falha no disparo de pagamento Reconcile (tenant ' +
+                  t.id +
+                  '): ' +
+                  (sholverErr ? sholverErr.message : String(sholverErr)),
+              )
+            }
           } else {
             // Já estava processado, limpa pendência
             t.set('pending_pix_payment_id', '')
@@ -306,6 +380,80 @@ cronAdd('reconcile_pending_pix', '*/2 * * * *', () => {
           $app.save(t)
 
           console.log('[Cron Reconcile] Pagamento aprovado ' + pid + ' renovou tenant ' + t.id)
+
+          // Disparo automático de pedido para Sholver na confirmação de pagamento PIX (Reconcile Cron)
+          try {
+            const rawApiUrl = ($os.getenv('SHOLVER_API_URL') || '').trim()
+            const webhookSecret = ($os.getenv('NUVVO_WEBHOOK_SECRET') || '').trim()
+            const orderNumber = 'NUVVO-' + t.id
+
+            if (!rawApiUrl || !webhookSecret) {
+              console.log(
+                '[Sholver Webhook] Ignorado no Cron: credenciais Sholver ausentes. Pedido:',
+                orderNumber,
+              )
+            } else {
+              const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
+              const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+
+              const sholverPayload = {
+                numero_pedido: orderNumber,
+                cliente: {
+                  razao_social: t.getString('name') || '',
+                  nome_fantasia: '',
+                  email: t.getString('email') || '',
+                  telefone: t.getString('phone') || '',
+                  documento: t.getString('document_cnpj') || '',
+                },
+                plano: {
+                  nome: pName,
+                },
+                produto: 'Nuvvo',
+                valor: Number(amountPaid),
+                metodo_pagamento: 'PIX',
+                status: 'pago',
+              }
+
+              console.log(
+                '[Sholver Webhook] Enviando confirmação de pagamento Cron para ' +
+                  targetUrl +
+                  ' | Pedido: ' +
+                  orderNumber +
+                  ' | Valor: ' +
+                  amountPaid,
+              )
+
+              const sholverRes = $http.send({
+                url: targetUrl,
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-API-Key': webhookSecret,
+                  'X-Sholver-Secret': webhookSecret,
+                },
+                body: JSON.stringify(sholverPayload),
+                timeout: 10,
+              })
+
+              const isSuccess = sholverRes.statusCode >= 200 && sholverRes.statusCode < 300
+              console.log(
+                '[Sholver Webhook] Resposta Cron recebida. HTTP ' +
+                  sholverRes.statusCode +
+                  ' para pedido ' +
+                  orderNumber +
+                  ' (Sucesso: ' +
+                  isSuccess +
+                  ')',
+              )
+            }
+          } catch (sholverErr) {
+            console.log(
+              '[Sholver Webhook Erro] Falha no disparo de pagamento Cron (tenant ' +
+                t.id +
+                '): ' +
+                (sholverErr ? sholverErr.message : String(sholverErr)),
+            )
+          }
         } else {
           t.set('pending_pix_payment_id', '')
           $app.save(t)

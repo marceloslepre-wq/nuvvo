@@ -20,13 +20,6 @@ routerAdd(
 
     if (!paymentId) {
       try {
-        const pathParams = e.requestInfo().pathParameters || {}
-        paymentId = (pathParams.paymentId || '').trim()
-      } catch (_) {}
-    }
-
-    if (!paymentId) {
-      try {
         const queryParams = e.requestInfo().query || {}
         paymentId = (queryParams.paymentId || queryParams.id || '').trim()
       } catch (_) {}
@@ -215,6 +208,86 @@ routerAdd(
                 tenantRecord.id +
                 ' +30d',
             )
+
+            // Disparo automático de pedido para Sholver na confirmação de pagamento PIX (Polling/Instantâneo)
+            // Fire-and-forget: reenvia com o MESMO numero_pedido ("NUVVO-<tenant_id>") para atualizar o pedido na Sholver
+            try {
+              const rawApiUrl = ($os.getenv('SHOLVER_API_URL') || '').trim()
+              const webhookSecret = ($os.getenv('NUVVO_WEBHOOK_SECRET') || '').trim()
+              const orderNumber = 'NUVVO-' + tenantRecord.id
+
+              if (!rawApiUrl) {
+                console.log(
+                  '[Sholver Webhook] Ignorado no Polling: SHOLVER_API_URL não configurada. Pedido:',
+                  orderNumber,
+                )
+              } else if (!webhookSecret) {
+                console.log(
+                  '[Sholver Webhook] Ignorado no Polling: NUVVO_WEBHOOK_SECRET não configurada. Pedido:',
+                  orderNumber,
+                )
+              } else {
+                const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
+                const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+
+                const sholverPayload = {
+                  numero_pedido: orderNumber,
+                  cliente: {
+                    razao_social: tenantRecord.getString('name') || '',
+                    nome_fantasia: '',
+                    email: tenantRecord.getString('email') || '',
+                    telefone: tenantRecord.getString('phone') || '',
+                    documento: tenantRecord.getString('document_cnpj') || '',
+                  },
+                  plano: {
+                    nome: pName,
+                  },
+                  produto: 'Nuvvo',
+                  valor: Number(amountPaid),
+                  metodo_pagamento: 'PIX',
+                  status: 'pago',
+                }
+
+                console.log(
+                  '[Sholver Webhook] Enviando confirmação de pagamento Polling para ' +
+                    targetUrl +
+                    ' | Pedido: ' +
+                    orderNumber +
+                    ' | Valor: ' +
+                    amountPaid,
+                )
+
+                const sholverRes = $http.send({
+                  url: targetUrl,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': webhookSecret,
+                    'X-Sholver-Secret': webhookSecret,
+                  },
+                  body: JSON.stringify(sholverPayload),
+                  timeout: 10,
+                })
+
+                const isSuccess = sholverRes.statusCode >= 200 && sholverRes.statusCode < 300
+                console.log(
+                  '[Sholver Webhook] Resposta Polling recebida. HTTP ' +
+                    sholverRes.statusCode +
+                    ' para pedido ' +
+                    orderNumber +
+                    ' (Sucesso: ' +
+                    isSuccess +
+                    ')',
+                )
+              }
+            } catch (sholverErr) {
+              console.log(
+                '[Sholver Webhook Erro] Falha no disparo de pagamento Polling (tenant ' +
+                  tenantRecord.id +
+                  '): ' +
+                  (sholverErr ? sholverErr.message : String(sholverErr)),
+              )
+            }
           } else {
             // Já havia sido processado anteriormente, limpa pending se for este
             if (tenantRecord.getString('pending_pix_payment_id') === String(paymentId)) {
