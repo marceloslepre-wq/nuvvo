@@ -163,8 +163,10 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
         orderNumber,
       )
     } else {
-      const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
-      const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+      const cleanRawUrl = rawApiUrl.replace(/\/+$/, '')
+      const targetUrl = cleanRawUrl.endsWith('/backend/v1/webhook/nuvvo')
+        ? cleanRawUrl
+        : cleanRawUrl + '/backend/v1/webhook/nuvvo'
       const planName = selectedPlan ? selectedPlan.getString('name') : 'Básico'
 
       const sholverPayload = {

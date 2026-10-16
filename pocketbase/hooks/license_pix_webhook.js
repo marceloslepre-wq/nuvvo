@@ -193,8 +193,10 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
             orderNumber,
           )
         } else {
-          const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
-          const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+          const cleanRawUrl = rawApiUrl.replace(/\/+$/, '')
+          const targetUrl = cleanRawUrl.endsWith('/backend/v1/webhook/nuvvo')
+            ? cleanRawUrl
+            : cleanRawUrl + '/backend/v1/webhook/nuvvo'
 
           const sholverPayload = {
             numero_pedido: orderNumber,

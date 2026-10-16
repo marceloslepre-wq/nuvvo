@@ -66,8 +66,10 @@ routerAdd('POST', '/backend/v1/track', (e) => {
       results.push({ scenario: 'trial', skipped: true, reason: 'NUVVO_WEBHOOK_SECRET_NOT_SET' })
       results.push({ scenario: 'pago', skipped: true, reason: 'NUVVO_WEBHOOK_SECRET_NOT_SET' })
     } else {
-      const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
-      const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+      const cleanRawUrl = rawApiUrl.replace(/\/+$/, '')
+      const targetUrl = cleanRawUrl.endsWith('/backend/v1/webhook/nuvvo')
+        ? cleanRawUrl
+        : cleanRawUrl + '/backend/v1/webhook/nuvvo'
 
       console.log(
         '[Sholver Webhook] Enviando pedido de Onboarding para ' +
