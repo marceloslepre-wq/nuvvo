@@ -7,6 +7,189 @@ routerAdd('POST', '/backend/v1/track', (e) => {
     return e.json(204, { ok: true, ignored: true })
   }
 
+  // Trigger temporário para Marcelo ver teste da Sholver
+  if (body.test_sholver === true) {
+    const rawApiUrl = ($os.getenv('SHOLVER_API_URL') || '').trim()
+    const webhookSecret = ($os.getenv('NUVVO_WEBHOOK_SECRET') || '').trim()
+    const testOrderNumber = 'NUVVO-TESTE-MARCELO-001'
+
+    const payloadTrial = {
+      numero_pedido: testOrderNumber,
+      cliente: {
+        razao_social: 'TESTE NUVVO - NÃO USAR',
+        nome_fantasia: '',
+        email: 'teste@nuvvo-teste.com',
+        telefone: '(11) 99999-9999',
+        documento: '00.000.000/0001-91',
+      },
+      plano: {
+        nome: 'Básico',
+      },
+      produto: 'Nuvvo',
+      valor: 197.0,
+      metodo_pagamento: 'GRATUITO',
+      status: 'trial_ativo',
+    }
+
+    const payloadPago = {
+      numero_pedido: testOrderNumber,
+      cliente: {
+        razao_social: 'TESTE NUVVO - NÃO USAR',
+        nome_fantasia: '',
+        email: 'teste@nuvvo-teste.com',
+        telefone: '(11) 99999-9999',
+        documento: '00.000.000/0001-91',
+      },
+      plano: {
+        nome: 'Básico',
+      },
+      produto: 'Nuvvo',
+      valor: 197.0,
+      metodo_pagamento: 'PIX',
+      status: 'pago',
+    }
+
+    const results = []
+
+    if (!rawApiUrl) {
+      console.log(
+        '[Sholver Webhook] Ignorado no Teste: SHOLVER_API_URL não configurada. Pedido:',
+        testOrderNumber,
+      )
+      results.push({ scenario: 'trial', skipped: true, reason: 'SHOLVER_API_URL_NOT_SET' })
+      results.push({ scenario: 'pago', skipped: true, reason: 'SHOLVER_API_URL_NOT_SET' })
+    } else if (!webhookSecret) {
+      console.log(
+        '[Sholver Webhook] Ignorado no Teste: NUVVO_WEBHOOK_SECRET não configurada. Pedido:',
+        testOrderNumber,
+      )
+      results.push({ scenario: 'trial', skipped: true, reason: 'NUVVO_WEBHOOK_SECRET_NOT_SET' })
+      results.push({ scenario: 'pago', skipped: true, reason: 'NUVVO_WEBHOOK_SECRET_NOT_SET' })
+    } else {
+      const cleanBaseUrl = rawApiUrl.replace(/\/+$/, '')
+      const targetUrl = cleanBaseUrl + '/backend/v1/webhook/nuvvo'
+
+      console.log(
+        '[Sholver Webhook] Enviando pedido de Onboarding para ' +
+          targetUrl +
+          ' | Pedido: ' +
+          testOrderNumber +
+          ' | Cliente: ' +
+          payloadTrial.cliente.razao_social,
+      )
+
+      try {
+        const res1 = $http.send({
+          url: targetUrl,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': webhookSecret,
+            'X-Sholver-Secret': webhookSecret,
+          },
+          body: JSON.stringify(payloadTrial),
+          timeout: 10,
+        })
+
+        const isSuccess1 = res1.statusCode >= 200 && res1.statusCode < 300
+        console.log(
+          '[Sholver Webhook] Resposta Onboarding recebida. HTTP ' +
+            res1.statusCode +
+            ' para pedido ' +
+            testOrderNumber +
+            ' (Sucesso: ' +
+            isSuccess1 +
+            ')',
+        )
+
+        results.push({
+          scenario: 'trial',
+          targetUrl: targetUrl,
+          payload: payloadTrial,
+          statusCode: res1.statusCode,
+          success: isSuccess1,
+          responseRaw: res1.raw,
+        })
+      } catch (err1) {
+        console.log(
+          '[Sholver Webhook Erro] Falha no disparo de Onboarding (tenant ' +
+            testOrderNumber +
+            '): ' +
+            (err1 ? err1.message : String(err1)),
+        )
+        results.push({
+          scenario: 'trial',
+          targetUrl: targetUrl,
+          payload: payloadTrial,
+          success: false,
+          error: err1 ? err1.message : String(err1),
+        })
+      }
+
+      console.log(
+        '[Sholver Webhook] Enviando confirmação de pagamento MP Webhook para ' +
+          targetUrl +
+          ' | Pedido: ' +
+          testOrderNumber +
+          ' | Valor: ' +
+          payloadPago.valor,
+      )
+
+      try {
+        const res2 = $http.send({
+          url: targetUrl,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': webhookSecret,
+            'X-Sholver-Secret': webhookSecret,
+          },
+          body: JSON.stringify(payloadPago),
+          timeout: 10,
+        })
+
+        const isSuccess2 = res2.statusCode >= 200 && res2.statusCode < 300
+        console.log(
+          '[Sholver Webhook] Resposta MP Webhook recebida. HTTP ' +
+            res2.statusCode +
+            ' para pedido ' +
+            testOrderNumber +
+            ' (Sucesso: ' +
+            isSuccess2 +
+            ')',
+        )
+
+        results.push({
+          scenario: 'pago',
+          targetUrl: targetUrl,
+          payload: payloadPago,
+          statusCode: res2.statusCode,
+          success: isSuccess2,
+          responseRaw: res2.raw,
+        })
+      } catch (err2) {
+        console.log(
+          '[Sholver Webhook Erro] Falha no disparo de pagamento MP Webhook (tenant ' +
+            testOrderNumber +
+            '): ' +
+            (err2 ? err2.message : String(err2)),
+        )
+        results.push({
+          scenario: 'pago',
+          targetUrl: targetUrl,
+          payload: payloadPago,
+          success: false,
+          error: err2 ? err2.message : String(err2),
+        })
+      }
+    }
+
+    return e.json(200, {
+      test_executed: true,
+      results: results,
+    })
+  }
+
   // 2. Ignorar robôs conhecidos (User-Agent header)
   const userAgent = (e.request.header.get('User-Agent') || '').toLowerCase()
   const botKeywords = [
