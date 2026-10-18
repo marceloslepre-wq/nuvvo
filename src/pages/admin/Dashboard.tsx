@@ -12,6 +12,7 @@ import { VisitSummaryCards, type VisitStats } from '@/components/admin/visit-sum
 import { VisitTrendChart, type TrendPoint } from '@/components/admin/visit-trend-chart'
 import { VisitModalityChart, type ModalityPoint } from '@/components/admin/visit-modality-chart'
 import { VisitEventsTable } from '@/components/admin/visit-events-table'
+import { getTenantProductReferenceMap, type ProductPathInfo } from '@/services/products'
 import { useRealtime } from '@/hooks/use-realtime'
 import { BarChart3, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,27 @@ export default function AdminDashboard() {
   const [totalCount, setTotalCount] = useState(0)
   const [todayCount, setTodayCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [productMap, setProductMap] = useState<Map<string, ProductPathInfo>>(new Map())
+
+  const loadProducts = useCallback(async () => {
+    if (!activeAdminTenant?.id) {
+      setProductMap(new Map())
+      return
+    }
+    const map = await getTenantProductReferenceMap(activeAdminTenant.id)
+    setProductMap(map)
+  }, [activeAdminTenant?.id])
+
+  useEffect(() => {
+    loadProducts()
+  }, [loadProducts])
+
+  useRealtime('products', () => {
+    loadProducts()
+  })
+  useRealtime('product_variant_details', () => {
+    loadProducts()
+  })
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -112,6 +134,11 @@ export default function AdminDashboard() {
     setAppliedFilter(filter)
   }
 
+  const handleRefresh = () => {
+    loadData()
+    loadProducts()
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -119,7 +146,7 @@ export default function AdminDashboard() {
           <BarChart3 className="h-7 w-7 text-primary" />
           <h1 className="text-3xl font-bold text-gray-900">Dashboard Gerencial</h1>
         </div>
-        <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Atualizar
         </Button>
@@ -134,7 +161,7 @@ export default function AdminDashboard() {
         <VisitModalityChart data={modalityData} />
       </div>
 
-      <VisitEventsTable logs={logs} totalCount={totalCount} />
+      <VisitEventsTable logs={logs} totalCount={totalCount} productMap={productMap} />
     </div>
   )
 }

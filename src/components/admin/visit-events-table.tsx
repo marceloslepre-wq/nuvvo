@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { VisitLog } from '@/services/visit-logs'
+import type { ProductPathInfo } from '@/services/products'
 import {
   formatDateTime,
   getLocationString,
@@ -21,11 +22,57 @@ import {
 interface VisitEventsTableProps {
   logs: VisitLog[]
   totalCount?: number
+  productMap?: Map<string, ProductPathInfo>
 }
 
 const PAGE_SIZE = 10
 
-export function VisitEventsTable({ logs, totalCount }: VisitEventsTableProps) {
+/**
+ * Converte caminhos como `/produto/<id>` para `/produto/<referencia>`,
+ * mantendo fallback para o ID original se não houver referência ou se o produto não existir.
+ * Retorna também o nome do produto caso exista para enriquecer o tooltip (title).
+ */
+export function resolveDisplayPath(
+  path: string | undefined | null,
+  productMap?: Map<string, ProductPathInfo>,
+): { displayPath: string; tooltipText: string } {
+  if (!path) {
+    return { displayPath: '—', tooltipText: '' }
+  }
+
+  // Regex para identificar rota /produto/<id>
+  // Aceita /produto/<id> com ou sem trailing slash ou query params
+  const match = path.match(/^\/produto\/([a-zA-Z0-9_-]+)(\/.*|\?.*)?$/)
+  if (!match) {
+    return { displayPath: path, tooltipText: path }
+  }
+
+  const productId = match[1]
+  const remainder = match[2] || ''
+  const productInfo = productMap?.get(productId)
+
+  if (!productInfo) {
+    // ID que não corresponde a nenhum produto (fallback conforme requisito 3)
+    return { displayPath: path, tooltipText: path }
+  }
+
+  const ref = productInfo.displayReference?.trim()
+  if (!ref) {
+    // Produto sem referência cadastrada (fallback conforme requisito 2)
+    const tooltip = productInfo.name ? `${productInfo.name} (${path})` : path
+    return { displayPath: path, tooltipText: tooltip }
+  }
+
+  // Substitui o ID pela referência do produto
+  const resolvedPath = `/produto/${ref}${remainder}`
+  const tooltip = productInfo.name
+    ? `${productInfo.name} — ${resolvedPath} (id: ${productId})`
+    : resolvedPath
+
+  return { displayPath: resolvedPath, tooltipText: tooltip }
+}
+
+export function VisitEventsTable({ logs, totalCount, productMap }: VisitEventsTableProps) {
   const [page, setPage] = useState(1)
 
   const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE))
@@ -101,12 +148,17 @@ export function VisitEventsTable({ logs, totalCount }: VisitEventsTableProps) {
                     <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
                       {getLocationString(log.country, log.region, log.city)}
                     </TableCell>
-                    <TableCell
-                      className="text-sm text-gray-600 font-mono max-w-[220px] truncate"
-                      title={log.path || undefined}
-                    >
-                      {log.path || '—'}
-                    </TableCell>
+                    {(() => {
+                      const { displayPath, tooltipText } = resolveDisplayPath(log.path, productMap)
+                      return (
+                        <TableCell
+                          className="text-sm text-gray-600 font-mono max-w-[220px] truncate"
+                          title={tooltipText || undefined}
+                        >
+                          {displayPath}
+                        </TableCell>
+                      )
+                    })()}
                   </TableRow>
                 )
               })
