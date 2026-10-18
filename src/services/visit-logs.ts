@@ -77,14 +77,6 @@ export function shouldIgnoreTracking(): boolean {
   return false
 }
 
-export const triggerSholverTest = async (): Promise<any> => {
-  return await pb.send('/backend/v1/track', {
-    method: 'POST',
-    body: JSON.stringify({ test_sholver: true }),
-    headers: { 'Content-Type': 'application/json' },
-  })
-}
-
 export const trackVisit = async (payload: TrackPayload): Promise<void> => {
   if (shouldIgnoreTracking()) {
     return
