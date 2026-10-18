@@ -57,12 +57,13 @@ export function VisitEventsTable({ logs, totalCount }: VisitEventsTableProps) {
               <TableHead>Modalidade</TableHead>
               <TableHead className="w-[110px]">Dispositivo</TableHead>
               <TableHead>Localização</TableHead>
+              <TableHead>Caminho / Rota</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pageItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-gray-400 py-8">
+                <TableCell colSpan={9} className="text-center text-gray-400 py-8">
                   Nenhum evento registrado no período.
                 </TableCell>
               </TableRow>
@@ -99,6 +100,12 @@ export function VisitEventsTable({ logs, totalCount }: VisitEventsTableProps) {
                     </TableCell>
                     <TableCell className="text-sm text-gray-600 max-w-[200px] truncate">
                       {getLocationString(log.country, log.region, log.city)}
+                    </TableCell>
+                    <TableCell
+                      className="text-sm text-gray-600 font-mono max-w-[220px] truncate"
+                      title={log.path || undefined}
+                    >
+                      {log.path || '—'}
                     </TableCell>
                   </TableRow>
                 )
