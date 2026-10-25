@@ -179,6 +179,7 @@ routerAdd(
                     nome_fantasia: '',
                     email: t.getString('email') || '',
                     telefone: t.getString('phone') || '',
+                    whatsapp: t.getString('phone') || '',
                     documento: t.getString('document_cnpj') || '',
                   },
                   plano: {
@@ -407,6 +408,7 @@ cronAdd('reconcile_pending_pix', '*/2 * * * *', () => {
                   nome_fantasia: '',
                   email: t.getString('email') || '',
                   telefone: t.getString('phone') || '',
+                  whatsapp: t.getString('phone') || '',
                   documento: t.getString('document_cnpj') || '',
                 },
                 plano: {

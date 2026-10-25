@@ -239,6 +239,7 @@ routerAdd(
                     nome_fantasia: '',
                     email: tenantRecord.getString('email') || '',
                     telefone: tenantRecord.getString('phone') || '',
+                    whatsapp: tenantRecord.getString('phone') || '',
                     documento: tenantRecord.getString('document_cnpj') || '',
                   },
                   plano: {

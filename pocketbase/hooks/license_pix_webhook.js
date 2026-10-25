@@ -205,6 +205,7 @@ routerAdd('POST', '/backend/v1/licenses/pix-webhook', (e) => {
               nome_fantasia: '',
               email: tenantRecord.getString('email') || '',
               telefone: tenantRecord.getString('phone') || '',
+              whatsapp: tenantRecord.getString('phone') || '',
               documento: tenantRecord.getString('document_cnpj') || '',
             },
             plano: {

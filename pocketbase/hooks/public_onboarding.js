@@ -176,6 +176,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
           nome_fantasia: '',
           email: email,
           telefone: phone,
+          whatsapp: phone || '',
           documento: cnpj,
         },
         plano: {
