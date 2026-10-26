@@ -88,7 +88,8 @@ export default function Layout() {
   // Sincroniza o Google Tag apenas para as rotas públicas (não carrega nem dispara se for rota admin ou tela de login direta)
   useEffect(() => {
     syncGoogleTagWithRoute(pathname, isDirectNuvvoRoot)
-    if (!isDirectNuvvoRoot && currentTenant) {
+    const isOfficialDomain = isNuvvoOfficialHost()
+    if (!isDirectNuvvoRoot && !isOfficialDomain && currentTenant) {
       trackTenantPageView(currentTenant, pathname, false)
     }
   }, [pathname, isDirectNuvvoRoot, currentTenant])

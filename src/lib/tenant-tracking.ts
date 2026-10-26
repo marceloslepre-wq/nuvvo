@@ -26,6 +26,7 @@ export function isNonPublicTenantPath(pathname: string): boolean {
   if (p.startsWith('/admin')) return true
   if (p.startsWith('/master')) return true
   if (p === '/cadastro' || p.startsWith('/cadastro/')) return true
+  if (p === '/login' || p.startsWith('/login/')) return true
   return false
 }
 
@@ -126,6 +127,14 @@ export function trackTenantPageView(
 ): void {
   if (typeof window === 'undefined') return
   if (!tenant) return
+
+  // No domínio principal da Nuvvo (nuvvo.sholver.com.br), NENHUM tenant tracking deve carregar em rota nenhuma
+  if (typeof window !== 'undefined') {
+    const host = (window.location.host || '').toLowerCase().trim().split(':')[0]
+    if (host === 'nuvvo.sholver.com.br' || host === 'www.nuvvo.sholver.com.br') {
+      return
+    }
+  }
 
   // NUNCA disparar em telas administrativas, login ou cadastro
   if (isDirectAdminScreen || isNonPublicTenantPath(pathname)) {

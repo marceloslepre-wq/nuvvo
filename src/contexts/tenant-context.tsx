@@ -117,21 +117,65 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [pathSegment])
 
-  // Atualizar documento title / branding se tenant tiver nome
+  // Atualizar document title e meta description por contexto
   useEffect(() => {
     const isNuvvoHost =
       typeof window !== 'undefined' &&
       (window.location.host.toLowerCase().startsWith('nuvvo.sholver.com.br') ||
         window.location.host.toLowerCase().startsWith('www.nuvvo.sholver.com.br'))
 
-    if (isNuvvoHost) {
+    const isNonPublicRoute =
+      location.pathname.startsWith('/admin') ||
+      location.pathname.startsWith('/master') ||
+      location.pathname === '/login' ||
+      location.pathname.startsWith('/login/') ||
+      location.pathname === '/cadastro' ||
+      location.pathname.startsWith('/cadastro/')
+
+    const DEFAULT_NUVVO_DESC = 'Nuvvo - plataforma completa para empresas de venda e locação.'
+
+    const updateMetaDesc = (desc: string) => {
+      if (typeof document === 'undefined') return
+      let meta = document.querySelector('meta[name="description"]')
+      if (!meta) {
+        meta = document.createElement('meta')
+        meta.setAttribute('name', 'description')
+        document.head.appendChild(meta)
+      }
+      meta.setAttribute('content', desc)
+
+      // Atualiza também og:description e twitter:description para consistência
+      const ogDesc = document.querySelector('meta[property="og:description"]')
+      if (ogDesc) ogDesc.setAttribute('content', desc)
+      const twDesc = document.querySelector('meta[name="twitter:description"]')
+      if (twDesc) twDesc.setAttribute('content', desc)
+    }
+
+    if (isNuvvoHost || isNonPublicRoute || !currentTenant) {
       document.title = 'Nuvvo - Plataforma de Vendas e Locação'
+      updateMetaDesc(DEFAULT_NUVVO_DESC)
       return
     }
 
-    if (currentTenant?.name && !location.pathname.startsWith('/admin')) {
+    // Site público do cliente (ex: aluguelhospitalhome.sholver.com.br)
+    if (currentTenant.name) {
       document.title = `${currentTenant.name} - Venda e Locação`
     }
+
+    // Extrai descrição limpa do cliente se houver (about_us sem tags HTML ou telefone ou nome)
+    let tenantDesc = DEFAULT_NUVVO_DESC
+    if (currentTenant.about_us) {
+      const plain = currentTenant.about_us
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (plain) {
+        tenantDesc = plain.length > 160 ? `${plain.substring(0, 157)}...` : plain
+      }
+    } else if (currentTenant.name) {
+      tenantDesc = `${currentTenant.name} - Venda e locação de equipamentos.`
+    }
+    updateMetaDesc(tenantDesc)
   }, [currentTenant, location.pathname])
 
   const setSelectedAdminTenantId = (id: string | null) => {

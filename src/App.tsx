@@ -65,6 +65,7 @@ const App = () => (
               </Route>
 
               <Route path="/cadastro" element={<PublicOnboarding />} />
+              <Route path="/login" element={<AdminLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route
                 path="/admin/reset-password"

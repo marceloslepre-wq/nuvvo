@@ -27,6 +27,8 @@ export function isAdministrativePath(pathname: string): boolean {
   const cleanPath = pathname.toLowerCase().trim()
   if (cleanPath.startsWith('/admin')) return true
   if (cleanPath.startsWith('/master')) return true
+  if (cleanPath === '/login' || cleanPath.startsWith('/login/')) return true
+  if (cleanPath === '/cadastro' || cleanPath.startsWith('/cadastro/')) return true
   return false
 }
 
@@ -61,6 +63,12 @@ export function disablePixelInAdmin(): void {
 export function isPublicTrackingAllowed(pathname: string, isDirectAdminScreen = false): boolean {
   if (isDirectAdminScreen) return false
   if (isAdministrativePath(pathname)) return false
+  if (typeof window !== 'undefined') {
+    const host = (window.location.host || '').toLowerCase().trim().split(':')[0]
+    if (host === 'nuvvo.sholver.com.br' || host === 'www.nuvvo.sholver.com.br') {
+      return false
+    }
+  }
   return true
 }
 

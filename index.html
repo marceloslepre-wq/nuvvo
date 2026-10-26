@@ -14,7 +14,18 @@
         function isCurrentRouteAdmin() {
           try {
             var p = (window.location.pathname || '').toLowerCase().trim();
-            return p.indexOf('/admin') === 0 || p.indexOf('/master') === 0;
+            var h = (window.location.host || '').toLowerCase().trim();
+            if (h === 'nuvvo.sholver.com.br' || h === 'www.nuvvo.sholver.com.br') {
+              return true;
+            }
+            return (
+              p.indexOf('/admin') === 0 ||
+              p.indexOf('/master') === 0 ||
+              p === '/login' ||
+              p.indexOf('/login') === 0 ||
+              p === '/cadastro' ||
+              p.indexOf('/cadastro') === 0
+            );
           } catch (_) {
             return false;
           }
@@ -93,20 +104,20 @@
     <title>Nuvvo - Plataforma de Vendas e Locação</title>
     <meta
       name="description"
-      content="Aluguel e venda de produtos hospitalares em geral. Entre em contato: 27 99904-6961"
+      content="Nuvvo - plataforma completa para empresas de venda e locação."
     />
-    <meta name="author" content="Skip (https://goskip.dev)" />
-    <meta property="og:title" content="Hospital Home - Venda e Locação" />
+    <meta name="author" content="Nuvvo" />
+    <meta property="og:title" content="Nuvvo - Plataforma de Vendas e Locação" />
     <meta
       property="og:description"
-      content="Aluguel e venda de produtos hospitalares em geral. Entre em contato: 27 99904-6961"
+      content="Nuvvo - plataforma completa para empresas de venda e locação."
     />
     <meta property="og:image" content="/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Hospital Home - Venda e Locação" />
+    <meta name="twitter:title" content="Nuvvo - Plataforma de Vendas e Locação" />
     <meta
       name="twitter:description"
-      content="Aluguel e venda de produtos hospitalares em geral. Entre em contato: 27 99904-6961"
+      content="Nuvvo - plataforma completa para empresas de venda e locação."
     />
     <meta name="twitter:image" content="/og-image.png" />
   </head>

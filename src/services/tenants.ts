@@ -148,14 +148,10 @@ export const resolveTenantByHost = async (host: string): Promise<Tenant | null> 
   const allTenants = await getTenants()
 
   // 1. Tratamento específico para o domínio oficial da plataforma Master Nuvvo
-  // Quando acessado via nuvvo.sholver.com.br (ou www.nuvvo.sholver.com.br),
-  // deve tratar como a INSTÂNCIA DE ORIGEM (a mesma de demonstração/master).
+  // No domínio principal da Nuvvo (nuvvo.sholver.com.br), o host NÃO pertence a nenhum cliente/tenant.
+  // Nenhum fallback de cliente deve ser associado ao domínio oficial da Nuvvo por padrão.
   if (isNuvvoOfficialHost(normHost)) {
-    const originTenant =
-      allTenants.find((t) => t.is_origin) ||
-      allTenants.find((t) => t.slug === 'hospital-home') ||
-      (allTenants.length > 0 ? allTenants[0] : null)
-    return originTenant
+    return null
   }
 
   // 2. Procura correspondência direta com o host (subdomínio, custom_domain, preview_host, extra_hosts)

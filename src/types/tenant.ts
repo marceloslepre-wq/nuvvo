@@ -112,6 +112,7 @@ export const RESERVED_PATH_PREFIXES = [
   'nossas-lojas',
   'backend',
   'api',
+  'login',
   '_',
 ] as const
 
@@ -183,14 +184,6 @@ export function matchesHost(tenant: Tenant, host: string): boolean {
 
   // 5. Comparação direta com slug se for um subdomínio
   if (sub && tenant.slug && tenant.slug.toLowerCase() === sub) {
-    return true
-  }
-
-  // 6. Host oficial do Nuvvo mapeia para a instância de origem
-  if (
-    tenant.is_origin &&
-    (norm === 'nuvvo.sholver.com.br' || norm === 'www.nuvvo.sholver.com.br')
-  ) {
     return true
   }
 
