@@ -4,9 +4,10 @@
 
 import { isAdministrativePath } from './gtag'
 import { trackVisit } from '@/services/visit-logs'
+import { trackTenantContactEvent } from './tenant-tracking'
 
 /**
- * Dispara o evento 'whatsapp_click' para o dataLayer do GTM.
+ * Dispara o evento 'whatsapp_click' para o dataLayer do GTM e fbq('track','Contact') no Meta Pixel.
  * Executado exclusivamente nas interações de contato do site público.
  */
 export function trackWhatsAppConversion(label?: string) {
@@ -22,6 +23,13 @@ export function trackWhatsAppConversion(label?: string) {
     })
   } catch {
     // rastreamento nunca deve quebrar o clique
+  }
+
+  // Disparo do Meta Pixel fbq('track', 'Contact') se ativo no site público do tenant
+  try {
+    trackTenantContactEvent(label)
+  } catch {
+    // silencioso
   }
 
   try {

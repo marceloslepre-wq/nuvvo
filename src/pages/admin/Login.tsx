@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import pb from '@/lib/pocketbase/client'
@@ -9,6 +9,7 @@ import { toast } from '@/components/ui/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import nuvvoLogo from '@/assets/logomarca-nuvvo-87c9b.png'
 import { isNuvvoOfficialHost } from '@/types/tenant'
+import { ensureSholverPixelLoaded, trackSholverContact } from '@/lib/nuvvo-pixel'
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
@@ -17,6 +18,11 @@ export default function AdminLogin() {
   const [isForgot, setIsForgot] = useState(false)
   const { signIn } = useAuth()
   const navigate = useNavigate()
+
+  // Item 4: Carregar Pixel da Sholver SOMENTE nas páginas próprias da Nuvvo (tela de login e /cadastro)
+  useEffect(() => {
+    ensureSholverPixelLoaded()
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

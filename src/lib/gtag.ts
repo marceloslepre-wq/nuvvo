@@ -31,6 +31,27 @@ export function isAdministrativePath(pathname: string): boolean {
 }
 
 /**
+ * Neutraliza o objeto fbq caso o usuário navegue para o painel administrativo logado
+ * (/admin/* ou /master/*, exceto /admin/login)
+ */
+export function disablePixelInAdmin(): void {
+  if (typeof window === 'undefined') return
+  const path = (window.location.pathname || '').toLowerCase().trim()
+  const isPostLoginAdmin =
+    (path.startsWith('/admin') || path.startsWith('/master')) && path !== '/admin/login'
+
+  if (isPostLoginAdmin) {
+    const win = window as any
+    if (win.fbq) {
+      // Sobrescreve o despachador do fbq para no-op dentro dos painéis administrativos
+      win.fbq = function () {
+        // no-op silencioso
+      }
+    }
+  }
+}
+
+/**
  * Determina se o contexto atual de navegação é puramente uma rota pública do site,
  * onde o rastreamento do Google Ads e remarketing é desejado.
  *
@@ -148,8 +169,15 @@ export function installDefensiveGoogleAdsErrorHandler(): void {
         urlStr.includes('googletagmanager.com/gtag') ||
         urlStr.includes('AW-403144958')
 
-      // Se estiver numa rota administrativa e for requisição de remarketing/ads, aborta com Response vazia fictícia
-      if (isGoogleTrackingUrl && isAdministrativePath(window.location.pathname)) {
+      const isMetaTrackingUrl =
+        urlStr.includes('facebook.com/tr') || urlStr.includes('connect.facebook.net')
+
+      // Se for rota administrativa (/admin ou /master após login), bloqueia envios
+      const isPostLoginAdmin =
+        isAdministrativePath(window.location.pathname) &&
+        window.location.pathname !== '/admin/login'
+
+      if ((isGoogleTrackingUrl || isMetaTrackingUrl) && isPostLoginAdmin) {
         return new Response(null, { status: 200, statusText: 'OK (Blocked in Admin)' })
       }
 
@@ -159,10 +187,10 @@ export function installDefensiveGoogleAdsErrorHandler(): void {
       } catch (err: any) {
         // Se a requisição de rastreamento do Google falhou (ex: bloqueada por adblocker / cors / HTTP 0),
         // retorna Response dummy de status 200 em vez de estourar TypeError/NetworkError na aplicação
-        if (isGoogleTrackingUrl) {
+        if (isGoogleTrackingUrl || isMetaTrackingUrl) {
           return new Response(null, {
             status: 200,
-            statusText: 'OK (Silenced Google Ads Network Error)',
+            statusText: 'OK (Silenced Tracking Network Error)',
           })
         }
         throw err
@@ -177,8 +205,14 @@ export function installDefensiveGoogleAdsErrorHandler(): void {
           urlStr.includes('google.com/rmkt') ||
           urlStr.includes('googleadservices.com') ||
           urlStr.includes('AW-403144958')
+        const isMetaTrackingUrl =
+          urlStr.includes('facebook.com/tr') || urlStr.includes('connect.facebook.net')
 
-        if (isGoogleTrackingUrl && isAdministrativePath(window.location.pathname)) {
+        const isPostLoginAdmin =
+          isAdministrativePath(window.location.pathname) &&
+          window.location.pathname !== '/admin/login'
+
+        if ((isGoogleTrackingUrl || isMetaTrackingUrl) && isPostLoginAdmin) {
           return true
         }
 
@@ -279,6 +313,8 @@ export function syncGoogleTagWithRoute(pathname: string, isDirectAdminScreen = f
     removeGoogleTagFromDom()
     // 2. Garante que os wrappers de dataLayer e gtag estejam bloqueando envios
     gateDataLayerAndGtag()
+    // 3. Garante que o Meta Pixel não dispare no painel administrativo
+    disablePixelInAdmin()
     return
   }
 

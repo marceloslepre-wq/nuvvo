@@ -33,6 +33,8 @@ export default function AdminLayoutSettings() {
   const [tenantExtraHosts, setTenantExtraHosts] = useState('')
   const [tenantFacebookUrl, setTenantFacebookUrl] = useState('')
   const [tenantInstagramUrl, setTenantInstagramUrl] = useState('')
+  const [tenantGtmId, setTenantGtmId] = useState('')
+  const [tenantMetaPixelId, setTenantMetaPixelId] = useState('')
   const [savingTenant, setSavingTenant] = useState(false)
   const [isNewTenantOpen, setIsNewTenantOpen] = useState(false)
 
@@ -79,6 +81,8 @@ export default function AdminLayoutSettings() {
     setTenantExtraHosts(activeAdminTenant.extra_hosts || '')
     setTenantFacebookUrl(activeAdminTenant.facebook_url || '')
     setTenantInstagramUrl(activeAdminTenant.instagram_url || '')
+    setTenantGtmId(activeAdminTenant.gtm_id || '')
+    setTenantMetaPixelId(activeAdminTenant.meta_pixel_id || '')
   }
 
   useEffect(() => {
@@ -140,6 +144,18 @@ export default function AdminLayoutSettings() {
     try {
       const cleanFb = tenantFacebookUrl.trim()
       const cleanIg = tenantInstagramUrl.trim()
+      const cleanGtm = tenantGtmId.trim().toUpperCase()
+      const cleanPixel = tenantMetaPixelId.trim().replace(/\D/g, '')
+
+      if (cleanGtm && !/^GTM-[A-Z0-9]+$/i.test(cleanGtm)) {
+        toast({
+          title: 'ID do GTM inválido',
+          description: 'O ID do Google Tag Manager deve estar no formato GTM-XXXXXXX.',
+          variant: 'destructive',
+        })
+        setSavingTenant(false)
+        return
+      }
 
       await pb.collection('tenants').update(activeAdminTenant.id, {
         name: tenantName,
@@ -150,6 +166,8 @@ export default function AdminLayoutSettings() {
         extra_hosts: tenantExtraHosts.trim().toLowerCase(),
         facebook_url: cleanFb,
         instagram_url: cleanIg,
+        gtm_id: cleanGtm,
+        meta_pixel_id: cleanPixel,
       })
 
       // Sincroniza também com o registro em site_settings do tenant
@@ -362,6 +380,32 @@ export default function AdminLayoutSettings() {
                 <p className="text-xs text-gray-500">
                   URL completa do perfil da empresa no Instagram. Deixe em branco se não possuir.
                 </p>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t space-y-4">
+              <h3 className="text-sm font-semibold text-gray-800">Rastreamento e Anúncios</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>ID do Google Tag Manager</Label>
+                  <Input
+                    value={tenantGtmId}
+                    onChange={(e) => setTenantGtmId(e.target.value.trim().toUpperCase())}
+                    placeholder="GTM-XXXXXXX"
+                    className="font-mono text-xs uppercase"
+                  />
+                  <p className="text-[11px] text-gray-400">Ex.: GTM-KH6V33Q5 (opcional)</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>ID do Pixel da Meta</Label>
+                  <Input
+                    value={tenantMetaPixelId}
+                    onChange={(e) => setTenantMetaPixelId(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Ex: 1063348857793554"
+                    className="font-mono text-xs"
+                  />
+                  <p className="text-[11px] text-gray-400">Apenas números (opcional)</p>
+                </div>
               </div>
             </div>
 

@@ -70,6 +70,10 @@ export interface Tenant {
   created?: string
   updated?: string
 
+  // Rastreamento e tags por cliente
+  gtm_id?: string
+  meta_pixel_id?: string
+
   // Campos comerciais / licenciamento Nuvvo
   plan?: string
   expand?: {

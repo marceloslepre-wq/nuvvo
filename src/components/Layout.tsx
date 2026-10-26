@@ -12,6 +12,7 @@ import AdminLogin from '@/pages/admin/Login'
 import { isNuvvoOfficialHost } from '@/types/tenant'
 import { WhatsAppFloatingButton } from '@/components/WhatsAppFloatingButton'
 import { syncGoogleTagWithRoute } from '@/lib/gtag'
+import { trackTenantPageView } from '@/lib/tenant-tracking'
 import { formatPhoneNumber, buildWhatsAppLink, openWhatsApp } from '@/lib/whatsapp'
 
 export default function Layout() {
@@ -87,7 +88,10 @@ export default function Layout() {
   // Sincroniza o Google Tag apenas para as rotas públicas (não carrega nem dispara se for rota admin ou tela de login direta)
   useEffect(() => {
     syncGoogleTagWithRoute(pathname, isDirectNuvvoRoot)
-  }, [pathname, isDirectNuvvoRoot])
+    if (!isDirectNuvvoRoot && currentTenant) {
+      trackTenantPageView(currentTenant, pathname, false)
+    }
+  }, [pathname, isDirectNuvvoRoot, currentTenant])
 
   if (tenantLoading) {
     return (

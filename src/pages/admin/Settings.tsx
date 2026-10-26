@@ -65,6 +65,8 @@ export default function AdminSettings() {
   const [companyCnpj, setCompanyCnpj] = useState('')
   const [companyEmail, setCompanyEmail] = useState('')
   const [companyPhone, setCompanyPhone] = useState('')
+  const [companyGtmId, setCompanyGtmId] = useState('')
+  const [companyMetaPixelId, setCompanyMetaPixelId] = useState('')
   const [savingCompany, setSavingCompany] = useState(false)
 
   // Estado da aba Locais (transferida de Layout & Empresa)
@@ -217,11 +219,15 @@ export default function AdminSettings() {
       setCompanyCnpj(String(activeAdminTenant.document_cnpj || ''))
       setCompanyEmail(String(activeAdminTenant.email || ''))
       setCompanyPhone(String(activeAdminTenant.phone || ''))
+      setCompanyGtmId(String(activeAdminTenant.gtm_id || ''))
+      setCompanyMetaPixelId(String(activeAdminTenant.meta_pixel_id || ''))
     } else {
       setCompanyName('')
       setCompanyCnpj('')
       setCompanyEmail('')
       setCompanyPhone('')
+      setCompanyGtmId('')
+      setCompanyMetaPixelId('')
     }
   }, [activeAdminTenant?.id, user?.id])
 
@@ -425,6 +431,26 @@ export default function AdminSettings() {
       return
     }
 
+    const cleanGtm = companyGtmId.trim()
+    if (cleanGtm && !/^GTM-[A-Z0-9]+$/i.test(cleanGtm)) {
+      toast({
+        title: 'ID do GTM inválido',
+        description: 'O ID do Google Tag Manager deve estar no formato GTM-XXXXXXX.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const cleanPixel = companyMetaPixelId.trim()
+    if (cleanPixel && !/^\d+$/.test(cleanPixel)) {
+      toast({
+        title: 'ID do Pixel da Meta inválido',
+        description: 'O ID do Pixel da Meta deve conter apenas números.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setSavingCompany(true)
     try {
       const payload: Record<string, any> = {
@@ -432,6 +458,8 @@ export default function AdminSettings() {
         document_cnpj: companyCnpj.trim(),
         email: companyEmail.trim(),
         phone: companyPhone.trim(),
+        gtm_id: cleanGtm.toUpperCase(),
+        meta_pixel_id: cleanPixel,
       }
 
       await pb.collection('tenants').update(targetTenantId, payload)
@@ -989,6 +1017,41 @@ export default function AdminSettings() {
               <p className="text-[11px] text-gray-400">
                 O subdomínio da empresa é fixo e definido na contratação/onboarding.
               </p>
+            </div>
+
+            {/* SEÇÃO RASTREAMENTO E ANÚNCIOS POR CLIENTE */}
+            <div className="pt-4 border-t space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Rastreamento e Anúncios</h3>
+                <p className="text-xs text-gray-500">
+                  Configure as tags do Google Tag Manager e o Pixel da Meta para o site público da
+                  sua empresa. Os códigos são opcionais e carregam exclusivamente no seu site.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>ID do Google Tag Manager</Label>
+                  <Input
+                    value={companyGtmId}
+                    onChange={(e) => setCompanyGtmId(e.target.value.trim().toUpperCase())}
+                    placeholder="GTM-XXXXXXX"
+                    className="font-mono text-xs uppercase"
+                  />
+                  <p className="text-[11px] text-gray-400">Ex.: GTM-KH6V33Q5 (opcional)</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>ID do Pixel da Meta</Label>
+                  <Input
+                    value={companyMetaPixelId}
+                    onChange={(e) => setCompanyMetaPixelId(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Ex: 1063348857793554"
+                    className="font-mono text-xs"
+                  />
+                  <p className="text-[11px] text-gray-400">Apenas números (opcional)</p>
+                </div>
+              </div>
             </div>
 
             <div className="pt-2">

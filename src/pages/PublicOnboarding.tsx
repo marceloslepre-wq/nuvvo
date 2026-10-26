@@ -25,6 +25,13 @@ import { toast } from '@/components/ui/use-toast'
 import pb from '@/lib/pocketbase/client'
 import { Plan } from '@/types/tenant'
 import { getPlans } from '@/services/tenants'
+import {
+  ensureSholverPixelLoaded,
+  getPlanTrackingInfo,
+  trackSholverInitiateCheckout,
+  trackSholverSuccessfulRegistration,
+  trackSholverContact,
+} from '@/lib/nuvvo-pixel'
 
 export default function PublicOnboarding() {
   const [searchParams] = useSearchParams()
@@ -65,6 +72,9 @@ export default function PublicOnboarding() {
       /* intentionally ignored */
     }
 
+    // Item 4: Carregar Pixel Sholver na página /cadastro
+    ensureSholverPixelLoaded()
+
     getPlans()
       .then((list) => {
         const publicPlans = list.filter((p) => p.status === 'active' && !p.is_master_exclusive)
@@ -72,14 +82,24 @@ export default function PublicOnboarding() {
         // Se o usuário passou explicitamente ?plano= na URL pelo link de convite, honra o parâmetro
         if (preSelectedPlanId && publicPlans.some((p) => p.id === preSelectedPlanId)) {
           setPlanId(preSelectedPlanId)
+        } else if (publicPlans.length > 0) {
+          // Mantém primeiro plano público como padrão se nenhum selecionado
+          setPlanId(publicPlans[0].id)
         }
       })
       .catch(() => {})
       .finally(() => setLoadingPlans(false))
   }, [preSelectedPlanId])
 
+  const selectedPlan = plans.find((p) => p.id === planId) || plans[0]
+
   const handleNameChange = (val: string) => {
     setName(val)
+    if (val.trim().length > 0) {
+      // Item 4a: Dispara UMA VEZ InitiateCheckout ao preencher Nome da Empresa pela primeira vez
+      const planInfo = getPlanTrackingInfo(selectedPlan)
+      trackSholverInitiateCheckout(planInfo)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,6 +162,18 @@ export default function PublicOnboarding() {
       toast({
         title: 'Cadastro concluído com sucesso!',
         description: 'Sua conta de teste de 15 dias está pronta.',
+      })
+
+      // Item 4b: SOMENTE após o backend confirmar que a conta foi criada com sucesso:
+      // fbq('init', '2307497159656039', { em, ph, country: 'br' })
+      // fbq('track', 'CompleteRegistration', { content_name, value, currency: 'BRL' })
+      // fbq('track', 'StartTrial', { value, currency: 'BRL', predicted_ltv: valor * 12 })
+      const chosenPlan = plans.find((p) => p.id === planId)
+      const planInfo = getPlanTrackingInfo(chosenPlan)
+      trackSholverSuccessfulRegistration({
+        email: email.trim(),
+        phone: phone.trim(),
+        planInfo,
       })
     } catch (err: any) {
       toast({
@@ -219,8 +251,6 @@ export default function PublicOnboarding() {
       </div>
     )
   }
-
-  const selectedPlan = plans.find((p) => p.id === planId)
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">

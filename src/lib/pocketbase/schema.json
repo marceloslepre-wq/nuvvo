@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-25T18:11:50.824Z",
+  "generatedAt": "2026-10-26T21:54:02.435Z",
   "collections": [
     {
       "name": "users",
@@ -1070,6 +1070,18 @@
         },
         {
           "name": "instagram_url",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gtm_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "meta_pixel_id",
           "type": "text",
           "required": false,
           "system": false
