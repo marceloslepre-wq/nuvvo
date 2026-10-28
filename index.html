@@ -10,22 +10,21 @@
     <!-- Script defensivo de rede para Google Ads / Analytics / GTM -->
     <script>
       (function() {
-        // Função utilitária para verificar se a rota é administrativa
+        // Função utilitária para verificar se a rota bloqueia chamadas gtag/dataLayer genéricas.
+        // As páginas próprias da Nuvvo (/login, /admin/login, /cadastro) possuem rastreamento ativo
+        // do Google Ads da Nuvvo (AW-18513891486) e Meta Pixel da Nuvvo, portanto NÃO devem ser bloqueadas aqui.
+        // O bloqueio é estrito apenas para painel logado (/admin pós-login, /master).
         function isCurrentRouteAdmin() {
           try {
             var p = (window.location.pathname || '').toLowerCase().trim();
-            var h = (window.location.host || '').toLowerCase().trim();
-            if (h === 'nuvvo.sholver.com.br' || h === 'www.nuvvo.sholver.com.br') {
+            // Rotas abertas da Nuvvo onde tags da própria plataforma são permitidas
+            if (p === '/login' || p === '/login/' || p === '/admin/login' || p === '/admin/login/' || p === '/cadastro' || p === '/cadastro/') {
+              return false;
+            }
+            if (p.indexOf('/admin') === 0 || p.indexOf('/master') === 0) {
               return true;
             }
-            return (
-              p.indexOf('/admin') === 0 ||
-              p.indexOf('/master') === 0 ||
-              p === '/login' ||
-              p.indexOf('/login') === 0 ||
-              p === '/cadastro' ||
-              p.indexOf('/cadastro') === 0
-            );
+            return false;
           } catch (_) {
             return false;
           }

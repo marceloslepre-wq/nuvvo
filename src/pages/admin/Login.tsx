@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import nuvvoLogo from '@/assets/logomarca-nuvvo-87c9b.png'
 import { isNuvvoOfficialHost } from '@/types/tenant'
 import { ensureSholverPixelLoaded, trackSholverContact } from '@/lib/nuvvo-pixel'
+import { ensureNuvvoGoogleAdsLoaded } from '@/lib/nuvvo-google-ads'
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
@@ -19,9 +20,10 @@ export default function AdminLogin() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
 
-  // Item 4: Carregar Pixel da Sholver SOMENTE nas páginas próprias da Nuvvo (tela de login e /cadastro)
+  // Carregar Pixel da Sholver e Tag do Google Ads (AW-18513891486) SOMENTE nas páginas próprias da Nuvvo
   useEffect(() => {
     ensureSholverPixelLoaded()
+    ensureNuvvoGoogleAdsLoaded()
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {

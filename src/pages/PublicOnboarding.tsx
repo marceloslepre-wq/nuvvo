@@ -32,6 +32,11 @@ import {
   trackSholverSuccessfulRegistration,
   trackSholverContact,
 } from '@/lib/nuvvo-pixel'
+import {
+  ensureNuvvoGoogleAdsLoaded,
+  getNuvvoPlanValue,
+  trackNuvvoAdsConversion,
+} from '@/lib/nuvvo-google-ads'
 
 export default function PublicOnboarding() {
   const [searchParams] = useSearchParams()
@@ -72,8 +77,9 @@ export default function PublicOnboarding() {
       /* intentionally ignored */
     }
 
-    // Item 4: Carregar Pixel Sholver na página /cadastro
+    // Carregar Pixel Sholver e Tag Google Ads (AW-18513891486) na página /cadastro
     ensureSholverPixelLoaded()
+    ensureNuvvoGoogleAdsLoaded()
 
     getPlans()
       .then((list) => {
@@ -174,6 +180,17 @@ export default function PublicOnboarding() {
         email: email.trim(),
         phone: phone.trim(),
         planInfo,
+      })
+
+      // DISPARO DE CONVERSÃO GOOGLE ADS (AW-18513891486):
+      // SOMENTE após backend confirmar criação com sucesso (mesmo momento de CompleteRegistration).
+      // Nunca no clique, nunca em erro.
+      // transaction_id: id da conta/tenant criado retornado pelo backend.
+      const tenantId = res?.tenant?.id || res?.user?.id || `nuvvo-${slug.trim().toLowerCase()}`
+      const planNumericValue = getNuvvoPlanValue(chosenPlan)
+      trackNuvvoAdsConversion({
+        transactionId: String(tenantId),
+        value: planNumericValue,
       })
     } catch (err: any) {
       toast({

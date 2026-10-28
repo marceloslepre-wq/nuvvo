@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { syncGoogleTagWithRoute, installDefensiveGoogleAdsErrorHandler } from '@/lib/gtag'
+import { ensureNuvvoGoogleAdsLoaded } from '@/lib/nuvvo-google-ads'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Index from './pages/Index'
@@ -33,6 +34,7 @@ function GoogleTagRouteSynchronizer() {
   useEffect(() => {
     installDefensiveGoogleAdsErrorHandler()
     syncGoogleTagWithRoute(pathname)
+    ensureNuvvoGoogleAdsLoaded(pathname)
   }, [pathname])
 
   return null

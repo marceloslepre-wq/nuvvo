@@ -180,10 +180,13 @@ export function installDefensiveGoogleAdsErrorHandler(): void {
       const isMetaTrackingUrl =
         urlStr.includes('facebook.com/tr') || urlStr.includes('connect.facebook.net')
 
-      // Se for rota administrativa (/admin ou /master após login), bloqueia envios
+      // Se for rota de painel logado (/admin/* ou /master/*, exceto /admin/login, /login e /cadastro), bloqueia envios
+      const currentPath = (window.location.pathname || '').toLowerCase().trim()
+      const isPublicNuvvoScreen =
+        currentPath === '/login' || currentPath === '/admin/login' || currentPath === '/cadastro'
       const isPostLoginAdmin =
-        isAdministrativePath(window.location.pathname) &&
-        window.location.pathname !== '/admin/login'
+        !isPublicNuvvoScreen &&
+        (currentPath.startsWith('/admin') || currentPath.startsWith('/master'))
 
       if ((isGoogleTrackingUrl || isMetaTrackingUrl) && isPostLoginAdmin) {
         return new Response(null, { status: 200, statusText: 'OK (Blocked in Admin)' })
@@ -216,9 +219,12 @@ export function installDefensiveGoogleAdsErrorHandler(): void {
         const isMetaTrackingUrl =
           urlStr.includes('facebook.com/tr') || urlStr.includes('connect.facebook.net')
 
+        const currentPath = (window.location.pathname || '').toLowerCase().trim()
+        const isPublicNuvvoScreen =
+          currentPath === '/login' || currentPath === '/admin/login' || currentPath === '/cadastro'
         const isPostLoginAdmin =
-          isAdministrativePath(window.location.pathname) &&
-          window.location.pathname !== '/admin/login'
+          !isPublicNuvvoScreen &&
+          (currentPath.startsWith('/admin') || currentPath.startsWith('/master'))
 
         if ((isGoogleTrackingUrl || isMetaTrackingUrl) && isPostLoginAdmin) {
           return true
@@ -251,8 +257,17 @@ export function gateDataLayerAndGtag(): void {
   if (!dl.__nuvvo_gated) {
     const originalPush = dl.push.bind(dl)
     dl.push = function (...items: any[]) {
-      if (isAdministrativePath(window.location.pathname)) {
-        // Bloqueia qualquer push disparado enquanto o usuário navega no admin/master
+      const p = (window.location.pathname || '').toLowerCase().trim()
+      // Permite dataLayer nas telas públicas próprias da Nuvvo (/login, /admin/login, /cadastro)
+      const isNuvvoPublicAuth =
+        p === '/login' ||
+        p === '/login/' ||
+        p === '/admin/login' ||
+        p === '/admin/login/' ||
+        p === '/cadastro' ||
+        p === '/cadastro/'
+      if (!isNuvvoPublicAuth && (p.startsWith('/admin') || p.startsWith('/master'))) {
+        // Bloqueia qualquer push disparado enquanto o usuário navega no painel interno admin/master
         return dl.length
       }
       return originalPush(...items)
@@ -265,8 +280,16 @@ export function gateDataLayerAndGtag(): void {
   const existingGtag = typeof win.gtag === 'function' ? win.gtag : null
 
   win.gtag = function (...args: any[]) {
-    if (isAdministrativePath(window.location.pathname)) {
-      // Bloqueia qualquer chamada gtag feita em páginas administrativas
+    const p = (window.location.pathname || '').toLowerCase().trim()
+    const isNuvvoPublicAuth =
+      p === '/login' ||
+      p === '/login/' ||
+      p === '/admin/login' ||
+      p === '/admin/login/' ||
+      p === '/cadastro' ||
+      p === '/cadastro/'
+    if (!isNuvvoPublicAuth && (p.startsWith('/admin') || p.startsWith('/master'))) {
+      // Bloqueia chamadas gtag feitas dentro dos painéis administrativos internos logados
       return
     }
 
@@ -317,11 +340,11 @@ export function syncGoogleTagWithRoute(pathname: string, isDirectAdminScreen = f
 
   if (!isPublicTrackingAllowed(pathname, isDirectAdminScreen)) {
     // Rota administrativa/login:
-    // 1. Remove qualquer script gtag ativo para neutralizar listeners de auto-event (form_submit)
+    // 1. Remove qualquer script gtag legado AW-403144958 ativo para neutralizar listeners de auto-event
     removeGoogleTagFromDom()
-    // 2. Garante que os wrappers de dataLayer e gtag estejam bloqueando envios
+    // 2. Garante que os wrappers de dataLayer e gtag estejam ativos com proteção de rota
     gateDataLayerAndGtag()
-    // 3. Garante que o Meta Pixel não dispare no painel administrativo
+    // 3. Garante que o Meta Pixel seja neutralizado apenas no painel administrativo logado
     disablePixelInAdmin()
     return
   }
