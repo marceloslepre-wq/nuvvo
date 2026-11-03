@@ -9,6 +9,7 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
   const phone = (body.phone || '').trim()
   const planId = body.plan_id || ''
   const cnpj = (body.cnpj || '').trim()
+  const cleanDoc = cnpj.replace(/\D/g, '')
   const slug = (body.slug || '')
     .trim()
     .toLowerCase()
@@ -20,6 +21,55 @@ routerAdd('POST', '/backend/v1/public/onboarding', (e) => {
     return e.badRequestError('Senha deve conter no mínimo 8 caracteres')
   }
   if (!slug) return e.badRequestError('Subdomínio/Identificador é obrigatório')
+
+  // Validação opcional de documento (CPF ou CNPJ) se fornecido
+  if (cleanDoc) {
+    const isValidCpf = (val) => {
+      if (val.length !== 11) return false
+      if (/^(\d)\1{10}$/.test(val)) return false
+      let sum = 0
+      for (let i = 0; i < 9; i++) sum += parseInt(val.charAt(i), 10) * (10 - i)
+      let rev = 11 - (sum % 11)
+      if (rev === 10 || rev === 11) rev = 0
+      if (rev !== parseInt(val.charAt(9), 10)) return false
+      sum = 0
+      for (let i = 0; i < 10; i++) sum += parseInt(val.charAt(i), 10) * (11 - i)
+      rev = 11 - (sum % 11)
+      if (rev === 10 || rev === 11) rev = 0
+      if (rev !== parseInt(val.charAt(10), 10)) return false
+      return true
+    }
+
+    const isValidCnpj = (val) => {
+      if (val.length !== 14) return false
+      if (/^(\d)\1{13}$/.test(val)) return false
+      const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+      let sum = 0
+      for (let i = 0; i < 12; i++) sum += parseInt(val.charAt(i), 10) * w1[i]
+      let rem = sum % 11
+      const d1 = rem < 2 ? 0 : 11 - rem
+      if (parseInt(val.charAt(12), 10) !== d1) return false
+      const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+      sum = 0
+      for (let i = 0; i < 13; i++) sum += parseInt(val.charAt(i), 10) * w2[i]
+      rem = sum % 11
+      const d2 = rem < 2 ? 0 : 11 - rem
+      if (parseInt(val.charAt(13), 10) !== d2) return false
+      return true
+    }
+
+    if (cleanDoc.length === 11) {
+      if (!isValidCpf(cleanDoc)) {
+        return e.badRequestError('CPF inválido')
+      }
+    } else if (cleanDoc.length === 14) {
+      if (!isValidCnpj(cleanDoc)) {
+        return e.badRequestError('CNPJ inválido')
+      }
+    } else {
+      return e.badRequestError('Documento inválido. Informe CPF (11 dígitos) ou CNPJ (14 dígitos)')
+    }
+  }
 
   // Checar se slug de tenant já existe
   try {

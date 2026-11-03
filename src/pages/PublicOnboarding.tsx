@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Building2,
@@ -6,21 +6,12 @@ import {
   Sparkles,
   ArrowRight,
   ShieldCheck,
-  Lock,
-  Mail,
-  User,
-  Phone,
-  Layers,
+  Eye,
+  EyeOff,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { toast } from '@/components/ui/use-toast'
 import pb from '@/lib/pocketbase/client'
 import { Plan } from '@/types/tenant'
@@ -30,13 +21,13 @@ import {
   getPlanTrackingInfo,
   trackSholverInitiateCheckout,
   trackSholverSuccessfulRegistration,
-  trackSholverContact,
 } from '@/lib/nuvvo-pixel'
 import {
   ensureNuvvoGoogleAdsLoaded,
   getNuvvoPlanValue,
   trackNuvvoAdsConversion,
 } from '@/lib/nuvvo-google-ads'
+import { maskCpfOrCnpj, validateCpfOrCnpj } from '@/lib/document-validation'
 
 export default function PublicOnboarding() {
   const [searchParams] = useSearchParams()
@@ -44,7 +35,7 @@ export default function PublicOnboarding() {
   const navigate = useNavigate()
 
   const [plans, setPlans] = useState<Plan[]>([])
-  const [loadingPlans, setLoadingPlans] = useState(true)
+  const [, setLoadingPlans] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [successData, setSuccessData] = useState<any | null>(null)
 
@@ -53,9 +44,32 @@ export default function PublicOnboarding() {
   const [slug, setSlug] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [phone, setPhone] = useState('')
   const [cnpj, setCnpj] = useState('')
   const [planId, setPlanId] = useState('')
+
+  // Erros por campo individual
+  const [errors, setErrors] = useState<{
+    name?: string
+    slug?: string
+    cnpj?: string
+    email?: string
+    phone?: string
+    password?: string
+    planId?: string
+  }>({})
+
+  // Refs para cada campo para scroll suave ao primeiro erro
+  const fieldRefs = {
+    name: useRef<HTMLDivElement>(null),
+    slug: useRef<HTMLDivElement>(null),
+    cnpj: useRef<HTMLDivElement>(null),
+    email: useRef<HTMLDivElement>(null),
+    phone: useRef<HTMLDivElement>(null),
+    password: useRef<HTMLDivElement>(null),
+    planId: useRef<HTMLDivElement>(null),
+  }
 
   // Garante explicitamente que qualquer rascunho de navegador / autofill residual seja limpo no mount
   useEffect(() => {
@@ -66,6 +80,7 @@ export default function PublicOnboarding() {
     setPhone('')
     setCnpj('')
     setPlanId('')
+    setErrors({})
 
     // Limpa eventuais chaves de rascunho se existirem em storages
     try {
@@ -101,48 +116,139 @@ export default function PublicOnboarding() {
 
   const handleNameChange = (val: string) => {
     setName(val)
+    if (errors.name) {
+      setErrors((prev) => ({ ...prev, name: undefined }))
+    }
     if (val.trim().length > 0) {
-      // Item 4a: Dispara UMA VEZ InitiateCheckout ao preencher Nome da Empresa pela primeira vez
+      // Dispara UMA VEZ InitiateCheckout ao preencher Nome da Empresa pela primeira vez
       const planInfo = getPlanTrackingInfo(selectedPlan)
       trackSholverInitiateCheckout(planInfo)
+    }
+  }
+
+  const handleSlugChange = (val: string) => {
+    const sanitized = val.toLowerCase().replace(/[^a-z0-9-]/g, '')
+    setSlug(sanitized)
+    if (errors.slug) {
+      setErrors((prev) => ({ ...prev, slug: undefined }))
+    }
+  }
+
+  const handleDocumentChange = (val: string) => {
+    const masked = maskCpfOrCnpj(val)
+    setCnpj(masked)
+    if (errors.cnpj) {
+      setErrors((prev) => ({ ...prev, cnpj: undefined }))
+    }
+  }
+
+  const handleEmailChange = (val: string) => {
+    setEmail(val)
+    if (errors.email) {
+      setErrors((prev) => ({ ...prev, email: undefined }))
+    }
+  }
+
+  const handlePhoneChange = (val: string) => {
+    setPhone(val)
+    if (errors.phone) {
+      setErrors((prev) => ({ ...prev, phone: undefined }))
+    }
+  }
+
+  const handlePasswordChange = (val: string) => {
+    setPassword(val)
+    if (errors.password) {
+      setErrors((prev) => ({ ...prev, password: undefined }))
+    }
+  }
+
+  const handlePlanSelect = (id: string) => {
+    setPlanId(id)
+    if (errors.planId) {
+      setErrors((prev) => ({ ...prev, planId: undefined }))
+    }
+  }
+
+  const scrollToFirstError = (newErrors: Record<string, string | undefined>) => {
+    const order: Array<keyof typeof fieldRefs> = [
+      'name',
+      'slug',
+      'cnpj',
+      'email',
+      'phone',
+      'password',
+      'planId',
+    ]
+    for (const key of order) {
+      if (newErrors[key]) {
+        const ref = fieldRefs[key]
+        if (ref?.current) {
+          ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Focar no input correspondente se existir
+          const input = ref.current.querySelector('input, select') as HTMLElement | null
+          if (input) {
+            setTimeout(() => input.focus(), 250)
+          }
+        }
+        break
+      }
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const missingFields: string[] = []
-    if (!name.trim()) missingFields.push('Nome da Empresa')
-    if (!slug.trim()) missingFields.push('Subdomínio Desejado')
-    if (!cnpj.trim()) missingFields.push('CNPJ')
-    if (!email.trim()) missingFields.push('E-mail do Administrador')
-    if (!phone.trim()) missingFields.push('WhatsApp / Telefone')
-    if (!password) missingFields.push('Senha de Acesso')
-    if (!planId) missingFields.push('Plano')
+    const newErrors: Record<string, string | undefined> = {}
 
-    if (missingFields.length > 0) {
-      toast({
-        title: 'Preencha todos os campos obrigatórios',
-        description: `Por favor, preencha: ${missingFields.join(', ')}.`,
-        variant: 'destructive',
-      })
-      return
+    // 1. Validações de campos obrigatórios
+    if (!name.trim()) {
+      newErrors.name = 'Nome da empresa é obrigatório.'
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email.trim())) {
-      toast({
-        title: 'E-mail inválido',
-        description: 'Por favor, informe um endereço de e-mail válido.',
-        variant: 'destructive',
-      })
-      return
+    if (!slug.trim()) {
+      newErrors.slug = 'Subdomínio desejado é obrigatório.'
     }
 
-    if (password.length < 8) {
+    if (!email.trim()) {
+      newErrors.email = 'E-mail do administrador é obrigatório.'
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email.trim())) {
+        newErrors.email = 'Por favor, informe um e-mail válido.'
+      }
+    }
+
+    if (!phone.trim()) {
+      newErrors.phone = 'WhatsApp / Telefone é obrigatório.'
+    }
+
+    if (!password) {
+      newErrors.password = 'Senha de acesso é obrigatória.'
+    } else if (password.length < 8) {
+      newErrors.password = 'Sua senha deve conter pelo menos 8 caracteres.'
+    }
+
+    if (!planId) {
+      newErrors.planId = 'Selecione um plano para continuar.'
+    }
+
+    // 2. Validação do Documento (CPF ou CNPJ) — OPCIONAL
+    if (cnpj.trim()) {
+      const docValidation = validateCpfOrCnpj(cnpj.trim(), false)
+      if (!docValidation.isValid) {
+        newErrors.cnpj =
+          docValidation.error || 'Documento inválido. Verifique os números digitados.'
+      }
+    }
+
+    // Se houver erros no cliente, cancela envio e rola até o primeiro erro
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      scrollToFirstError(newErrors)
       toast({
-        title: 'Senha muito curta',
-        description: 'Sua senha deve conter pelo menos 8 dígitos.',
+        title: 'Verifique os campos com erro',
+        description: 'Corrija os campos destacados em vermelho para continuar.',
         variant: 'destructive',
       })
       return
@@ -171,9 +277,6 @@ export default function PublicOnboarding() {
       })
 
       // Item 4b: SOMENTE após o backend confirmar que a conta foi criada com sucesso:
-      // fbq('init', '2307497159656039', { em, ph, country: 'br' })
-      // fbq('track', 'CompleteRegistration', { content_name, value, currency: 'BRL' })
-      // fbq('track', 'StartTrial', { value, currency: 'BRL', predicted_ltv: valor * 12 })
       const chosenPlan = plans.find((p) => p.id === planId)
       const planInfo = getPlanTrackingInfo(chosenPlan)
       trackSholverSuccessfulRegistration({
@@ -185,7 +288,6 @@ export default function PublicOnboarding() {
       // DISPARO DE CONVERSÃO GOOGLE ADS (AW-18513891486):
       // SOMENTE após backend confirmar criação com sucesso (mesmo momento de CompleteRegistration).
       // Nunca no clique, nunca em erro.
-      // transaction_id: id da conta/tenant criado retornado pelo backend.
       const tenantId = res?.tenant?.id || res?.user?.id || `nuvvo-${slug.trim().toLowerCase()}`
       const planNumericValue = getNuvvoPlanValue(chosenPlan)
       trackNuvvoAdsConversion({
@@ -193,9 +295,54 @@ export default function PublicOnboarding() {
         value: planNumericValue,
       })
     } catch (err: any) {
+      const rawMsg = err?.message || 'Não foi possível concluir o cadastro.'
+      const lowerMsg = rawMsg.toLowerCase()
+
+      const backendErrors: Record<string, string | undefined> = {}
+
+      // Mapeamento inteligente de erros do backend para os campos correspondentes
+      if (
+        lowerMsg.includes('subdomínio') ||
+        lowerMsg.includes('subdominio') ||
+        lowerMsg.includes('endereço') ||
+        lowerMsg.includes('endereco') ||
+        lowerMsg.includes('slug') ||
+        lowerMsg.includes('já está em uso') ||
+        lowerMsg.includes('ja esta em uso')
+      ) {
+        backendErrors.slug = 'Este subdomínio já está em uso. Escolha outro.'
+      } else if (
+        lowerMsg.includes('e-mail') ||
+        lowerMsg.includes('email') ||
+        lowerMsg.includes('cadastrado')
+      ) {
+        backendErrors.email = 'Este e-mail já está cadastrado.'
+      } else if (
+        lowerMsg.includes('cpf') ||
+        lowerMsg.includes('cnpj') ||
+        lowerMsg.includes('documento')
+      ) {
+        backendErrors.cnpj = rawMsg
+      } else if (lowerMsg.includes('senha') || lowerMsg.includes('password')) {
+        backendErrors.password = rawMsg
+      } else if (lowerMsg.includes('nome')) {
+        backendErrors.name = rawMsg
+      } else if (
+        lowerMsg.includes('telefone') ||
+        lowerMsg.includes('whatsapp') ||
+        lowerMsg.includes('phone')
+      ) {
+        backendErrors.phone = rawMsg
+      }
+
+      if (Object.keys(backendErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...backendErrors }))
+        scrollToFirstError(backendErrors)
+      }
+
       toast({
         title: 'Erro no cadastro',
-        description: err.message || 'Não foi possível concluir o cadastro.',
+        description: rawMsg,
         variant: 'destructive',
       })
     } finally {
@@ -310,107 +457,156 @@ export default function PublicOnboarding() {
 
         <form
           onSubmit={handleSubmit}
+          noValidate
           autoComplete="off"
           className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 space-y-5 shadow-xl shadow-slate-200/50"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="sm:col-span-2">
+            {/* 1. Nome da Empresa */}
+            <div className="sm:col-span-2" ref={fieldRefs.name}>
               <label className="font-semibold text-slate-800 block mb-1.5">Nome da Empresa</label>
               <Input
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                required
                 autoComplete="off"
                 placeholder="Ex: Minha Empresa Locações"
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500"
+                className={`bg-white text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500 ${
+                  errors.name ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-300'
+                }`}
               />
+              {errors.name && (
+                <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.name}</p>
+              )}
             </div>
 
-            <div>
+            {/* 2. Subdomínio Desejado */}
+            <div ref={fieldRefs.slug}>
               <label className="font-semibold text-slate-800 block mb-1.5">
                 Subdomínio Desejado
               </label>
-              {/* ORDEM INVERTIDA: Prefixo do domínio padrão à esquerda e input do slug à direita */}
-              <div className="flex items-center rounded-md border border-slate-300 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent">
+              <div
+                className={`flex items-center rounded-md border overflow-hidden focus-within:ring-2 focus-within:border-transparent ${
+                  errors.slug
+                    ? 'border-red-500 focus-within:ring-red-500'
+                    : 'border-slate-300 focus-within:ring-indigo-500'
+                }`}
+              >
                 <span className="bg-slate-100 border-r border-slate-300 text-slate-600 font-mono px-3 h-10 flex items-center text-[11px] font-medium shrink-0 select-none">
                   nuvvo.sholver.com.br/
                 </span>
                 <input
                   type="text"
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                  required
+                  onChange={(e) => handleSlugChange(e.target.value)}
                   autoComplete="off"
                   placeholder="minhaempresa"
                   className="w-full bg-white text-slate-900 placeholder:text-slate-400 h-10 px-3 text-xs font-mono outline-none"
                 />
               </div>
-              <span className="text-[10px] text-slate-500 mt-1 block">
-                URL provisória:{' '}
-                <strong className="text-indigo-600 font-mono">
-                  nuvvo.sholver.com.br/{slug || 'empresa'}
-                </strong>
-              </span>
+              {errors.slug ? (
+                <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.slug}</p>
+              ) : (
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  URL provisória:{' '}
+                  <strong className="text-indigo-600 font-mono">
+                    nuvvo.sholver.com.br/{slug || 'empresa'}
+                  </strong>
+                </span>
+              )}
             </div>
 
-            <div>
-              <label className="font-semibold text-slate-800 block mb-1.5">CNPJ</label>
+            {/* 3. CNPJ ou CPF (opcional) */}
+            <div ref={fieldRefs.cnpj}>
+              <label className="font-semibold text-slate-800 block mb-1.5">
+                CNPJ ou CPF (opcional)
+              </label>
               <Input
                 value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
-                required
+                onChange={(e) => handleDocumentChange(e.target.value)}
                 autoComplete="off"
-                placeholder="00.000.000/0000-00"
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500"
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                className={`bg-white text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500 ${
+                  errors.cnpj ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-300'
+                }`}
               />
+              {errors.cnpj && (
+                <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.cnpj}</p>
+              )}
             </div>
 
-            <div>
+            {/* 4. E-mail do Administrador */}
+            <div ref={fieldRefs.email}>
               <label className="font-semibold text-slate-800 block mb-1.5">
                 E-mail do Administrador
               </label>
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                onChange={(e) => handleEmailChange(e.target.value)}
                 autoComplete="new-password"
                 placeholder="seuemail@empresa.com"
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500"
+                className={`bg-white text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500 ${
+                  errors.email ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-300'
+                }`}
               />
+              {errors.email && (
+                <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.email}</p>
+              )}
             </div>
 
-            <div>
+            {/* 5. WhatsApp / Telefone (OBRIGATÓRIO) */}
+            <div ref={fieldRefs.phone}>
               <label className="font-semibold text-slate-800 block mb-1.5">
                 WhatsApp / Telefone
               </label>
               <Input
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
+                onChange={(e) => handlePhoneChange(e.target.value)}
                 autoComplete="off"
                 placeholder="(00) 00000-0000"
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500"
+                className={`bg-white text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500 ${
+                  errors.phone ? 'border-red-500 focus-visible:ring-red-500' : 'border-slate-300'
+                }`}
               />
+              {errors.phone && (
+                <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.phone}</p>
+              )}
             </div>
 
-            <div className="sm:col-span-2">
+            {/* 6. Senha com botão de mostrar/ocultar */}
+            <div className="sm:col-span-2" ref={fieldRefs.password}>
               <label className="font-semibold text-slate-800 block mb-1.5">
                 Senha de Acesso ao Painel (mínimo 8 caracteres)
               </label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-                placeholder="••••••••"
-                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 h-10 text-xs focus-visible:ring-indigo-500"
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => handlePasswordChange(e.target.value)}
+                  autoComplete="new-password"
+                  placeholder="••••••••"
+                  className={`bg-white text-slate-900 placeholder:text-slate-400 h-10 text-xs pr-10 focus-visible:ring-indigo-500 ${
+                    errors.password
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : 'border-slate-300'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Exibir senha'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-slate-700 transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-600 text-[11px] mt-1 font-medium">{errors.password}</p>
+              )}
             </div>
 
-            {/* SELEÇÃO DE PLANO */}
-            <div className="sm:col-span-2 pt-3 border-t border-slate-200">
+            {/* 7. SELEÇÃO DE PLANO */}
+            <div className="sm:col-span-2 pt-3 border-t border-slate-200" ref={fieldRefs.planId}>
               <label className="font-semibold text-slate-800 block mb-2.5 flex items-center justify-between">
                 <span>Escolha seu Plano para após os 15 dias de teste:</span>
                 {selectedPlan && (
@@ -426,7 +622,7 @@ export default function PublicOnboarding() {
                   return (
                     <div
                       key={p.id}
-                      onClick={() => setPlanId(p.id)}
+                      onClick={() => handlePlanSelect(p.id)}
                       className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                         isSelected
                           ? 'bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-500/20 shadow-sm'
@@ -455,6 +651,9 @@ export default function PublicOnboarding() {
                   )
                 })}
               </div>
+              {errors.planId && (
+                <p className="text-red-600 text-[11px] mt-2 font-medium">{errors.planId}</p>
+              )}
             </div>
           </div>
 
@@ -462,10 +661,19 @@ export default function PublicOnboarding() {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 text-sm shadow-lg shadow-indigo-600/20 gap-2 transition-colors"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 text-sm shadow-lg shadow-indigo-600/20 gap-2 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Criando conta...' : 'Começar Meus 15 Dias de Teste Grátis'}
-              <ArrowRight className="w-4 h-4" />
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Criando sua conta...
+                </>
+              ) : (
+                <>
+                  Começar Meus 15 Dias de Teste Grátis
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </Button>
           </div>
 
