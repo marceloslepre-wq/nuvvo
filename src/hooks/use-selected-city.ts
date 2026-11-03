@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTenant } from '@/contexts/tenant-context'
+import pb from '@/lib/pocketbase/client'
 
 export function useSelectedCity(tenantIdOverride?: string) {
   const { currentTenant } = useTenant()
@@ -53,6 +54,54 @@ export function useSelectedCity(tenantIdOverride?: string) {
       /* ignore */
     }
   }, [selectedCityId, storageKey])
+
+  // Cidade via parâmetro na URL (?cidade=cachoeiro): casa com as cidades/lojas
+  // cadastradas do tenant (nome começando com o valor, ignorando acentos/caixa)
+  // e salva como a cidade escolhida do usuário. Sem parâmetro, nada muda.
+  useEffect(() => {
+    try {
+      const param = new URLSearchParams(window.location.search).get('cidade')
+      if (!param || !tenantId) return
+      const normalized = param
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+      if (!normalized) return
+      let cancelled = false
+      const run = async () => {
+        try {
+          // Se já existe cidade salva, o parâmetro não precisa reescrever nada
+          const stored = localStorage.getItem(storageKey)
+          if (stored) return
+          const locs = await pb
+            .collection('pickup_locations')
+            .getFullList({ filter: `tenant='${tenantId}'` })
+          if (cancelled) return
+          const loc = locs.find((l) => {
+            const city = String(l.city || '')
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .trim()
+              .toLowerCase()
+            return city === normalized || city.startsWith(normalized)
+          })
+          if (loc) {
+            setSelectedCityId(loc.id)
+          }
+          // Se nenhum local corresponder, ignora o parâmetro silenciosamente
+        } catch {
+          /* ignora silenciosamente */
+        }
+      }
+      run()
+      return () => {
+        cancelled = true
+      }
+    } catch {
+      /* ignora silenciosamente */
+    }
+  }, [tenantId, storageKey])
 
   // Sincroniza abas/janelas
   useEffect(() => {
