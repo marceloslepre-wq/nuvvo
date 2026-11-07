@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import type { CategoryPathInfo } from '@/services/categories'
 import {
   Table,
   TableHeader,
@@ -23,6 +24,7 @@ interface VisitEventsTableProps {
   logs: VisitLog[]
   totalCount?: number
   productMap?: Map<string, ProductPathInfo>
+  categoryMap?: Map<string, CategoryPathInfo>
 }
 
 const PAGE_SIZE = 10
@@ -35,9 +37,36 @@ const PAGE_SIZE = 10
 export function resolveDisplayPath(
   path: string | undefined | null,
   productMap?: Map<string, ProductPathInfo>,
+  categoryMap?: Map<string, CategoryPathInfo>,
 ): { displayPath: string; tooltipText: string } {
   if (!path) {
     return { displayPath: '—', tooltipText: '' }
+  }
+
+  // Regex para identificar rota /categoria/<id>
+  // Aceita /categoria/<id> com ou sem trailing slash ou query params
+  const categoryMatch = path.match(/^\/categoria\/([a-zA-Z0-9_-]+)(\/.*|\?.*)?$/)
+  if (categoryMatch) {
+    const categoryId = categoryMatch[1]
+    const remainder = categoryMatch[2] || ''
+    const categoryInfo = categoryMap?.get(categoryId)
+
+    if (!categoryInfo) {
+      // ID que não corresponde a nenhuma categoria (fallback)
+      return { displayPath: path, tooltipText: path }
+    }
+
+    const categoryName = categoryInfo.name?.trim()
+    if (!categoryName) {
+      // Categoria sem nome cadastrado (fallback)
+      return { displayPath: path, tooltipText: path }
+    }
+
+    // Substitui o ID pelo nome da categoria
+    const resolvedPath = `/categoria/${categoryName}${remainder}`
+    const tooltip = `${categoryName} — ${resolvedPath} (id: ${categoryId})`
+
+    return { displayPath: resolvedPath, tooltipText: tooltip }
   }
 
   // Regex para identificar rota /produto/<id>
@@ -72,7 +101,12 @@ export function resolveDisplayPath(
   return { displayPath: resolvedPath, tooltipText: tooltip }
 }
 
-export function VisitEventsTable({ logs, totalCount, productMap }: VisitEventsTableProps) {
+export function VisitEventsTable({
+  logs,
+  totalCount,
+  productMap,
+  categoryMap,
+}: VisitEventsTableProps) {
   const [page, setPage] = useState(1)
 
   const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE))
@@ -149,7 +183,11 @@ export function VisitEventsTable({ logs, totalCount, productMap }: VisitEventsTa
                       {getLocationString(log.country, log.region, log.city)}
                     </TableCell>
                     {(() => {
-                      const { displayPath, tooltipText } = resolveDisplayPath(log.path, productMap)
+                      const { displayPath, tooltipText } = resolveDisplayPath(
+                        log.path,
+                        productMap,
+                        categoryMap,
+                      )
                       return (
                         <TableCell
                           className="text-sm text-gray-600 font-mono max-w-[220px] truncate"

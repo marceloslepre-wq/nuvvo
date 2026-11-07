@@ -13,6 +13,7 @@ import { VisitTrendChart, type TrendPoint } from '@/components/admin/visit-trend
 import { VisitModalityChart, type ModalityPoint } from '@/components/admin/visit-modality-chart'
 import { VisitEventsTable } from '@/components/admin/visit-events-table'
 import { getTenantProductReferenceMap, type ProductPathInfo } from '@/services/products'
+import { getTenantCategoryPathMap, type CategoryPathInfo } from '@/services/categories'
 import { useRealtime } from '@/hooks/use-realtime'
 import { BarChart3, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,6 +34,7 @@ export default function AdminDashboard() {
   const [todayCount, setTodayCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [productMap, setProductMap] = useState<Map<string, ProductPathInfo>>(new Map())
+  const [categoryMap, setCategoryMap] = useState<Map<string, CategoryPathInfo>>(new Map())
 
   const loadProducts = useCallback(async () => {
     if (!activeAdminTenant?.id) {
@@ -52,6 +54,23 @@ export default function AdminDashboard() {
   })
   useRealtime('product_variant_details', () => {
     loadProducts()
+  })
+
+  const loadCategories = useCallback(async () => {
+    if (!activeAdminTenant?.id) {
+      setCategoryMap(new Map())
+      return
+    }
+    const map = await getTenantCategoryPathMap(activeAdminTenant.id)
+    setCategoryMap(map)
+  }, [activeAdminTenant?.id])
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
+
+  useRealtime('categories', () => {
+    loadCategories()
   })
 
   const loadData = useCallback(async () => {
@@ -137,6 +156,7 @@ export default function AdminDashboard() {
   const handleRefresh = () => {
     loadData()
     loadProducts()
+    loadCategories()
   }
 
   return (
@@ -161,7 +181,12 @@ export default function AdminDashboard() {
         <VisitModalityChart data={modalityData} />
       </div>
 
-      <VisitEventsTable logs={logs} totalCount={totalCount} productMap={productMap} />
+      <VisitEventsTable
+        logs={logs}
+        totalCount={totalCount}
+        productMap={productMap}
+        categoryMap={categoryMap}
+      />
     </div>
   )
 }
