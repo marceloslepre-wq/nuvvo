@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T11:15:56.570Z",
+  "generatedAt": "2026-11-25T11:34:55.297Z",
   "collections": [
     {
       "name": "users",
@@ -849,6 +849,12 @@
           "required": false,
           "system": false,
           "collectionRef": "tenants"
+        },
+        {
+          "name": "click_origin",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

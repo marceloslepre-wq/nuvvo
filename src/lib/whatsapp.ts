@@ -6,6 +6,25 @@ import { isAdministrativePath } from './gtag'
 import { trackVisit } from '@/services/visit-logs'
 import { trackTenantContactEvent } from './tenant-tracking'
 
+const CLICK_DEDUPE_WINDOW_MS = 10_000
+const CONTACT_SENT_KEY = 'visit_contact_sent'
+
+/**
+ * Um mesmo botão, na mesma sessão, só conta de novo após 10 segundos.
+ */
+function isDuplicateClick(origin: string): boolean {
+  try {
+    const key = `visit_click_last_${origin}`
+    const now = Date.now()
+    const last = Number(sessionStorage.getItem(key) || 0)
+    if (last && now - last < CLICK_DEDUPE_WINDOW_MS) return true
+    sessionStorage.setItem(key, String(now))
+    return false
+  } catch {
+    return false
+  }
+}
+
 /**
  * Dispara o evento 'whatsapp_click' para o dataLayer do GTM e fbq('track','Contact') no Meta Pixel.
  * Executado exclusivamente nas interações de contato do site público.
@@ -13,6 +32,7 @@ import { trackTenantContactEvent } from './tenant-tracking'
 export function trackWhatsAppConversion(label?: string) {
   if (typeof window === 'undefined') return
   if (isAdministrativePath(window.location.pathname)) return
+  if (isDuplicateClick(label || 'desconhecido')) return
   try {
     const w = window as any
     w.dataLayer = w.dataLayer || []
@@ -25,9 +45,13 @@ export function trackWhatsAppConversion(label?: string) {
     // rastreamento nunca deve quebrar o clique
   }
 
-  // Disparo do Meta Pixel fbq('track', 'Contact') se ativo no site público do tenant
+  // Meta Pixel fbq('track', 'Contact'): no máximo 1 vez por sessão
   try {
-    trackTenantContactEvent(label)
+    const w = window as any
+    if (!sessionStorage.getItem(CONTACT_SENT_KEY) && typeof w.fbq === 'function') {
+      trackTenantContactEvent(label)
+      sessionStorage.setItem(CONTACT_SENT_KEY, '1')
+    }
   } catch {
     // silencioso
   }
@@ -40,6 +64,7 @@ export function trackWhatsAppConversion(label?: string) {
       type: 'click',
       path: window.location.pathname,
       tenantId: tenantId || undefined,
+      click_origin: label || 'desconhecido',
     }).catch(() => {
       /* silently ignore tracking errors */
     })

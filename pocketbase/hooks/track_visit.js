@@ -90,6 +90,10 @@ routerAdd('POST', '/backend/v1/track', (e) => {
   record.set('referrer', typeof body.referrer === 'string' ? body.referrer : '')
   record.set('path', typeof body.path === 'string' ? body.path : '')
   record.set('session_id', typeof body.session_id === 'string' ? body.session_id : '')
+  record.set(
+    'click_origin',
+    typeof body.click_origin === 'string' ? body.click_origin.slice(0, 64) : '',
+  )
 
   try {
     $app.save(record)

@@ -12,6 +12,7 @@ import { VisitSummaryCards, type VisitStats } from '@/components/admin/visit-sum
 import { VisitTrendChart, type TrendPoint } from '@/components/admin/visit-trend-chart'
 import { VisitModalityChart, type ModalityPoint } from '@/components/admin/visit-modality-chart'
 import { VisitEventsTable } from '@/components/admin/visit-events-table'
+import { VisitClickReport } from '@/components/admin/visit-click-report'
 import { getTenantProductReferenceMap, type ProductPathInfo } from '@/services/products'
 import { getTenantCategoryPathMap, type CategoryPathInfo } from '@/services/categories'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -180,6 +181,8 @@ export default function AdminDashboard() {
         <VisitTrendChart data={trendData} />
         <VisitModalityChart data={modalityData} />
       </div>
+
+      <VisitClickReport logs={allLogs.length > 0 ? allLogs : logs} />
 
       <VisitEventsTable
         logs={logs}

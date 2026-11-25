@@ -16,12 +16,32 @@ export interface VisitLog extends RecordModel {
   referrer: string
   path: string
   session_id: string
+  click_origin?: string
 }
 
 export interface TrackPayload {
   type: 'pageview' | 'click'
   path: string
   tenantId?: string
+  click_origin?: string
+}
+
+const PAGEVIEW_SENT_KEY = 'visit_pageview_sent'
+
+function hasPageviewInSession(): boolean {
+  try {
+    return sessionStorage.getItem(PAGEVIEW_SENT_KEY) === '1'
+  } catch {
+    return true
+  }
+}
+
+function markPageviewInSession(): void {
+  try {
+    sessionStorage.setItem(PAGEVIEW_SENT_KEY, '1')
+  } catch {
+    /* ignore */
+  }
 }
 
 const BOT_USER_AGENT_REGEX =
@@ -77,11 +97,7 @@ export function shouldIgnoreTracking(): boolean {
   return false
 }
 
-export const trackVisit = async (payload: TrackPayload): Promise<void> => {
-  if (shouldIgnoreTracking()) {
-    return
-  }
-
+const sendTrack = async (payload: TrackPayload): Promise<void> => {
   const info = detectVisitInfo()
   const body: Record<string, any> = {
     type: payload.type,
@@ -97,6 +113,9 @@ export const trackVisit = async (payload: TrackPayload): Promise<void> => {
   if (payload.tenantId) {
     body.tenant_id = payload.tenantId
   }
+  if (payload.type === 'click' && payload.click_origin) {
+    body.click_origin = payload.click_origin
+  }
   try {
     await pb.send('/backend/v1/track', {
       method: 'POST',
@@ -106,6 +125,23 @@ export const trackVisit = async (payload: TrackPayload): Promise<void> => {
   } catch {
     /* silently ignore tracking errors */
   }
+}
+
+export const trackVisit = async (payload: TrackPayload): Promise<void> => {
+  if (shouldIgnoreTracking()) {
+    return
+  }
+
+  // Clique numa sessão que ainda não tem pageview (ex.: navegador in-app):
+  // grava o pageview da rota atual antes do clique.
+  if (payload.type === 'click' && !hasPageviewInSession()) {
+    markPageviewInSession()
+    await sendTrack({ type: 'pageview', path: payload.path, tenantId: payload.tenantId })
+  }
+  if (payload.type === 'pageview') {
+    markPageviewInSession()
+  }
+  await sendTrack(payload)
 }
 
 export interface VisitFilter {
@@ -146,7 +182,7 @@ export const getVisitLogs = async (filter: VisitFilter, limit = 1000): Promise<V
 
 export const getAllVisitLogs = async (
   filter: VisitFilter,
-  fields = 'id,type,modality,session_id,created',
+  fields = 'id,type,modality,source,session_id,created,click_origin',
 ): Promise<VisitLog[]> => {
   const f = buildVisitFilter(filter)
   const result = await pb.collection<VisitLog>('visit_logs').getFullList({
